@@ -1,7 +1,7 @@
 import { GameState, PlayerCombatState, GameActionPayload, GameEventLog, PlayerKey } from '../types';
 import { CardInstance } from '../../cards/types';
 import { getCardDefinition } from '../../cards/cardRegistry';
-import { buildStandardDeck } from './deckBuilder';
+import { buildStandardDeck, createCardInstance } from './deckBuilder';
 import { RULES, canCardAttackTarget } from '../rules/gameRules';
 import { 
   resolveCardToCardCombat, 
@@ -12,7 +12,8 @@ import {
   processSpellEffect, 
   drawCardsFromDeck, 
   attachCardToTarget, 
-  evolveCard 
+  evolveCard,
+  checkSumidagawaBreach
 } from '../effects/effectProcessor';
 
 export function initializeGame(
@@ -72,7 +73,6 @@ export function initializeGame(
   drawCardsFromDeck(playerB, RULES.INITIAL_HAND_SIZE);
 
   const firstPlayer = isPlayerAFirst ? playerA : playerB;
-  const secondPlayer = isPlayerAFirst ? playerB : playerA;
 
   const initialLog: GameEventLog = {
     id: 'log_start',
@@ -81,7 +81,7 @@ export function initializeGame(
     actorPlayerId: firstPlayer.playerId,
     actorPlayerName: firstPlayer.name,
     type: 'GAME_START',
-    message: `「本物カードバトル」対戦開始！先攻は ${firstPlayer.name} です。（初期HP: ${RULES.INITIAL_HP}）`
+    message: `「本物カードバトル」対戦開始！先攻は ${firstPlayer.name} です。（各プレイヤーHP: ${RULES.INITIAL_HP}）`
   };
 
   return {
@@ -167,7 +167,7 @@ export function handleGameAction(
         return { success: false, error: 'このターンはすでにカードを引いています。' };
       }
       if (activePlayer.deck.length === 0) {
-        // Deck out loss!
+        // Deck out loss
         state.phase = 'GAME_OVER';
         state.winnerPlayerId = opponentPlayer.playerId;
         state.winReason = `${activePlayer.name} の山札が0枚の状態でドローしたため敗北しました。`;
@@ -199,6 +199,18 @@ export function handleGameAction(
         return { success: false, error: 'このカードは進化専用カードです。手札から直接出せません。' };
       }
 
+      // Special evolution rule: ヘッドフォンニキ + ヘッドフォンニキ -> オンフードヘッドフォンニキ
+      if (payload.targetSlotIndex !== undefined && activePlayer.field[payload.targetSlotIndex]) {
+        const existingCard = activePlayer.field[payload.targetSlotIndex]!;
+        if (existingCard.definitionId === 'atk_headphone_niki' && card.definitionId === 'atk_headphone_niki') {
+          activePlayer.hand.splice(handIndex, 1);
+          evolveCard(existingCard, 'evo_onhood_headphone_niki');
+          addLog('EVOLVE', `「ヘッドフォンニキ」に「ヘッドフォンニキ」を重ねた！「オンフードヘッドフォンニキ」へ合体進化！`);
+          state.stateVersion += 1;
+          return { success: true };
+        }
+      }
+
       // Find target field slot
       let slot = payload.targetSlotIndex;
       if (slot === undefined || slot < 0 || slot >= 5 || activePlayer.field[slot] !== null) {
@@ -220,36 +232,24 @@ export function handleGameAction(
 
       addLog('PLAY_ATTACK', `${activePlayer.name} が攻撃カード「${def.name}」を場に配置しました！（ATK: ${card.currentAtk} / HP: ${card.currentHp}）`, def.name);
 
-      // Trigger ON_PLAY effects
-      for (const eff of def.effects) {
-        if (eff.trigger === 'ON_PLAY') {
-          if (eff.damage && eff.targetType === 'ENEMY_CARD') {
-            // Find target or first enemy card
-            let targetCard: CardInstance | null = null;
-            if (payload.targetCardInstanceId) {
-              targetCard = opponentPlayer.field.find(c => c && c.instanceId === payload.targetCardInstanceId) || null;
-            }
-            if (!targetCard) {
-              targetCard = opponentPlayer.field.find(c => c !== null) || null;
-            }
-            if (targetCard) {
-              targetCard.currentHp -= eff.damage;
-              const tDef = getCardDefinition(targetCard.definitionId);
-              addLog('EFFECT_TRIGGER', `「${def.name}」の効果で「${tDef?.name}」に${eff.damage}ダメージ！`, def.name, tDef?.name, eff.damage);
-              if (targetCard.currentHp <= 0) {
-                const sIdx = opponentPlayer.field.findIndex(c => c?.instanceId === targetCard!.instanceId);
-                if (sIdx !== -1) opponentPlayer.field[sIdx] = null;
-                targetCard.zone = 'GRAVEYARD';
-                opponentPlayer.graveyard.push(targetCard);
-                addLog('DESTROY', `「${tDef?.name}」は破壊されました。`);
-              }
-            }
-          }
-          if (eff.healPlayer) {
-            activePlayer.hp = Math.min(activePlayer.maxHp, activePlayer.hp + eff.healPlayer);
-            addLog('HEAL', `「${def.name}」の召喚時効果で${activePlayer.name}のHPが${eff.healPlayer}回復！（現在HP: ${activePlayer.hp}）`, def.name, undefined, eff.healPlayer);
-          }
+      // Environment Check 1: フェニックスホール
+      // 「本物カード（攻撃カード）が1体場に出現するたびに、「井上教授（壁）」(体力100)を1体生成する。」
+      if (state.environment && state.environment.cardInstance.definitionId === 'env_phoenix_hall') {
+        const wallSlot = activePlayer.field.findIndex(s => s === null);
+        if (wallSlot !== -1) {
+          const inoueWall = createCardInstance('token_inoue_professor', activePlayer.playerId);
+          inoueWall.zone = 'FIELD';
+          inoueWall.slotIndex = wallSlot;
+          inoueWall.isTaunt = true;
+          activePlayer.field[wallSlot] = inoueWall;
+          addLog('EFFECT_TRIGGER', `【フェニックスホール】の効果発動！守護の「井上教授（壁）」（体力:100）が召喚された！`);
         }
+      }
+
+      // Environment Check 2: 隅田川
+      // 「ゆきや系カード」が場に出た瞬間、この環境効果は終了する。
+      if (card.definitionId.includes('yukiya') || def.tags.includes('ゆきや系')) {
+        checkSumidagawaBreach(state, state.logs, def.name);
       }
 
       state.stateVersion += 1;
@@ -272,13 +272,18 @@ export function handleGameAction(
 
       // If it's an attachment, use ATTACH_CARD instead
       if (def.subType === 'ATTACHMENT') {
-        return { success: false, error: '付着カードは攻撃カードを指定して付着させてください。' };
+        return { success: false, error: '付着カードは攻撃カードを指定して付属させてください。' };
       }
 
-      // Remove from hand, put in graveyard
+      // Remove from hand, put in graveyard (or exile for Yasumatsu)
       activePlayer.hand.splice(handIndex, 1);
-      spellCard.zone = 'GRAVEYARD';
-      activePlayer.graveyard.push(spellCard);
+      if (def.id === 'spl_yasumatsu') {
+        spellCard.zone = 'EXILE';
+        activePlayer.exile.push(spellCard);
+      } else {
+        spellCard.zone = 'GRAVEYARD';
+        activePlayer.graveyard.push(spellCard);
+      }
 
       const res = processSpellEffect(state, activePlayer, opponentPlayer, spellCard, payload.targetCardInstanceId);
       state.logs.push(...res.logs);
@@ -291,41 +296,29 @@ export function handleGameAction(
 
     case 'ATTACH_CARD': {
       if (!payload.cardInstanceId || !payload.targetCardInstanceId) {
-        return { success: false, error: '付着カードおよび対象カードを指定してください。' };
+        return { success: false, error: '付属カードおよび対象カードを指定してください。' };
       }
       const handIndex = activePlayer.hand.findIndex(c => c.instanceId === payload.cardInstanceId);
       if (handIndex === -1) {
         return { success: false, error: '手札にそのカードがありません。' };
       }
       const attachCard = activePlayer.hand[handIndex];
-      const def = getCardDefinition(attachCard.definitionId);
-      if (!def || def.subType !== 'ATTACHMENT') {
-        return { success: false, error: 'このカードは付着カードではありません。' };
+      const attachDef = getCardDefinition(attachCard.definitionId);
+      if (!attachDef) {
+        return { success: false, error: 'カードデータが見つかりません。' };
       }
 
-      // Find target card on friendly field or enemy field
-      let targetCard: CardInstance | null = null;
-      let targetIsFriendly = true;
-
-      targetCard = activePlayer.field.find(c => c && c.instanceId === payload.targetCardInstanceId) || null;
+      // Find target card on friendly field
+      const targetCard = activePlayer.field.find(c => c && c.instanceId === payload.targetCardInstanceId);
       if (!targetCard) {
-        targetCard = opponentPlayer.field.find(c => c && c.instanceId === payload.targetCardInstanceId) || null;
-        targetIsFriendly = false;
-      }
-
-      if (!targetCard) {
-        return { success: false, error: '付着対象の攻撃カードが戦場に見つかりません。' };
-      }
-
-      if (def.attachmentRule?.allowedTarget === 'FRIENDLY_ATTACK' && !targetIsFriendly) {
-        return { success: false, error: 'この付着カードは味方の攻撃カードにのみ使用可能です。' };
+        return { success: false, error: '付属対象の攻撃カードが戦場に見つかりません。' };
       }
 
       activePlayer.hand.splice(handIndex, 1);
       const res = attachCardToTarget(targetCard, attachCard);
       const targetDef = getCardDefinition(targetCard.definitionId);
 
-      addLog('ATTACH_CARD', `${activePlayer.name} が「${def.name}」を「${targetDef?.name}」に付着させました！（スタック装備）`, def.name, targetDef?.name);
+      addLog('ATTACH_CARD', res.message, attachDef.name, targetDef?.name);
       state.stateVersion += 1;
       return { success: true };
     }
@@ -344,7 +337,7 @@ export function handleGameAction(
         return { success: false, error: 'このカードは進化できません。' };
       }
 
-      // If initiated via Awakening Orb spell from hand:
+      // If initiated via a spell card from hand (e.g. ふともも):
       if (payload.cardInstanceId) {
         const handIndex = activePlayer.hand.findIndex(c => c.instanceId === payload.cardInstanceId);
         if (handIndex !== -1) {
@@ -354,35 +347,9 @@ export function handleGameAction(
         }
       }
 
-      const res = evolveCard(targetCard);
-      if (!res.success) {
-        return { success: false, error: res.message };
-      }
-
+      evolveCard(targetCard, currentDef.evolutionRule.targetDefinitionId);
       const evolvedDef = getCardDefinition(targetCard.definitionId);
-      addLog('EVOLVE', `${activePlayer.name} の「${currentDef.name}」が「${evolvedDef?.name}」へ進化！`, evolvedDef?.name);
-
-      // Trigger ON_PLAY of evolved card
-      if (evolvedDef) {
-        for (const eff of evolvedDef.effects) {
-          if (eff.trigger === 'ON_PLAY' && eff.damage && eff.targetType === 'ALL_ENEMY_CARDS') {
-            let hit = 0;
-            opponentPlayer.field.forEach((c, idx) => {
-              if (c) {
-                c.currentHp -= eff.damage!;
-                hit++;
-                if (c.currentHp <= 0) {
-                  opponentPlayer.field[idx] = null;
-                  c.zone = 'GRAVEYARD';
-                  opponentPlayer.graveyard.push(c);
-                  addLog('DESTROY', `「${getCardDefinition(c.definitionId)?.name}」は進化召喚の衝撃で消滅した。`);
-                }
-              }
-            });
-            addLog('EFFECT_TRIGGER', `「${evolvedDef.name}」の進化時咆哮！敵全カードに${eff.damage}ダメージ！（${hit}体直撃）`, evolvedDef.name, undefined, eff.damage);
-          }
-        }
-      }
+      addLog('EVOLVE', `${activePlayer.name} の「${currentDef.name}」が「${evolvedDef?.name}」へ進化した！`, evolvedDef?.name);
 
       checkGameOver(state);
       state.stateVersion += 1;
@@ -444,32 +411,25 @@ export function handleGameAction(
         return { success: false, error: check.reason };
       }
 
-      // Taunt (守護) check: If opponent has Taunt cards, attacker must target Taunt
+      // Taunt (守護) check
       const hasTauntOnEnemyField = opponentPlayer.field.some(c => c && c.isTaunt);
-      const isSkyIsland = state.environment?.cardInstance.definitionId === 'env_sky_island';
-      if (hasTauntOnEnemyField && !defender.isTaunt && !attacker.canPierceTaunt && !isSkyIsland) {
-        return { success: false, error: '相手の場に【守護】カードが存在するため、守護カードを優先して攻撃してください。' };
+      if (hasTauntOnEnemyField && !defender.isTaunt && !attacker.canPierceTaunt) {
+        return { success: false, error: '相手の場に【守護】カード（井上教授など）が存在するため、守護カードを優先して攻撃してください。' };
       }
 
       const atkDef = getCardDefinition(attacker.definitionId);
       const defDef = getCardDefinition(defender.definitionId);
 
-      // Check "知らんけどの使い手" (COIN_FLIP): 50% 500 bonus, 50% "知らんけど"
-      let bonusDmg = 0;
-      if (attacker.definitionId === 'atk_shirankedo') {
-        if (Math.random() < 0.5) {
-          bonusDmg = 500;
-          addLog('EFFECT_TRIGGER', `【知らんけどの使い手】の会心の一撃！500の追加ダメージ発生！`, atkDef?.name);
-        } else {
-          addLog('EFFECT_TRIGGER', `【知らんけどの使い手】「知らんけどな！」（追加ダメージなし）`, atkDef?.name);
-        }
-      }
+      const totalCardsOnBoard = state.playerA.field.filter(Boolean).length + state.playerB.field.filter(Boolean).length;
 
-      if (bonusDmg > 0) {
-        defender.currentHp -= bonusDmg;
-      }
-
-      const combat = resolveCardToCardCombat(attacker, defender, state.environment);
+      const combat = resolveCardToCardCombat(
+        attacker,
+        defender,
+        state.environment,
+        activePlayer.field,
+        opponentPlayer.field,
+        totalCardsOnBoard
+      );
 
       addLog(
         'ATTACK',
@@ -493,8 +453,6 @@ export function handleGameAction(
           defender.attachedCards = [];
         }
         addLog('DESTROY', `敵の「${defDef?.name}」は撃破され墓地へ送られた。`);
-      } else if (combat.defenderResurrected) {
-        addLog('EFFECT_TRIGGER', `「${defDef?.name}」は不死鳥の力で復活した！`);
       }
 
       // Handle attacker death
@@ -511,8 +469,6 @@ export function handleGameAction(
           attacker.attachedCards = [];
         }
         addLog('DESTROY', `味方の「${atkDef?.name}」は相打ちにより破壊された。`);
-      } else if (combat.attackerResurrected) {
-        addLog('EFFECT_TRIGGER', `「${atkDef?.name}」は不死鳥の力で復活した！`);
       }
 
       checkGameOver(state);
@@ -536,13 +492,19 @@ export function handleGameAction(
 
       // Taunt check
       const hasTauntOnEnemyField = opponentPlayer.field.some(c => c && c.isTaunt);
-      const isSkyIsland = state.environment?.cardInstance.definitionId === 'env_sky_island';
-      if (hasTauntOnEnemyField && !attacker.canPierceTaunt && !isSkyIsland) {
-        return { success: false, error: '相手の場に【守護】カードが存在するため、直接攻撃できません。' };
+      if (hasTauntOnEnemyField && !attacker.canPierceTaunt) {
+        return { success: false, error: '相手の場に【守護】カード（井上教授など）が存在するため、直接攻撃できません。' };
       }
 
       const atkDef = getCardDefinition(attacker.definitionId);
-      const combat = resolveCardToPlayerCombat(attacker, state.environment);
+      const totalCardsOnBoard = state.playerA.field.filter(Boolean).length + state.playerB.field.filter(Boolean).length;
+
+      const combat = resolveCardToPlayerCombat(
+        attacker,
+        state.environment,
+        activePlayer.field,
+        totalCardsOnBoard
+      );
 
       opponentPlayer.hp = Math.max(0, opponentPlayer.hp - combat.damage);
       addLog(
@@ -559,31 +521,7 @@ export function handleGameAction(
     }
 
     case 'END_TURN': {
-      // 1. Process turn end effects for active player
-      activePlayer.field.forEach(c => {
-        if (c) {
-          const cDef = getCardDefinition(c.definitionId);
-          // End turn heal effects
-          if (cDef?.id === 'evo_lord_leo') {
-            activePlayer.field.forEach(fc => {
-              if (fc) {
-                fc.currentHp = Math.min(fc.maxHp, fc.currentHp + 300);
-              }
-            });
-            addLog('HEAL', `「聖騎士ロードレオ」の加護で味方全体のHPが300回復！`);
-          }
-          // Attachment end-turn heal
-          c.attachedCards.forEach(att => {
-            const aDef = getCardDefinition(att.definitionId);
-            if (aDef?.attachmentRule?.endTurnHeal) {
-              c.currentHp = Math.min(c.maxHp, c.currentHp + aDef.attachmentRule.endTurnHeal);
-              addLog('HEAL', `「${aDef.name}」の力で「${cDef?.name}」のHPが回復！`);
-            }
-          });
-        }
-      });
-
-      // 2. Switch turn player
+      // 1. Switch turn player
       const nextPlayerKey: PlayerKey = state.activePlayerKey === 'playerA' ? 'playerB' : 'playerA';
       state.activePlayerKey = nextPlayerKey;
       state.turnNumber += 1;
@@ -604,23 +542,13 @@ export function handleGameAction(
 
       addLog('TURN_END', `${activePlayer.name} のターン終了。ターン ${state.turnNumber}：${newActive.name} のターン！`);
 
-      // 3. Process environment turn-start triggers
-      if (state.environment && state.environment.cardInstance.definitionId === 'env_forest') {
-        newActive.hp = Math.min(newActive.maxHp, newActive.hp + 300);
-        newActive.field.forEach(fc => {
-          if (fc) fc.currentHp = Math.min(fc.maxHp, fc.currentHp + 200);
-        });
-        addLog('HEAL', `【深緑の大樹海】の恵みにより ${newActive.name} のHPが300回復！場のカードHP+200！`);
-      }
-
-      // 4. Normal draw at start of turn (Rule #5 & #6)
-      // Check turn 1 first player draw rule (First player draws 0, second player draws 1)
+      // 2. Normal draw at start of turn (Rule #5 & #6)
       const isSecondPlayerFirstTurn = state.turnNumber === 2;
       const shouldDraw = state.turnNumber > 2 || isSecondPlayerFirstTurn;
 
       if (shouldDraw) {
         if (newActive.deck.length === 0) {
-          // Deck out defeat!
+          // Deck out defeat
           state.phase = 'GAME_OVER';
           state.winnerPlayerId = newOpponent.playerId;
           state.winReason = `${newActive.name} の山札が尽きたため敗北しました。`;
@@ -628,7 +556,7 @@ export function handleGameAction(
           addLog('GAME_OVER', `${newActive.name} の山札が0枚のためドローできず敗北！勝者: ${newOpponent.name}！`);
           return { success: true };
         }
-        const drawn = drawCardsFromDeck(newActive, 1);
+        drawCardsFromDeck(newActive, 1);
         newActive.hasDrawnThisTurn = true;
         addLog('DRAW', `${newActive.name} がターン開始時にカードを1枚ドローしました。`);
       }

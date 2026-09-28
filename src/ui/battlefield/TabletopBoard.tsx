@@ -3,7 +3,7 @@ import { SanitizedGameState } from '../../online/types';
 import { CardInstance } from '../../cards/types';
 import { getCardDefinition } from '../../cards/cardRegistry';
 import { OpponentHand } from '../hand/OpponentHand';
-import { FannedHand } from '../hand/FannedHand';
+import { CardView } from '../cards/CardView';
 import { DeckStack3D } from '../deck/DeckStack3D';
 import { GraveyardPile } from '../graveyard/GraveyardPile';
 import { GraveyardModal } from '../graveyard/GraveyardModal';
@@ -34,6 +34,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
 
   // Local selection states
   const [selectedHandCard, setSelectedHandCard] = useState<CardInstance | null>(null);
+  const [hoveredHandCardId, setHoveredHandCardId] = useState<string | null>(null);
   const [selectedFieldCard, setSelectedFieldCard] = useState<CardInstance | null>(null);
   const [inspectCard, setInspectCard] = useState<CardInstance | null>(null);
   const [viewingGraveyard, setViewingGraveyard] = useState<'me' | 'opp' | null>(null);
@@ -52,6 +53,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
 
   const clearSelection = () => {
     setSelectedHandCard(null);
+    setHoveredHandCardId(null);
     setSelectedFieldCard(null);
     setActionError(null);
   };
@@ -395,8 +397,13 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
           </div>
         </div>
 
+        {/* Battle Event Logs Ticker & Drawer (Center positioned for clear visibility) */}
+        <div className="w-full max-w-lg mx-auto my-0.5">
+          <LogDrawer logs={logs} myPlayerId={me.playerId} />
+        </div>
+
         {/* My Field (5 slots) */}
-        <div className="flex items-center justify-center gap-1.5 sm:gap-2 mt-2">
+        <div className="flex items-center justify-center gap-1.5 sm:gap-2 mt-1">
           {me.field.map((card, idx) => (
             <FieldSlot
               key={`my_slot_${idx}`}
@@ -415,8 +422,8 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
         </div>
       </div>
 
-      {/* BOTTOM: MY AREA */}
-      <div className="relative z-20 w-full flex flex-col px-3 pb-2">
+      {/* BOTTOM: MY AREA (Elevated with safe area padding to prevent clipping by mobile system bar) */}
+      <div className="relative z-20 w-full flex flex-col px-3 pb-[max(2.5rem,env(safe-area-inset-bottom,36px))] pt-1">
         {/* Hand Card Action Floating Toolbar */}
         {selectedHandCard && isMyTurn && (
           <div className="w-full max-w-sm mx-auto mb-1 p-2 rounded-lg bg-stone-900/95 border border-amber-500/80 shadow-xl flex items-center justify-between animate-slideUp">
@@ -494,20 +501,82 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
           </div>
         </div>
 
-        {/* My Fanned Hand (Prompt: "カードを扇状・重ねて表示する手札") */}
-        <div className="w-full">
-          <FannedHand
-            cards={me.hand || []}
-            selectedCardId={selectedHandCard?.instanceId}
-            isMyTurn={isMyTurn}
-            onSelectCard={handleSelectHandCard}
-            onInspectCard={setInspectCard}
-          />
-        </div>
+        {/* My Fanned Hand (ババ抜き風 扇状ファンアニメーション & アクティブ強調) */}
+        <div className="w-full relative h-36 sm:h-40 flex items-end justify-center select-none overflow-visible pb-2 pt-6">
+          {(!me.hand || me.hand.length === 0) ? (
+            <div className="h-24 flex items-center justify-center text-xs text-stone-500 italic">
+              手札がありません
+            </div>
+          ) : (
+            <div className={`flex items-end justify-center px-4 max-w-full ${
+              me.hand.length <= 3 ? '-space-x-2 sm:-space-x-1' :
+              me.hand.length <= 5 ? '-space-x-5 sm:-space-x-4' :
+              me.hand.length <= 7 ? '-space-x-7 sm:-space-x-5' :
+              '-space-x-9 sm:-space-x-6'
+            }`}>
+              {me.hand.map((card, idx) => {
+                const total = me.hand!.length;
+                const isSelected = selectedHandCard?.instanceId === card.instanceId;
+                const isHovered = hoveredHandCardId === card.instanceId;
+                const centerIndex = (total - 1) / 2;
+                const normalizedOffset = idx - centerIndex;
 
-        {/* Bottom Battle Event Logs Ticker & Drawer */}
-        <div className="mt-1">
-          <LogDrawer logs={logs} myPlayerId={me.playerId} />
+                // Fan angle (ババ抜き風扇状回転)
+                const maxAngle = Math.min(28, total * 5.2);
+                const angleStep = total > 1 ? (maxAngle * 2) / (total - 1) : 0;
+                const baseRotDeg = normalizedOffset * angleStep;
+                const rotDeg = isSelected ? 0 : isHovered ? baseRotDeg * 0.3 : baseRotDeg;
+
+                // Arc translation (扇の円弧カーブ)
+                const arcY = Math.abs(normalizedOffset) * Math.min(10, total * 1.8);
+                // Active / Hover lift
+                const translateY = isSelected ? -56 : isHovered ? -32 : arcY - 20;
+                const scale = isSelected ? 1.16 : isHovered ? 1.08 : 1.0;
+                const zIndex = isSelected ? 60 : isHovered ? 45 : 10 + idx;
+
+                return (
+                  <div
+                    key={card.instanceId}
+                    style={{
+                      transform: `rotate(${rotDeg}deg) translateY(${translateY}px) scale(${scale})`,
+                      transformOrigin: 'bottom center',
+                      zIndex,
+                      transition: 'transform 0.24s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.2s ease, filter 0.2s ease'
+                    }}
+                    className={`relative shrink-0 cursor-pointer origin-bottom ${
+                      isSelected
+                        ? 'filter drop-shadow-[0_0_20px_rgba(250,204,21,0.95)]'
+                        : isHovered
+                        ? 'filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.7)]'
+                        : 'shadow-[-4px_2px_10px_rgba(0,0,0,0.5)]'
+                    }`}
+                    onClick={() => handleSelectHandCard(card)}
+                    onMouseEnter={() => setHoveredHandCardId(card.instanceId)}
+                    onMouseLeave={() => setHoveredHandCardId(null)}
+                    onTouchStart={() => setHoveredHandCardId(card.instanceId)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setInspectCard(card);
+                    }}
+                  >
+                    {/* Active Card Emphasis Badge */}
+                    {isSelected && (
+                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 to-yellow-300 text-stone-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-xl flex items-center gap-1 animate-bounce whitespace-nowrap z-50 border border-yellow-100">
+                        <Sparkles className="w-2.5 h-2.5" /> 選択中
+                      </div>
+                    )}
+
+                    <CardView
+                      card={card}
+                      size="hand"
+                      isSelected={isSelected}
+                      canAct={isMyTurn}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

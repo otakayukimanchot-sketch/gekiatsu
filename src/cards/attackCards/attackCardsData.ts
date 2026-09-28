@@ -1,279 +1,355 @@
 import { CardDefinition } from '../types';
 
 export const ATTACK_CARDS: CardDefinition[] = [
+  // 1. 綺麗なよしえ
   {
-    id: 'atk_leo',
-    name: '真・剣士レオ',
+    id: 'atk_yoshie_clean',
+    name: '綺麗なよしえ',
     type: 'ATTACK',
-    cost: 3,
-    baseAtk: 1200,
-    baseHp: 1500,
-    tags: ['戦士', '先陣'],
-    description: '標準的な攻撃カード。高いバランス力を誇り、「聖騎士ロードレオ」へと進化可能。',
-    flavorText: '「我が剣に迷いなし！正義の道を切り拓く！」',
-    artColor: '#3b82f6',
-    artGradient: 'from-blue-600 to-indigo-900',
-    artSymbol: 'Sword',
+    cost: 2,
+    baseAtk: 500,
+    baseHp: 70,
+    tags: ['よしえ系', '進化前'],
+    description: '基本の攻撃カード。「数珠カード」を付属させることで「塩よしえ」へ進化する。',
+    flavorText: '「清らかで美しいよしえ。まだ塩分は控えめ。」',
+    artColor: '#ec4899',
+    artGradient: 'from-pink-500 to-rose-700',
+    artSymbol: 'Sparkles',
     effects: [],
     evolutionRule: {
-      targetDefinitionId: 'evo_lord_leo',
-      statBonusAtk: 1200,
-      statBonusHp: 1100
+      targetDefinitionId: 'evo_yoshie_salt'
     }
   },
+
+  // 2. 塩よしえ (進化カード)
   {
-    id: 'atk_golem',
-    name: '守護の巨兵ゴーレム',
+    id: 'evo_yoshie_salt',
+    name: '塩よしえ',
+    type: 'ATTACK',
+    cost: 3,
+    baseAtk: 700,
+    baseHp: 100,
+    tags: ['よしえ系', '進化体'],
+    description: '「綺麗なよしえ」に「数珠カード」を付属させて進化。「うんこかーど」を付属させることで「普通に話すだけならいいよー（嘘）」嘉慧へ進化する。',
+    flavorText: '「塩対応が冴え渡るよしえ。近づく者には容赦ない。」',
+    artColor: '#a855f7',
+    artGradient: 'from-purple-600 to-indigo-900',
+    artSymbol: 'Zap',
+    isEvolutionOnly: true,
+    effects: [],
+    evolutionRule: {
+      targetDefinitionId: 'evo_yoshie_kakei'
+    }
+  },
+
+  // 3. 「普通に話すだけならいいよー（嘘）」嘉慧 (進化カード)
+  {
+    id: 'evo_yoshie_kakei',
+    name: '「普通に話すだけならいいよー（嘘）」嘉慧',
     type: 'ATTACK',
     cost: 4,
     baseAtk: 800,
-    baseHp: 2400,
-    tags: ['巨兵', '守護'],
-    description: '【守護】相手は守護を持つカードが存在する場合、このカードを優先して攻撃しなければならない。',
-    flavorText: '堅牢なる岩石の肉体は、主への攻撃をことごとく阻む。',
-    artColor: '#78716c',
-    artGradient: 'from-stone-600 to-stone-900',
-    artSymbol: 'Shield',
-    effects: [
-      {
-        id: 'eff_golem_taunt',
-        trigger: 'ON_PLAY',
-        targetType: 'NONE',
-        description: '【守護】を獲得する。',
-        specialAction: 'TAUNT'
-      }
-    ]
-  },
-  {
-    id: 'atk_ninja',
-    name: '疾風の忍者',
-    type: 'ATTACK',
-    cost: 3,
-    baseAtk: 1000,
-    baseHp: 1000,
-    tags: ['忍者', '速攻'],
-    description: '【突撃】場に出たターンに即座に攻撃が可能。',
-    flavorText: '影より出でて、風と共に斬り伏せる。',
-    artColor: '#10b981',
-    artGradient: 'from-emerald-600 to-teal-950',
-    artSymbol: 'Zap',
-    effects: [
-      {
-        id: 'eff_ninja_charge',
-        trigger: 'ON_PLAY',
-        targetType: 'NONE',
-        description: '【突撃】獲得。出したターンに攻撃できる。',
-        specialAction: 'CHARGE'
-      }
-    ]
-  },
-  {
-    id: 'atk_luna',
-    name: '魔導少女ルナ',
-    type: 'ATTACK',
-    cost: 3,
-    baseAtk: 900,
-    baseHp: 1100,
-    tags: ['魔法使い', '遠隔'],
-    description: '【召喚時】相手の攻撃カード1体に400ダメージを与える。',
-    flavorText: '「私の魔力、侮らないでよね！」',
-    artColor: '#a855f7',
-    artGradient: 'from-purple-600 to-fuchsia-950',
-    artSymbol: 'Sparkles',
-    effects: [
-      {
-        id: 'eff_luna_onplay',
-        trigger: 'ON_PLAY',
-        targetType: 'ENEMY_CARD',
-        description: '相手攻撃カード1体に400ダメージ',
-        damage: 400
-      }
-    ]
-  },
-  {
-    id: 'atk_yoshie',
-    name: '綺麗なよしえ',
-    type: 'ATTACK',
-    cost: 3,
-    baseAtk: 1100,
-    baseHp: 1300,
-    tags: ['神秘', '回復'],
-    description: '【召喚時】自プレイヤーのHPを500回復する。清廉な輝きで戦場を包む。',
-    flavorText: '「皆様、どうか心穏やかにお過ごしください。」',
-    artColor: '#ec4899',
-    artGradient: 'from-pink-500 to-rose-900',
-    artSymbol: 'HeartHandshake',
-    effects: [
-      {
-        id: 'eff_yoshie_heal',
-        trigger: 'ON_PLAY',
-        targetType: 'FRIENDLY_PLAYER',
-        description: '自プレイヤーのHPを500回復',
-        healPlayer: 500
-      }
-    ]
-  },
-  {
-    id: 'atk_draco',
-    name: '幼竜ドラコ',
-    type: 'ATTACK',
-    cost: 2,
-    baseAtk: 700,
-    baseHp: 900,
-    tags: ['ドラゴン', '幼体'],
-    description: '進化の可能性を秘めた子竜。「火炎竜ヴォルケス」へ進化可能。',
-    flavorText: '小さな体にも竜の熱き血潮が脈打っている。',
-    artColor: '#f97316',
-    artGradient: 'from-orange-500 to-amber-900',
-    artSymbol: 'Flame',
+    baseHp: 150,
+    tags: ['よしえ系', '進化体', '嘉慧'],
+    description: '「塩よしえ」に「うんこかーど」を付属させて進化。「ユキやカード」を付属させることで「よしえEX」へ進化する。',
+    flavorText: '「普通に話すだけならいいよー（絶対に嘘）。」',
+    artColor: '#3b82f6',
+    artGradient: 'from-blue-600 via-indigo-700 to-slate-900',
+    artSymbol: 'HelpCircle',
+    isEvolutionOnly: true,
     effects: [],
     evolutionRule: {
-      targetDefinitionId: 'evo_volces',
-      statBonusAtk: 1500,
-      statBonusHp: 1300
+      targetDefinitionId: 'evo_yoshie_ex'
     }
   },
-  {
-    id: 'atk_shirankedo',
-    name: '知らんけどの使い手',
-    type: 'ATTACK',
-    cost: 4,
-    baseAtk: 1400,
-    baseHp: 1300,
-    tags: ['関西', '不確定'],
-    description: '【攻撃時】サーバー側乱数で判定。50%で相手対象に500追撃ダメージ、50%で「知らんけど」で何も起きない。',
-    flavorText: '「絶対勝てるで！……知らんけどな。」',
-    artColor: '#eab308',
-    artGradient: 'from-yellow-500 to-amber-950',
-    artSymbol: 'HelpCircle',
-    effects: [
-      {
-        id: 'eff_shirankedo_attack',
-        trigger: 'ON_ATTACK',
-        targetType: 'ENEMY_CARD',
-        description: '50%で500追撃ダメージ、50%で知らんけど',
-        isRandom: true,
-        randomEffectType: 'COIN_FLIP',
-        damage: 500
-      }
-    ]
-  },
-  {
-    id: 'atk_knight',
-    name: '鋼鉄の重装騎士',
-    type: 'ATTACK',
-    cost: 4,
-    baseAtk: 1300,
-    baseHp: 1800,
-    tags: ['戦士', '重装'],
-    description: '付着カード（装備カード）と相性が良いタフな前衛カード。',
-    flavorText: '鉄壁の甲冑が矢も魔法も弾き返す。',
-    artColor: '#64748b',
-    artGradient: 'from-slate-600 to-slate-950',
-    artSymbol: 'ShieldAlert',
-    effects: []
-  },
-  {
-    id: 'atk_phoenix',
-    name: '不死鳥フェニックス',
-    type: 'ATTACK',
-    cost: 5,
-    baseAtk: 1800,
-    baseHp: 1600,
-    tags: ['神鳥', '不死'],
-    description: '【破壊時】1ゲーム中に1度だけ、HP800でその場に復活する。',
-    flavorText: '灰燼より立ち上がり、再び炎の翼を広げる伝説の鳥。',
-    artColor: '#ef4444',
-    artGradient: 'from-red-600 to-rose-950',
-    artSymbol: 'Flame',
-    effects: [
-      {
-        id: 'eff_phoenix_rebirth',
-        trigger: 'ON_DESTROY',
-        targetType: 'NONE',
-        description: '一度だけHP800で復活する',
-        specialAction: 'RESURRECT_ONCE',
-        buffHp: 800
-      }
-    ]
-  },
-  {
-    id: 'atk_assassin',
-    name: '影の暗殺者',
-    type: 'ATTACK',
-    cost: 4,
-    baseAtk: 1500,
-    baseHp: 1100,
-    tags: ['暗殺者', '貫通'],
-    description: '【守護無視】相手の守護カードを無視して、直接相手プレイヤーや後衛を攻撃できる。',
-    flavorText: '遮る盾など無意味。急所は既に捉えている。',
-    artColor: '#1e293b',
-    artGradient: 'from-slate-800 to-zinc-950',
-    artSymbol: 'Crosshair',
-    effects: [
-      {
-        id: 'eff_assassin_pierce',
-        trigger: 'ON_PLAY',
-        targetType: 'NONE',
-        description: '相手の守護を無視して攻撃できる',
-        specialAction: 'PIERCE_TAUNT'
-      }
-    ]
-  },
 
-  // Evolution cards (Can be summoned via Evolution on base card)
+  // 4. よしえEX (最終進化カード)
   {
-    id: 'evo_lord_leo',
-    name: '聖騎士ロードレオ',
+    id: 'evo_yoshie_ex',
+    name: 'よしえEX',
     type: 'ATTACK',
     cost: 5,
-    baseAtk: 2400,
-    baseHp: 2600,
-    tags: ['進化', '聖騎士', '守護'],
-    description: '【進化召喚】「真・剣士レオ」から進化！【守護】を持ち、ターン終了時に味方全カードのHPを300回復。',
-    flavorText: '幾多の試練を乗り越え、聖なる鎧を纏いし救世の騎士。',
-    artColor: '#38bdf8',
-    artGradient: 'from-sky-400 via-blue-600 to-indigo-950',
+    baseAtk: 1000,
+    baseHp: 500,
+    tags: ['よしえ系', 'EX', '最終進化'],
+    description: '「嘉慧」に「ユキやカード」を付属させて進化。圧倒的な耐久力と攻撃力を誇る至高のよしえ。',
+    flavorText: '「すべてを超越したEXの輝き。誰も逆らえない。」',
+    artColor: '#f59e0b',
+    artGradient: 'from-yellow-400 via-amber-600 to-orange-950',
     artSymbol: 'Crown',
     isEvolutionOnly: true,
-    effects: [
-      {
-        id: 'eff_lord_taunt',
-        trigger: 'ON_PLAY',
-        targetType: 'NONE',
-        description: '【守護】を獲得',
-        specialAction: 'TAUNT'
-      },
-      {
-        id: 'eff_lord_heal',
-        trigger: 'ON_TURN_END',
-        targetType: 'ALL_FRIENDLY_CARDS',
-        description: '自軍全カードのHPを300回復',
-        healCard: 300
-      }
-    ]
+    effects: []
   },
+
+  // 5. ヨートン
   {
-    id: 'evo_volces',
-    name: '火炎竜ヴォルケス',
+    id: 'atk_yoton',
+    name: 'ヨートン',
+    type: 'ATTACK',
+    cost: 2,
+    baseAtk: 250,
+    baseHp: 200,
+    tags: ['戦士'],
+    description: '堅実な性能を持つ攻撃カード。',
+    flavorText: '「ヨートン参上！」',
+    artColor: '#10b981',
+    artGradient: 'from-emerald-600 to-teal-900',
+    artSymbol: 'Sword',
+    effects: []
+  },
+
+  // 6. 吉田りゅうく
+  {
+    id: 'atk_yoshida_ryuku',
+    name: '吉田りゅうく',
+    type: 'ATTACK',
+    cost: 3,
+    baseAtk: 300,
+    baseHp: 700,
+    tags: ['りゅうく系', '進化前'],
+    description: '高い体力を誇る。「ふともも」を使用することで「リューク・スカイウォーカー」に進化する。',
+    flavorText: '「鍛え上げられたタフネス。秘めたるフォースが眠る。」',
+    artColor: '#6366f1',
+    artGradient: 'from-indigo-600 to-slate-900',
+    artSymbol: 'Shield',
+    effects: [],
+    evolutionRule: {
+      targetDefinitionId: 'evo_ryuku_skywalker'
+    }
+  },
+
+  // 7. リューク・スカイウォーカー (進化カード)
+  {
+    id: 'evo_ryuku_skywalker',
+    name: 'リューク・スカイウォーカー',
     type: 'ATTACK',
     cost: 5,
-    baseAtk: 2200,
-    baseHp: 2200,
-    tags: ['進化', 'ドラゴン', '全体攻撃'],
-    description: '【進化召喚】「幼竜ドラコ」から進化！【召喚時】敵の場の全攻撃カードに500ダメージ！',
-    flavorText: '天を焼き尽くす紅蓮の業火。地上に逃げ場はない。',
-    artColor: '#f43f5e',
-    artGradient: 'from-rose-500 via-red-600 to-amber-950',
+    baseAtk: 1000,
+    baseHp: 1000,
+    tags: ['りゅうく系', '進化体', 'ジェダイ'],
+    description: '「吉田りゅうく」に「ふともも」を使用して進化。【効果】「リュークと共にあらんことを」',
+    flavorText: '「リュークと共にあらんことを。」銀河を揺るがす圧倒的フォース。',
+    artColor: '#0ea5e9',
+    artGradient: 'from-cyan-400 via-blue-600 to-slate-950',
+    artSymbol: 'Zap',
+    isEvolutionOnly: true,
+    effects: []
+  },
+
+  // 8. 情報処理基礎のおばぁ
+  {
+    id: 'atk_info_grandma',
+    name: '情報処理基礎のおばぁ',
+    type: 'ATTACK',
+    cost: 2,
+    baseAtk: 100,
+    baseHp: 100,
+    tags: ['情報処理', '教官'],
+    description: '【効果】「普通に厳しい」。単位取得への道は険しい。',
+    flavorText: '「普通に厳しいからね。課題出した？」',
+    artColor: '#78716c',
+    artGradient: 'from-stone-600 to-stone-900',
+    artSymbol: 'BookOpen',
+    effects: []
+  },
+
+  // 9. まゆサブレ
+  {
+    id: 'atk_mayu_sable',
+    name: 'まゆサブレ',
+    type: 'ATTACK',
+    cost: 3,
+    baseAtk: 300,
+    baseHp: 450,
+    tags: ['サブレ', '進化前'],
+    description: '攻撃力300（「ムエ」に対しては特攻で攻撃力700！）。「顎カード」を付属させることで「顎・キャノン」に進化する。',
+    flavorText: '「サクサクの香ばしいサブレ。ムエにはめっぽう強い。」',
+    artColor: '#d97706',
+    artGradient: 'from-amber-500 to-yellow-800',
+    artSymbol: 'Crosshair',
+    effects: []
+  },
+
+  // 10. 顎・キャノン (進化カード)
+  {
+    id: 'evo_ago_cannon',
+    name: '顎・キャノン',
+    type: 'ATTACK',
+    cost: 4,
+    baseAtk: 700,
+    baseHp: 300,
+    tags: ['キャノン', '進化体'],
+    description: '「まゆサブレ」に「顎カード」を付属させて進化。攻撃力700（「ムエ」に対しては攻撃力1000！）。',
+    flavorText: '「突き出た顎から放たれる超高出力キャノン砲！」',
+    artColor: '#dc2626',
+    artGradient: 'from-red-600 to-amber-900',
     artSymbol: 'Flame',
+    isEvolutionOnly: true,
+    effects: []
+  },
+
+  // 11. バニラなそうくん
+  {
+    id: 'atk_vanilla_sokun',
+    name: 'バニラなそうくん',
+    type: 'ATTACK',
+    cost: 2,
+    baseAtk: 30,
+    baseHp: 900,
+    tags: ['そうくん系', '高耐久'],
+    description: '【効果】「バニラじゃなくていいじゃぁん」。超高体力で場に居座る。',
+    flavorText: '「バニラじゃなくていいじゃぁん！」',
+    artColor: '#fef08a',
+    artGradient: 'from-yellow-200 via-amber-300 to-yellow-600',
+    artSymbol: 'Heart',
+    effects: []
+  },
+
+  // 12. ムエ
+  {
+    id: 'atk_mue',
+    name: 'ムエ',
+    type: 'ATTACK',
+    cost: 4,
+    baseAtk: 1000,
+    baseHp: 600,
+    tags: ['つだぬまず', '高火力'],
+    description: '攻撃力1000の強豪。しょーちゃん・おりちゃんと共に「つだぬまず」を形成する。',
+    flavorText: '「圧倒的パワーを誇るエースアタッカー。」',
+    artColor: '#ef4444',
+    artGradient: 'from-red-600 via-rose-700 to-stone-900',
+    artSymbol: 'Sword',
+    effects: []
+  },
+
+  // 13. しょーちゃん
+  {
+    id: 'atk_shochan',
+    name: 'しょーちゃん',
+    type: 'ATTACK',
+    cost: 3,
+    baseAtk: 600,
+    baseHp: 500,
+    tags: ['つだぬまず'],
+    description: 'バランスの良いアタッカー。ムエ・おりちゃんと揃うと「つだぬまず」が発動。',
+    flavorText: '「つだぬまずの頼れる中核。」',
+    artColor: '#3b82f6',
+    artGradient: 'from-blue-600 to-cyan-900',
+    artSymbol: 'Zap',
+    effects: []
+  },
+
+  // 14. おりちゃん
+  {
+    id: 'atk_orichan',
+    name: 'おりちゃん',
+    type: 'ATTACK',
+    cost: 3,
+    baseAtk: 500,
+    baseHp: 700,
+    tags: ['つだぬまず', '高耐久'],
+    description: '高耐久アタッカー。ムエ・しょーちゃんと揃うと「つだぬまず」が発動。',
+    flavorText: '「堅実な立ち回りで戦線を支える。」',
+    artColor: '#10b981',
+    artGradient: 'from-emerald-500 to-teal-900',
+    artSymbol: 'Shield',
+    effects: []
+  },
+
+  // 15. 顎
+  {
+    id: 'atk_ago',
+    name: '顎',
+    type: 'ATTACK',
+    cost: 2,
+    baseAtk: 400,
+    baseHp: 100,
+    tags: ['顎'],
+    description: '鋭利な突起物。低コスト高火力。',
+    flavorText: '「見事な鋭角を描く顎。」',
+    artColor: '#f97316',
+    artGradient: 'from-orange-500 to-stone-900',
+    artSymbol: 'Crosshair',
+    effects: []
+  },
+
+  // 16. りゅーのすけ
+  {
+    id: 'atk_ryunosuke',
+    name: 'りゅーのすけ',
+    type: 'ATTACK',
+    cost: 1,
+    baseAtk: 500,
+    baseHp: 2,
+    tags: ['紙装甲'],
+    description: '攻撃力500・体力わずか2の超攻撃型カード。かすり傷でも倒れる。',
+    flavorText: '「当たれば痛いが、触れられたら即終了！」',
+    artColor: '#e11d48',
+    artGradient: 'from-rose-500 to-red-950',
+    artSymbol: 'Zap',
+    effects: []
+  },
+
+  // 17. ヘッドフォンニキ
+  {
+    id: 'atk_headphone_niki',
+    name: 'ヘッドフォンニキ',
+    type: 'ATTACK',
+    cost: 2,
+    baseAtk: 300,
+    baseHp: 300,
+    tags: ['ニキ系', '進化前'],
+    description: '「ヘッドフォンニキ」同士を重ね合わせることで「オンフードヘッドフォンニキ」へと進化する！',
+    flavorText: '「お気に入りのヘッドフォンで音楽に没頭中。」',
+    artColor: '#8b5cf6',
+    artGradient: 'from-purple-500 to-indigo-950',
+    artSymbol: 'Sparkles',
+    effects: [],
+    evolutionRule: {
+      targetDefinitionId: 'evo_onhood_headphone_niki'
+    }
+  },
+
+  // 18. オンフードヘッドフォンニキ (進化カード)
+  {
+    id: 'evo_onhood_headphone_niki',
+    name: 'オンフードヘッドフォンニキ',
+    type: 'ATTACK',
+    cost: 4,
+    baseAtk: 700,
+    baseHp: 700,
+    tags: ['ニキ系', '進化体'],
+    description: 'ヘッドフォンニキにヘッドフォンニキを重ねて合体進化！フードの上からヘッドフォンを装着した究極形態。',
+    flavorText: '「フードの上から装着することで更なる密閉感と力を手に入れた。」',
+    artColor: '#c026d3',
+    artGradient: 'from-fuchsia-600 to-purple-950',
+    artSymbol: 'Crown',
+    isEvolutionOnly: true,
+    effects: []
+  },
+
+  // 19. 井上教授（壁） (環境カード「フェニックスホール」の特殊生成カード)
+  {
+    id: 'token_inoue_professor',
+    name: '井上教授（壁）',
+    type: 'ATTACK',
+    cost: 1,
+    baseAtk: 0,
+    baseHp: 100,
+    tags: ['特殊生成', '壁', '守護'],
+    description: '【特殊生成・守護】フェニックスホールの効果で生成される壁。相手の攻撃を受け止める。',
+    flavorText: '「立ちはだかる学術の壁。」',
+    artColor: '#64748b',
+    artGradient: 'from-slate-600 to-stone-900',
+    artSymbol: 'Shield',
     isEvolutionOnly: true,
     effects: [
       {
-        id: 'eff_volces_blast',
+        id: 'eff_inoue_wall',
         trigger: 'ON_PLAY',
-        targetType: 'ALL_ENEMY_CARDS',
-        description: '敵全カードに500ダメージ',
-        damage: 500
+        targetType: 'NONE',
+        description: '【守護】壁として敵の攻撃を引き受ける',
+        specialAction: 'TAUNT'
       }
     ]
   }

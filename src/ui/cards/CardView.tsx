@@ -59,7 +59,7 @@ export const CardView: React.FC<CardViewProps> = ({
   const sizeClasses = {
     small: 'w-14 h-20 text-[9px]',
     field: 'w-20 h-28 text-[10px]',
-    hand: 'w-22 h-32 text-xs',
+    hand: 'w-16 h-24 sm:w-18 sm:h-27 text-[9px]',
     large: 'w-60 h-84 text-sm'
   };
 
