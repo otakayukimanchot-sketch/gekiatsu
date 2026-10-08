@@ -107,6 +107,11 @@ export const CARD_EVOLUTION_LINES = {
     stages: ['atk_africa', 'evo_senmon_africa', 'evo_africa_ex'],
     relatedSupportCards: [],
   },
+  donachanLine: {
+    familyName: 'どなちゃん系列',
+    stages: ['atk_donachan', 'evo_nesoberi_donachan', 'evo_donachan_ex'],
+    relatedSupportCards: [],
+  },
   tsudanumazuGroup: {
     familyName: 'つだぬまず＆特効系列',
     stages: [
@@ -164,6 +169,7 @@ export function createStandardDeckDefinitionIds(): string[] {
     ['atk_vanilla_sokun', 'evo_vanilla_janakute', 'evo_vanilla_ex'],
     ['atk_keroro_gunso', 'evo_geroro_gunso', 'evo_gunso_ex'],
     ['atk_africa', 'evo_senmon_africa', 'evo_africa_ex'],
+    ['atk_donachan', 'evo_nesoberi_donachan', 'evo_donachan_ex'],
   ];
 
   const singleAttackIds: string[] = ATTACK_CARDS.filter(

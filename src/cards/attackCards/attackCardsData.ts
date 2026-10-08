@@ -1705,6 +1705,77 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
       artSymbol: 'Crown',
     },
   },
+  // どなちゃん進化系列: どなちゃん (Lv.2) → ねそべりどなちゃん (Lv.4) → どなちゃんEX (Lv.5)
+  {
+    id: 'atk_donachan',
+    name: 'どなちゃん',
+    type: 'ATTACK',
+    evolution: {
+      family: 'どなちゃん系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: 'evo_nesoberi_donachan',
+    },
+    level: 2,
+    abilities: {
+      attackName: 'どなちゃんステップ',
+      activeEffect: '2エネルギーで50ダメージを与える基本攻撃',
+      description:
+        'どなちゃん進化系列の起点となるLv.2基礎カード。「ねそべりどなちゃん」へ進化可能。',
+    },
+    ui: {
+      tags: ['どなちゃん系', '基礎', 'Lv.2'],
+      flavorText: '「愛嬌たっぷりのどなちゃんが登場！」',
+      artSymbol: 'Heart',
+    },
+  },
+  {
+    id: 'evo_nesoberi_donachan',
+    name: 'ねそべりどなちゃん',
+    type: 'ATTACK',
+    evolution: {
+      family: 'どなちゃん系列',
+      stage: 2,
+      evolvesFrom: 'atk_donachan',
+      evolvesTo: 'evo_donachan_ex',
+    },
+    level: 4,
+    abilities: {
+      attackName: 'ごろごろローリングプレス',
+      activeEffect: '3エネルギーで100ダメージを与える強襲攻撃',
+      description:
+        '「どなちゃん」から進化。脱力した寝そべりフォームから3エネルギー100ダメージを繰り出す。「どなちゃんEX」へ進化可能。',
+    },
+    ui: {
+      tags: ['どなちゃん系', 'ねそべり', '進化', 'Lv.4'],
+      flavorText: '「ねそべりながらも威力は抜群！油断した相手を押し潰す！」',
+      artSymbol: 'Sparkles',
+    },
+  },
+  {
+    id: 'evo_donachan_ex',
+    name: 'どなちゃんEX',
+    type: 'ATTACK',
+    evolution: {
+      family: 'どなちゃん系列',
+      stage: 3,
+      evolvesFrom: 'evo_nesoberi_donachan',
+      evolvesTo: null,
+    },
+    level: 5,
+    abilities: {
+      attackName: 'EXアルティメット・どなちゃんフィーバー',
+      activeEffect: '4エネルギーで130ダメージを与えるEX必殺技',
+      passiveEffect: 'EXルール：きぜつした際、相手は2ポイントを獲得する',
+      description:
+        '【EX級】「ねそべりどなちゃん」から進化する最終形態！HP160・攻撃力130の圧倒的カリスマを放つ。',
+    },
+    ui: {
+      tags: ['どなちゃん系', 'EX', '進化', 'Lv.5'],
+      flavorText: '「完全覚醒したどなちゃんEX！誰もこのフィーバーを止められない！！」',
+      artSymbol: 'Crown',
+    },
+  },
 ];
 
 export const ATTACK_CARDS: CardDefinition[] = ATTACK_CARD_SEEDS.map(buildCardDefinition);
