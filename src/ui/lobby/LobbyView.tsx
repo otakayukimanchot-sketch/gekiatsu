@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { RuleModal } from './RuleModal';
 import { DeckInspectModal } from './DeckInspectModal';
+import { ALL_CARD_DEFINITIONS } from '../../cards/cardRegistry';
 
 interface LobbyViewProps {
   playerName: string;
@@ -311,7 +312,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-stone-200 text-xs font-bold border border-slate-800 cursor-pointer"
           >
             <Layers className="w-3.5 h-3.5 text-amber-400" />
-            <span>全カード図鑑＆デッキ (全38種)</span>
+            <span>全カード図鑑＆デッキ (全{ALL_CARD_DEFINITIONS.length}種)</span>
           </button>
         </div>
       </div>

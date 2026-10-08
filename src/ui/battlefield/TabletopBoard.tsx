@@ -6,7 +6,6 @@ import { canEvolveCard } from '../../game/engine/gameEngine';
 import { CardView } from '../cards/CardView';
 import { GraveyardModal } from '../graveyard/GraveyardModal';
 import { FieldSlot } from './FieldSlot';
-import { EnvironmentZone } from './EnvironmentZone';
 import { CardDetailModal } from '../cards/CardDetailModal';
 import { LogDrawer } from './LogDrawer';
 import {
@@ -39,12 +38,18 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     isMyTurn,
     mustPromoteBench,
     phase,
-    environment,
     logs,
     winnerPlayerId,
     winReason,
     lastAnimation,
   } = gameState;
+
+  const myBench = Array.isArray(me?.bench) ? me.bench : [null, null, null];
+  const oppBench = Array.isArray(opponent?.bench) ? opponent.bench : [null, null, null];
+  const myHand = Array.isArray(me?.hand) ? me.hand : [];
+  const myTrash = Array.isArray(me?.trash) ? me.trash : [];
+  const oppTrash = Array.isArray(opponent?.trash) ? opponent.trash : [];
+  const safeLogs = Array.isArray(logs) ? logs : [];
 
   const [selectedHandCard, setSelectedHandCard] = useState<CardInstance | null>(null);
   const [hoveredHandCardId, setHoveredHandCardId] = useState<string | null>(null);
@@ -118,7 +123,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
       return () => clearTimeout(t);
     }
 
-    if (lastAnimation.type === 'SPELL' || lastAnimation.type === 'ENVIRONMENT') {
+    if (lastAnimation.type === 'SPELL') {
       setAnimBanner(`✨ 「${lastAnimation.cardName || ''}」を発動！`);
       const t = setTimeout(() => setAnimBanner(null), 1200);
       return () => clearTimeout(t);
@@ -136,7 +141,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     if (!handCard) return [];
     const def = getCardDefinition(handCard.definitionId);
     if (!def || def.type !== 'ATTACK' || !def.evolution.evolvesFrom) return [];
-    return [me.activeCard, ...me.bench].filter(
+    return [me.activeCard, ...myBench].filter(
       (fc): fc is CardInstance =>
         fc !== null && canEvolveCard(fc, handCard, gameState.turnNumber).ok
     );
@@ -200,14 +205,6 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
         return;
       }
       onSendAction('USE_SPELL_CARD', {
-        cardInstanceId: selectedHandCard.instanceId,
-      });
-      clearModes();
-      return;
-    }
-
-    if (def.type === 'ENVIRONMENT') {
-      onSendAction('PLAY_ENVIRONMENT', {
         cardInstanceId: selectedHandCard.instanceId,
       });
       clearModes();
@@ -326,7 +323,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     !!me.activeCard &&
     !!opponent.activeCard &&
     me.activeCard.attachedEnergy >= me.activeCard.energyCost;
-  const hasBenchCards = me.bench.some((b) => b !== null);
+  const hasBenchCards = myBench.some((b) => b !== null);
   const canRetreatNow =
     isMyTurn &&
     !me.hasRetreatedThisTurn &&
@@ -361,10 +358,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
           ? 'バトル場をタップして配置'
           : '空きベンチ枠または「ベンチに出す」をタップ！';
       }
-      if (selectedDef.type === 'SPELL') {
-        return '「魔法を発動」ボタンをタップ！';
-      }
-      return '環境ゾーンまたは「環境を展開」をタップ！';
+      return '「魔法を発動」ボタンをタップ！';
     }
     if (canAttachEnergyNow) {
       return '①⚡エネルギー付与 ➔ ②手札をベンチへ/進化 ➔ ③⚔️わざ攻撃！';
@@ -377,7 +371,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
 
   // Shared Hand Renderer (Guarantees 100% full card visibility from top edge to bottom edge)
   const renderHandCards = (isLandscapeMode: boolean) => {
-    if (!me.hand || me.hand.length === 0) {
+    if (myHand.length === 0) {
       return (
         <div className="h-full flex items-center justify-center text-[11px] text-slate-500 italic px-4">
           手札がありません
@@ -385,7 +379,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
       );
     }
 
-    const total = me.hand.length;
+    const total = myHand.length;
     const overlapClass = isLandscapeMode
       ? total <= 4
         ? 'space-x-1.5'
@@ -401,7 +395,8 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     return (
       <div className="w-full overflow-x-auto overflow-y-visible pokepoke-scroll flex items-center justify-center px-2 pt-2.5 pb-1">
         <div className={`flex items-center justify-center ${overlapClass}`}>
-          {me.hand.map((card, idx) => {
+          {myHand.map((card, idx) => {
+            if (!card) return null;
             const isSelected = selectedHandCard?.instanceId === card.instanceId;
             const isHovered = hoveredHandCardId === card.instanceId;
             const cardDef = getCardDefinition(card.definitionId);
@@ -502,9 +497,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                 : !me.activeCard
                 ? 'バトル場に出す'
                 : 'ベンチに出す'
-              : selectedDef.type === 'SPELL'
-              ? '魔法を発動'
-              : '環境を展開'}
+              : '魔法を発動'}
           </button>
           <button
             onClick={() => setInspectCard(selectedHandCard)}
@@ -591,7 +584,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                 className="px-1.5 py-0.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-stone-300 flex items-center gap-0.5 cursor-pointer"
               >
                 <Trash2 className="w-2.5 h-2.5 text-stone-400" />
-                <span className="text-stone-400 font-mono">{opponent.trash.length}</span>
+                <span className="text-stone-400 font-mono">{oppTrash.length}</span>
               </button>
             </div>
           </div>
@@ -599,7 +592,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
           {/* Opponent Bench (3 Slots) */}
           <div className="flex items-center justify-center gap-2">
             <span className="text-[8px] font-bold text-slate-500">相手ベンチ</span>
-            {opponent.bench.map((card, idx) => (
+            {oppBench.map((card, idx) => (
               <FieldSlot
                 key={`opp_bench_p_${idx}`}
                 card={card}
@@ -659,16 +652,11 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             </div>
           </div>
 
-          {/* Center Status & Environment Bar */}
-          <div className="w-full flex items-center justify-between gap-1.5 py-1 px-2 rounded-xl bg-slate-900/90 border border-slate-700/80 shadow-inner">
-            <EnvironmentZone
-              environment={environment}
-              canPlace={selectedDef?.type === 'ENVIRONMENT' && isMyTurn}
-              onPlaceEnvironment={() => handlePlaySelectedHandCard()}
-              onInspect={() => {
-                if (environment) setInspectCard(environment.cardInstance);
-              }}
-            />
+          {/* Center Status Bar */}
+          <div className="w-full flex items-center justify-between gap-1.5 py-1 px-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 shadow-inner">
+            <div className="px-2 py-0.5 rounded-lg bg-slate-950 border border-amber-500/40 text-[9px] font-black text-amber-400 shrink-0">
+              VS
+            </div>
 
             <div className="flex flex-col items-center justify-center flex-1 min-w-0 px-1">
               <div
@@ -856,7 +844,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
           {/* My Bench (3 Slots) */}
           <div className="flex items-center justify-center gap-2">
             <span className="text-[8px] font-bold text-slate-400">自分ベンチ</span>
-            {me.bench.map((card, idx) => {
+            {myBench.map((card, idx) => {
               const isAttachTarget = isAttachingEnergy && !!card;
               const isRetreatTarget = isRetreating && !!card;
               const isPromoteTarget = mustPromoteBench && !!card;
@@ -933,12 +921,12 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
               >
                 <Trash2 className="w-2.5 h-2.5 text-stone-400" />
                 <span>トラッシュ</span>
-                <span className="text-stone-400 font-mono">{me.trash.length}</span>
+                <span className="text-stone-400 font-mono">{myTrash.length}</span>
               </button>
             </div>
           </div>
 
-          <LogDrawer logs={logs} myPlayerId={me.playerId} />
+          <LogDrawer logs={safeLogs} myPlayerId={me.playerId} />
         </div>
 
         {/* D. HAND AREA (shrink-0: Reserved space at bottom so hand is NEVER clipped) */}
@@ -951,9 +939,6 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
       {/* ====================================================================
          2. LANDSCAPE LAYOUT (.layout-landscape)
          Dedicated wide horizontal layout for mobile landscape viewports
-         Row 1: Top Header (Opponent Info + Turn Guide + Environment + End Turn)
-         Row 2: Horizontal Battle Arena ([Opp Bench] [Opp Active] VS [My Active] [My Bench])
-         Row 3: Bottom Bar ([My Controls: Pt / Energy / Attack / Retreat] + [My Hand Horizontal])
          ==================================================================== */}
       <div className="layout-landscape relative z-10 w-full h-full px-2 py-1 gap-1">
         {/* ROW 1: COMPACT TOP HEADER BAR */}
@@ -985,7 +970,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
               onClick={() => setViewingTrash('opp')}
               className="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-[9px] text-stone-300 cursor-pointer"
             >
-              相手トラッシュ({opponent.trash.length})
+              相手トラッシュ({oppTrash.length})
             </button>
           </div>
 
@@ -1043,7 +1028,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             <div className="text-[8px] font-bold text-slate-500 [writing-mode:vertical-rl]">
               相手ベンチ
             </div>
-            {opponent.bench.map((card, idx) => (
+            {oppBench.map((card, idx) => (
               <FieldSlot
                 key={`opp_bench_l_${idx}`}
                 card={card}
@@ -1073,17 +1058,11 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             />
           </div>
 
-          {/* Center: Environment Zone + VS Badge */}
+          {/* Center: VS Badge */}
           <div className="flex flex-col items-center justify-center gap-1 shrink-0">
-            <EnvironmentZone
-              environment={environment}
-              canPlace={selectedDef?.type === 'ENVIRONMENT' && isMyTurn}
-              onPlaceEnvironment={() => handlePlaySelectedHandCard()}
-              onInspect={() => {
-                if (environment) setInspectCard(environment.cardInstance);
-              }}
-            />
-            <span className="text-[9px] font-black text-amber-400/80">VS</span>
+            <div className="px-2 py-1 rounded-lg bg-slate-950 border border-amber-500/40 text-[10px] font-black text-amber-400 shadow">
+              VS
+            </div>
           </div>
 
           {/* Center-Right: My Active Spot */}
@@ -1127,7 +1106,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
 
           {/* Right: My Bench (3 Slots) */}
           <div className="flex items-center gap-1.5">
-            {me.bench.map((card, idx) => {
+            {myBench.map((card, idx) => {
               const isAttachTarget = isAttachingEnergy && !!card;
               const isRetreatTarget = isRetreating && !!card;
               const isPromoteTarget = mustPromoteBench && !!card;
@@ -1191,7 +1170,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   onClick={() => setViewingTrash('me')}
                   className="underline hover:text-white cursor-pointer"
                 >
-                  トラッシュ:{me.trash.length}
+                  トラッシュ:{myTrash.length}
                 </button>
               </div>
             </div>
@@ -1279,7 +1258,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
       {/* Trash Modal */}
       {viewingTrash && (
         <GraveyardModal
-          cards={viewingTrash === 'me' ? me.trash : opponent.trash}
+          cards={viewingTrash === 'me' ? myTrash : oppTrash}
           ownerName={viewingTrash === 'me' ? me.name : opponent.name}
           onClose={() => setViewingTrash(null)}
           onInspectCard={setInspectCard}

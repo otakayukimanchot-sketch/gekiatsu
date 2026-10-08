@@ -52,32 +52,13 @@ function setAnimation(
 
 /**
  * 場のカード（バトル場・ベンチ）の現在攻撃力を再計算する
- * 環境カードや一時バフを反映する
  */
 export function recalculateDynamicStats(state: GameState) {
-  const envDef = state.environment
-    ? getCardDefinition(state.environment.cardInstance.definitionId)
-    : undefined;
-  const envEffect = envDef?.abilities.environmentEffect;
-
   const updatePlayerCards = (player: PlayerBattleState) => {
     const allField = [player.activeCard, ...player.bench].filter(Boolean);
     for (const card of allField) {
       if (!card) continue;
-      const cardDef = getCardDefinition(card.definitionId);
-      let envBonus = 0;
-
-      if (envEffect === 'SENSOJI_BOOST') {
-        if (cardDef?.evolution.family === 'つだぬまず系列') {
-          envBonus = 20;
-        } else {
-          envBonus = 10;
-        }
-      } else if (envEffect === 'SUMIDAGAWA_BOOST' || envEffect === 'YUKIYA_ROOM_BOOST') {
-        envBonus = 10;
-      }
-
-      card.currentAtk = card.baseAtk + card.tempAtkBuff + envBonus;
+      card.currentAtk = card.baseAtk + card.tempAtkBuff;
     }
   };
 
@@ -87,18 +68,41 @@ export function recalculateDynamicStats(state: GameState) {
 
 /**
  * 攻撃カードが与える最終ダメージを計算する
+ * - もえきゅん → しょーちゃん 特効即死
+ * - りょち → ムエ 特効即死
  */
 export function calculateCardDamage(
-  state: GameState,
   attackerCard: CardInstance,
   defenderCard: CardInstance
-): number {
-  const envDef = state.environment
-    ? getCardDefinition(state.environment.cardInstance.definitionId)
-    : undefined;
-  const envShield = envDef?.abilities.environmentEffect === 'PHOENIX_WALL' ? 10 : 0;
-  const totalReduction = defenderCard.damageReductionNextTurn + envShield;
-  return Math.max(10, attackerCard.currentAtk - totalReduction);
+): { damage: number; isInstantKill: boolean } {
+  const attackerDef = getCardDefinition(attackerCard.definitionId);
+  const defenderDef = getCardDefinition(defenderCard.definitionId);
+
+  if (
+    attackerDef?.abilities.combatSkill === 'INSTANT_KILL_SHOCHAN' &&
+    defenderDef?.id === 'atk_shochan'
+  ) {
+    return {
+      damage: Math.max(defenderCard.currentHp, defenderCard.maxHp, 999),
+      isInstantKill: true,
+    };
+  }
+
+  if (
+    attackerDef?.abilities.combatSkill === 'INSTANT_KILL_MUE' &&
+    defenderDef?.id === 'atk_mue'
+  ) {
+    return {
+      damage: Math.max(defenderCard.currentHp, defenderCard.maxHp, 999),
+      isInstantKill: true,
+    };
+  }
+
+  const totalReduction = defenderCard.damageReductionNextTurn;
+  return {
+    damage: Math.max(10, attackerCard.currentAtk - totalReduction),
+    isInstantKill: false,
+  };
 }
 
 export function initializeGame(
@@ -161,7 +165,6 @@ export function initializeGame(
     firstPlayerKey,
     playerA,
     playerB,
-    environment: null,
     stateVersion: 1,
     logs: [],
     lastActionTimestamp: Date.now(),
@@ -209,36 +212,6 @@ export function startTurn(state: GameState, nextPlayerKey: PlayerKey) {
   activePlayer.hasRetreatedThisTurn = false;
   activePlayer.hasUsedSpellThisTurn = false;
 
-  const envDef = state.environment
-    ? getCardDefinition(state.environment.cardInstance.definitionId)
-    : undefined;
-
-  if (
-    envDef?.abilities.environmentEffect === 'GROLAN_FULL_HEAL' &&
-    activePlayer.activeCard &&
-    activePlayer.activeCard.currentHp < activePlayer.activeCard.maxHp
-  ) {
-    const before = activePlayer.activeCard.currentHp;
-    activePlayer.activeCard.currentHp = Math.min(
-      activePlayer.activeCard.maxHp,
-      activePlayer.activeCard.currentHp + 10
-    );
-    const healed = activePlayer.activeCard.currentHp - before;
-    if (healed > 0) {
-      const activeDef = getCardDefinition(activePlayer.activeCard.definitionId);
-      addLog(
-        state,
-        activePlayer.playerId,
-        activePlayer.name,
-        'HEAL',
-        `環境「グロラン」のコーヒー効果で「${activeDef?.name}」のHPが${healed}回復！`,
-        activeDef?.name,
-        undefined,
-        healed
-      );
-    }
-  }
-
   if (activePlayer.deck.length > 0) {
     const drawn = activePlayer.deck.shift()!;
     drawn.zone = 'HAND';
@@ -267,7 +240,7 @@ export function startTurn(state: GameState, nextPlayerKey: PlayerKey) {
 }
 
 /**
- * バトル場のカードがHP0以下になった際の気絶（ノックアウト）・ポイント加算・勝敗／ベンチ繰り出し処理
+ * 相手のベンチやバトル場がHP0以下になった際の気絶（ノックアウト）・ポイント加算・勝敗／ベンチ繰り出し処理
  */
 function handleKnockoutAndTurnTransition(
   state: GameState,
@@ -277,9 +250,47 @@ function handleKnockoutAndTurnTransition(
 ) {
   const attacker = state[attackerKey];
   const defender = state[defenderKey];
+
+  // 1. まず相手ベンチでHP0以下になったカードのきぜつ処理（インフル等の全体ダメージ対応）
+  for (let i = 0; i < defender.bench.length; i++) {
+    const bCard = defender.bench[i];
+    if (bCard && bCard.currentHp <= 0) {
+      const bDef = getCardDefinition(bCard.definitionId);
+      const pts = bDef?.stats.pointValue || 1;
+      bCard.currentHp = 0;
+      bCard.attachedEnergy = 0;
+      bCard.tempAtkBuff = 0;
+      bCard.damageReductionNextTurn = 0;
+      bCard.zone = 'TRASH';
+      bCard.benchIndex = undefined;
+      defender.trash.push(bCard);
+      defender.bench[i] = null;
+
+      attacker.score = Math.min(attacker.maxScore, attacker.score + pts);
+      addLog(
+        state,
+        attacker.playerId,
+        attacker.name,
+        'KNOCKOUT',
+        `ベンチの「${bDef?.name}」がきぜつ！ ${attacker.name} が ${pts} ポイント獲得！（合計 ${attacker.score}/${attacker.maxScore} pt）`,
+        bDef?.name,
+        undefined,
+        pts
+      );
+    }
+  }
+
+  // 2. バトル場のきぜつチェック
   const knockedCard = defender.activeCard;
 
   if (!knockedCard || knockedCard.currentHp > 0) {
+    if (attacker.score >= attacker.maxScore) {
+      state.phase = 'GAME_OVER';
+      state.winnerPlayerId = attacker.playerId;
+      state.winReason = `${attacker.name} が先に ${attacker.maxScore} ポイントを獲得して勝利！`;
+      addLog(state, attacker.playerId, attacker.name, 'GAME_OVER', state.winReason);
+      return;
+    }
     if (endTurnAfterCompare) {
       startTurn(state, defenderKey);
     }
@@ -543,7 +554,6 @@ function evolveFieldCard(
       targetCard = player.bench.find((b) => b?.instanceId === targetCardInstanceId) || null;
     }
   } else {
-    // ターゲット未指定の場合は進化可能な自分の場のカードを自動検索
     const candidates = [player.activeCard, ...player.bench].filter((c): c is CardInstance =>
       Boolean(c && canEvolveCard(c, evoCard, state.turnNumber).ok)
     );
@@ -568,10 +578,8 @@ function evolveFieldCard(
   const oldDef = getCardDefinition(targetCard.definitionId);
   const damageTaken = Math.max(0, targetCard.maxHp - targetCard.currentHp);
 
-  // 手札から進化カードを消費
   player.hand.splice(handIdx, 1);
 
-  // 場のカードインスタンスのステータスを進化後の定義へ更新（付与エネルギーや被ダメージ量を維持）
   targetCard.definitionId = evoDef.id;
   targetCard.maxHp = evoDef.hp;
   targetCard.currentHp = Math.max(10, evoDef.hp - damageTaken);
@@ -579,7 +587,7 @@ function evolveFieldCard(
   targetCard.currentAtk = evoDef.attack;
   targetCard.energyCost = evoDef.energyCost;
   targetCard.retreatCost = evoDef.retreatCost;
-  targetCard.summonTurn = state.turnNumber; // 同一ターン内の連続2段階進化を防止
+  targetCard.summonTurn = state.turnNumber;
 
   recalculateDynamicStats(state);
 
@@ -761,6 +769,20 @@ function activateSpellCard(
       }
       break;
     }
+    case 'DRAW_2_IF_LOW_HAND': {
+      const drawCount = player.hand.length <= 3 ? 2 : 1;
+      let actualDrawn = 0;
+      for (let i = 0; i < drawCount; i++) {
+        if (player.deck.length > 0) {
+          const drawn = player.deck.shift()!;
+          drawn.zone = 'HAND';
+          player.hand.push(drawn);
+          actualDrawn++;
+        }
+      }
+      effectSummary = `${player.name} が「${def.name}」を発動！山札からカードを${actualDrawn}枚引いた！`;
+      break;
+    }
     case 'SEARCH_ATTACK_CARD': {
       const atkIdx = player.deck.findIndex(
         (c) => getCardDefinition(c.definitionId)?.type === 'ATTACK'
@@ -781,6 +803,18 @@ function activateSpellCard(
         player.activeCard.attachedEnergy += 1;
         const actDef = getCardDefinition(player.activeCard.definitionId);
         effectSummary = `${player.name} が「${def.name}」を発動！「${actDef?.name}」にボーナスエネルギー＋1！`;
+      }
+      break;
+    }
+    case 'BONUS_ENERGY_BENCH': {
+      const benchTarget =
+        player.bench.find((b) => b !== null && b.attachedEnergy < b.energyCost) ||
+        player.bench.find((b) => b !== null) ||
+        player.activeCard;
+      if (benchTarget) {
+        benchTarget.attachedEnergy += 1;
+        const tDef = getCardDefinition(benchTarget.definitionId);
+        effectSummary = `${player.name} が「${def.name}」を発動！「${tDef?.name}」にボーナスエネルギー＋1！`;
       }
       break;
     }
@@ -812,6 +846,36 @@ function activateSpellCard(
       }
       break;
     }
+    case 'HEAL_ALL_25': {
+      const friendly = [player.activeCard, ...player.bench].filter(Boolean);
+      friendly.forEach((c) => {
+        if (c) c.currentHp = Math.min(c.maxHp, c.currentHp + 25);
+      });
+      effectSummary = `${player.name} が「${def.name}」を発動！自分の場すべてのカードのHPを25回復！`;
+      break;
+    }
+    case 'FULL_HEAL_ALL': {
+      const friendly = [player.activeCard, ...player.bench].filter(Boolean);
+      let count = 0;
+      friendly.forEach((c) => {
+        if (c && c.currentHp < c.maxHp) {
+          c.currentHp = c.maxHp;
+          count++;
+        }
+      });
+      effectSummary = `${player.name} が「${def.name}」を発動！自分の場の傷ついたカード（${count}体）のHPを全回復した！`;
+      break;
+    }
+    case 'PHOENIX_WALL_TOKEN': {
+      const token = createCardInstance('token_inoue_professor', player.playerId);
+      token.zone = 'HAND';
+      player.hand.push(token);
+      if (player.activeCard) {
+        player.activeCard.damageReductionNextTurn += 20;
+      }
+      effectSummary = `${player.name} が「${def.name}」を発動！手札に「井上教授（壁）」を加え、次ターンの被ダメージ−20！`;
+      break;
+    }
     case 'HEAL_20_SHIELD_20': {
       if (player.activeCard) {
         player.activeCard.currentHp = Math.min(
@@ -838,6 +902,22 @@ function activateSpellCard(
         const oppDef = getCardDefinition(opponent.activeCard.definitionId);
         effectSummary = `${player.name} が「${def.name}」を発動！相手の「${oppDef?.name}」に20ダメージ！`;
       }
+      break;
+    }
+    case 'DIRECT_DMG_30': {
+      if (opponent.activeCard) {
+        opponent.activeCard.currentHp = Math.max(0, opponent.activeCard.currentHp - 30);
+        const oppDef = getCardDefinition(opponent.activeCard.definitionId);
+        effectSummary = `${player.name} が「${def.name}」を発動！相手の「${oppDef?.name}」に30ダメージ！`;
+      }
+      break;
+    }
+    case 'BENCH_STORM_15_ALL': {
+      const oppCards = [opponent.activeCard, ...opponent.bench].filter(Boolean);
+      oppCards.forEach((c) => {
+        if (c) c.currentHp = Math.max(0, c.currentHp - 15);
+      });
+      effectSummary = `${player.name} が「${def.name}」を発動！相手の場すべてのカードに15ダメージ！`;
       break;
     }
     case 'DRAIN_ENERGY_DMG_10': {
@@ -898,86 +978,18 @@ function activateSpellCard(
     cardName: def.name,
   });
 
-  if (opponent.activeCard && opponent.activeCard.currentHp <= 0) {
+  const anyOpponentKnockedOut =
+    (opponent.activeCard && opponent.activeCard.currentHp <= 0) ||
+    opponent.bench.some((b) => b !== null && b.currentHp <= 0);
+
+  if (anyOpponentKnockedOut) {
     handleKnockoutAndTurnTransition(state, playerKey, opponentKey, false);
   }
   return { success: true };
 }
 
 /**
- * 6. 環境カード展開処理
- */
-function activateEnvironmentCard(
-  state: GameState,
-  player: PlayerBattleState,
-  cardInstanceId?: string
-): { success: boolean; error?: string } {
-  const handIdx = player.hand.findIndex((c) => c.instanceId === cardInstanceId);
-  if (handIdx === -1) {
-    return { success: false, error: '手札にその環境カードがありません。' };
-  }
-  const envCard = player.hand[handIdx];
-  const def = getCardDefinition(envCard.definitionId);
-  if (!def || def.type !== 'ENVIRONMENT') {
-    return { success: false, error: '選択されたカードは環境カードではありません。' };
-  }
-
-  player.hand.splice(handIdx, 1);
-
-  if (state.environment) {
-    const oldEnv = state.environment.cardInstance;
-    oldEnv.zone = 'TRASH';
-    const oldOwner = state.playerA.playerId === oldEnv.ownerId ? state.playerA : state.playerB;
-    oldOwner.trash.push(oldEnv);
-  }
-
-  envCard.zone = 'ENVIRONMENT';
-  state.environment = {
-    cardInstance: envCard,
-    placedByPlayerId: player.playerId,
-    placedTurn: state.turnNumber,
-  };
-
-  let envMessage = `${player.name} が環境カード「${def.name}」を展開！`;
-
-  if (def.abilities.environmentEffect === 'GROLAN_FULL_HEAL') {
-    const targets = [player.activeCard, ...player.bench].filter(Boolean);
-    let healedCount = 0;
-    targets.forEach((c) => {
-      if (c && c.currentHp < c.maxHp) {
-        c.currentHp = c.maxHp;
-        healedCount++;
-      }
-    });
-    envMessage = `${player.name} が環境「グロラン」を展開！コーヒーを飲んで自分の場の傷ついたカード（${healedCount}体）のHPを全回復した！`;
-  } else if (def.abilities.environmentEffect === 'PHOENIX_WALL') {
-    const token = createCardInstance('token_inoue_professor', player.playerId);
-    token.zone = 'HAND';
-    player.hand.push(token);
-    envMessage = `${player.name} が環境「フェニックスホール」を展開！手札に「井上教授（壁）」(Lv.1) を1枚生成！`;
-  } else if (
-    def.abilities.environmentEffect === 'SUMIDAGAWA_BOOST' ||
-    def.abilities.environmentEffect === 'YUKIYA_ROOM_BOOST'
-  ) {
-    if (player.activeCard && player.activeCard.currentHp < player.activeCard.maxHp) {
-      player.activeCard.currentHp = Math.min(
-        player.activeCard.maxHp,
-        player.activeCard.currentHp + 20
-      );
-    }
-  }
-
-  recalculateDynamicStats(state);
-  addLog(state, player.playerId, player.name, 'ENVIRONMENT', envMessage, def.name);
-  setAnimation(state, 'ENVIRONMENT', player.playerId, {
-    sourceCardId: envCard.instanceId,
-    cardName: def.name,
-  });
-  return { success: true };
-}
-
-/**
- * 7. バトル場のカードによるわざ攻撃処理
+ * 6. バトル場のカードによるわざ攻撃処理
  */
 function executeCardAttack(
   state: GameState,
@@ -1007,15 +1019,19 @@ function executeCardAttack(
   const attackerDef = getCardDefinition(attackerCard.definitionId);
   const defenderDef = getCardDefinition(defenderCard.definitionId);
 
-  const damage = calculateCardDamage(state, attackerCard, defenderCard);
+  const { damage, isInstantKill } = calculateCardDamage(attackerCard, defenderCard);
   defenderCard.currentHp = Math.max(0, defenderCard.currentHp - damage);
+
+  const logMessage = isInstantKill
+    ? `💥特効即死！ ${player.name} の「${attackerDef?.name}」が宿敵「${defenderDef?.name}」を一撃で葬り去った！！`
+    : `${player.name} の「${attackerDef?.name}」の『${attackerDef?.abilities.attackName}』！ 相手の「${defenderDef?.name}」に ${damage} ダメージ！（残りHP: ${defenderCard.currentHp}/${defenderCard.maxHp}）`;
 
   addLog(
     state,
     player.playerId,
     player.name,
     'ATTACK',
-    `${player.name} の「${attackerDef?.name}」の『${attackerDef?.abilities.attackName}』！ 相手の「${defenderDef?.name}」に ${damage} ダメージ！（残りHP: ${defenderCard.currentHp}/${defenderCard.maxHp}）`,
+    logMessage,
     attackerDef?.name,
     defenderDef?.name,
     damage
@@ -1025,7 +1041,7 @@ function executeCardAttack(
     sourceCardId: attackerCard.instanceId,
     targetCardId: defenderCard.instanceId,
     cardName: attackerDef?.name,
-    attackName: attackerDef?.abilities.attackName,
+    attackName: isInstantKill ? '特効一撃即死' : attackerDef?.abilities.attackName,
     damage,
   });
 
@@ -1034,7 +1050,7 @@ function executeCardAttack(
 }
 
 /**
- * 8. きぜつ後のベンチカード繰り出し処理
+ * 7. きぜつ後のベンチカード繰り出し処理
  */
 function promoteBenchCardToActive(
   state: GameState,
@@ -1178,9 +1194,6 @@ export function handleGameAction(
       break;
     case 'USE_SPELL_CARD':
       result = activateSpellCard(state, playerKey, opponentKey, payload.cardInstanceId);
-      break;
-    case 'PLAY_ENVIRONMENT':
-      result = activateEnvironmentCard(state, player, payload.cardInstanceId);
       break;
     case 'ATTACK':
       result = executeCardAttack(state, playerKey, opponentKey);

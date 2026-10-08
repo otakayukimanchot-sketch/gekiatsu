@@ -132,19 +132,15 @@ export const RuleModal: React.FC<RuleModalProps> = ({ onClose }) => {
             </div>
           </div>
 
-          {/* Section 4: Spell & Environment Cards */}
+          {/* Section 4: Spell Cards */}
           <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
-            <h3 className="font-black text-emerald-300 mb-1.5 flex items-center gap-1.5 text-sm">
-              <Layers className="w-4 h-4" /> 魔法カード（ブルー）＆ 環境カード（エメラルド）
+            <h3 className="font-black text-blue-300 mb-1.5 flex items-center gap-1.5 text-sm">
+              <Layers className="w-4 h-4" /> 魔法カード（Lv.1 / ブルー）
             </h3>
             <div className="space-y-1 text-stone-200">
               <div>
                 <strong className="text-blue-300">魔法カード (Lv.1 / ブルー):</strong>{' '}
-                エネルギー消費0で1ターンに1枚使用可能。「Superfly」（1枚ドロー）や火力強化・回復など即座に効果を発揮します。
-              </div>
-              <div>
-                <strong className="text-emerald-300">環境カード (Lv.1 / エメラルド):</strong>{' '}
-                フィールドの環境ゾーンに展開。「グロラン」（傷ついた自分の場のカードのHPを全回復）など戦局を有利にします。
+                エネルギー消費0で1ターンに1枚使用可能。「モンスターエナジー」「ZONE」（エネルギー加速）、「グローバルラウンジ」（全体HP全回復）、「浅草寺」「FCバルセロナ」（火力強化）、「インフル」「五郎丸のキック」（直接ダメージ）など即座に強力な効果を発揮します。
               </div>
             </div>
           </div>

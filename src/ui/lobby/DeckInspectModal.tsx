@@ -22,8 +22,7 @@ type FilterOption =
   | 'LV3'
   | 'LV4'
   | 'LV5'
-  | 'SPELL'
-  | 'ENVIRONMENT';
+  | 'SPELL';
 
 export const DeckInspectModal: React.FC<DeckInspectModalProps> = ({ onClose }) => {
   const [filter, setFilter] = useState<FilterOption>('ALL');
@@ -49,7 +48,6 @@ export const DeckInspectModal: React.FC<DeckInspectModalProps> = ({ onClose }) =
       if (filter === 'LV4') return def.type === 'ATTACK' && def.level === 4;
       if (filter === 'LV5') return def.type === 'ATTACK' && def.level === 5;
       if (filter === 'SPELL') return def.type === 'SPELL';
-      if (filter === 'ENVIRONMENT') return def.type === 'ENVIRONMENT';
       return true;
     });
   }, [filter, allCardInstances, standardDeckInstances]);
@@ -63,7 +61,6 @@ export const DeckInspectModal: React.FC<DeckInspectModalProps> = ({ onClose }) =
     { key: 'LV4', label: 'Lv.4 強襲', colorClass: 'bg-rose-400 text-rose-950' },
     { key: 'LV5', label: 'Lv.5 EX級', colorClass: 'bg-amber-400 text-amber-950' },
     { key: 'SPELL', label: 'Lv.1 魔法', colorClass: 'bg-blue-400 text-blue-950' },
-    { key: 'ENVIRONMENT', label: 'Lv.1 環境', colorClass: 'bg-emerald-400 text-emerald-950' },
   ];
 
   return (

@@ -311,13 +311,27 @@ export class CardRoomManager {
     const room = this.rooms.get(roomId);
     if (!room || !room.gameState || room.gameState.phase === 'GAME_OVER') return;
 
-    const botAction = decideNextBotAction(room.gameState, 'playerB');
-    if (!botAction) return;
+    try {
+      const botAction = decideNextBotAction(room.gameState, 'playerB');
+      if (!botAction) return;
 
-    const res = handleGameAction(room.gameState, room.gameState.playerB.playerId, botAction);
-    if (res.success) {
-      this.broadcastGameState(roomId);
-      this.scheduleBotIfNeeded(roomId);
+      const res = handleGameAction(room.gameState, room.gameState.playerB.playerId, botAction);
+      if (res.success) {
+        this.broadcastGameState(roomId);
+        this.scheduleBotIfNeeded(roomId);
+      } else {
+        // Fallback: if a bot action fails validation, safely end the bot's turn so the match never stalls or loops
+        if (room.gameState.phase === 'MAIN' && room.gameState.activePlayerKey === 'playerB') {
+          const fallback = handleGameAction(room.gameState, room.gameState.playerB.playerId, {
+            actionType: 'END_TURN',
+          });
+          if (fallback.success) {
+            this.broadcastGameState(roomId);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[Bot Step Error]', err);
     }
   }
 }

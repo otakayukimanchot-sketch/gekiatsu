@@ -113,16 +113,6 @@ export const SPELL_COLOR_THEME: CardColorTheme = {
   tierLabel: 'Lv.1 魔法',
 };
 
-export const ENVIRONMENT_COLOR_THEME: CardColorTheme = {
-  frameGradient: 'from-emerald-600 via-teal-700 to-emerald-950',
-  borderClass: 'border-emerald-300',
-  badgeBg: 'bg-emerald-200',
-  badgeText: 'text-emerald-950',
-  artGradient: 'from-emerald-400 via-teal-600 to-stone-950',
-  accentHex: '#10b981',
-  tierLabel: 'Lv.1 環境',
-};
-
 export const ELEMENT_METADATA: Record<
   CardElement,
   { label: string; badgeClass: string; summary: string }
@@ -203,7 +193,7 @@ export const SET_METADATA: Record<
     id: 'SET_000_ORIGIN',
     code: 'SET-000',
     name: '原初の学園伝承',
-    themeDescription: 'ホンモノカードバトルの原点となる伝統の38枚。',
+    themeDescription: 'ホンモノカードバトルの伝統と新戦力が融合したオールスター収録セット。',
   },
   SET_001_DAWN: {
     id: 'SET_001_DAWN',
@@ -247,7 +237,6 @@ export function getStatsForCard(type: CardType, level: CardLevel): LevelStats {
 
 export function getColorThemeForCard(type: CardType, level: CardLevel): CardColorTheme {
   if (type === 'SPELL') return SPELL_COLOR_THEME;
-  if (type === 'ENVIRONMENT') return ENVIRONMENT_COLOR_THEME;
   return ATTACK_LEVEL_COLORS[level] || ATTACK_LEVEL_COLORS[1];
 }
 
@@ -277,7 +266,6 @@ function inferDefaultElement(seed: RawCardSeed): CardElement {
 }
 
 function inferSubCategory(seed: RawCardSeed): CardSubCategory {
-  if (seed.type === 'ENVIRONMENT') return 'FIELD_ENV';
   if (seed.type === 'SPELL') {
     if (
       seed.abilities.spellEffect === 'BUFF_ATK_20' ||
@@ -347,6 +335,5 @@ export function buildCardDefinition(seed: RawCardSeed): CardDefinition {
     flavorText: seed.ui.flavorText,
     artSymbol: seed.ui.artSymbol,
     spellEffect: seed.abilities.spellEffect,
-    environmentEffect: seed.abilities.environmentEffect,
   };
 }

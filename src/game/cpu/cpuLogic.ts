@@ -20,7 +20,6 @@ export function decideNextBotAction(
   if (state.phase === 'WAITING_FOR_PROMOTION') {
     if (state.promotionRequiredPlayerKey !== botKey) return null;
 
-    // Pick the best Bench card: prefer one that already has enough energy to attack, or highest HP+ATK score
     let bestIdx = -1;
     let bestScore = -999;
 
@@ -95,24 +94,6 @@ export function decideNextBotAction(
     }
   }
 
-  // 4. Play Environment card if beneficial
-  const envInHand = bot.hand.find((c) => {
-    const def = getCardDefinition(c.definitionId);
-    if (!def || def.type !== 'ENVIRONMENT') return false;
-    if (def.environmentEffect === 'GROLAN_FULL_HEAL') {
-      // Use Grolan when any friendly card is damaged
-      return [bot.activeCard, ...bot.bench].some((fc) => fc && fc.currentHp < fc.maxHp);
-    }
-    return state.environment?.cardInstance.definitionId !== def.id;
-  });
-
-  if (envInHand) {
-    return {
-      actionType: 'PLAY_ENVIRONMENT',
-      cardInstanceId: envInHand.instanceId,
-    };
-  }
-
   // 5. Use Spell card if not yet used this turn
   if (!bot.hasUsedSpellThisTurn) {
     const spellInHand = bot.hand.find(
@@ -130,11 +111,9 @@ export function decideNextBotAction(
   if (!bot.hasAttachedEnergyThisTurn && bot.energyAvailable > 0) {
     let targetId: string | undefined;
 
-    // Priority A: Active card needs energy to reach its attack cost
     if (bot.activeCard && bot.activeCard.attachedEnergy < bot.activeCard.energyCost) {
       targetId = bot.activeCard.instanceId;
     } else {
-      // Priority B: Bench card that needs energy to reach its attack cost (prefer higher level ace)
       const benchCandidates = bot.bench
         .filter((b): b is NonNullable<typeof b> => b !== null && b.attachedEnergy < b.energyCost)
         .sort((a, b) => {
@@ -146,7 +125,6 @@ export function decideNextBotAction(
       if (benchCandidates.length > 0) {
         targetId = benchCandidates[0].instanceId;
       } else if (bot.activeCard) {
-        // Priority C: Give extra energy to Active card for future retreat
         targetId = bot.activeCard.instanceId;
       }
     }
@@ -172,7 +150,10 @@ export function decideNextBotAction(
 
     if (!activeCanKoOpp && (!activeCanAttack || activeIsLowHp)) {
       const readyBenchIdx = bot.bench.findIndex(
-        (b) => b !== null && b.attachedEnergy >= b.energyCost && b.currentHp > bot.activeCard!.currentHp
+        (b) =>
+          b !== null &&
+          b.attachedEnergy >= b.energyCost &&
+          b.currentHp > bot.activeCard!.currentHp
       );
       if (readyBenchIdx !== -1) {
         return {

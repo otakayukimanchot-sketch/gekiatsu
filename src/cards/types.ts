@@ -1,4 +1,4 @@
-export type CardType = 'ATTACK' | 'SPELL' | 'ENVIRONMENT';
+export type CardType = 'ATTACK' | 'SPELL';
 
 export type CardLevel = 1 | 2 | 3 | 4 | 5;
 
@@ -28,7 +28,7 @@ export type CardFaction =
   | '天空聖域';
 
 export type CardSetId =
-  | 'SET_000_ORIGIN' // Set 000: 原初の学園伝承 (既存38枚)
+  | 'SET_000_ORIGIN' // Set 000: 原初の学園伝承
   | 'SET_001_DAWN'   // Set 001: 始まりの大地
   | 'SET_002_CYBER'  // Set 002: 機巧都市アーク
   | 'SET_003_ABYSS'  // Set 003: 深淵の夜想曲
@@ -41,7 +41,6 @@ export type CardSubCategory =
   | 'SUPPORT_SPELL'   // サポートカード
   | 'EQUIPMENT_SPELL' // 装備カード
   | 'EVENT_SPELL'     // イベント/スペル
-  | 'FIELD_ENV'       // フィールド/環境カード
   | 'SPECIAL_TECH';   // 特殊戦術カード
 
 export type DeckArchetypeId =
@@ -73,6 +72,8 @@ export type OnPlayUnitSkill =
 
 export type CombatUnitSkill =
   | 'NONE'
+  | 'INSTANT_KILL_SHOCHAN'    // もえきゅん: しょーちゃんに対して即死ダメージ
+  | 'INSTANT_KILL_MUE'        // りょち: ムエに対して即死ダメージ
   | 'BERSERK_LOW_HP_30'       // 背水: HP50%以下でダメージ+30
   | 'SWARM_BONUS_10_PER_BENCH'// 陣形: ベンチ1体につきダメージ+10
   | 'HAND_SCALE_BONUS_20'     // 叡智: 手札4枚以上でダメージ+20
@@ -103,30 +104,18 @@ export type SpellEffectKind =
   | 'EQUIP_BLADE_ATK_25_ENERGY_1'
   | 'HEAL_30_BUFF_10'
   | 'HEAL_ALL_25'
+  | 'FULL_HEAL_ALL'
   | 'HEAL_20_SHIELD_20'
   | 'SHIELD_30'
   | 'DIRECT_DMG_20'
+  | 'DIRECT_DMG_30'
   | 'DIRECT_DMG_30_IF_TRASH_3'
   | 'BENCH_STORM_15_ALL'
   | 'DRAIN_ENERGY_DMG_10'
   | 'SWAP_OPPONENT_BENCH'
   | 'PEEK_AND_DRAW'
-  | 'HAND_RELOAD_3';
-
-export type EnvironmentEffectKind =
-  | 'GROLAN_FULL_HEAL'
-  | 'PHOENIX_WALL'
-  | 'SENSOJI_BOOST'
-  | 'SUMIDAGAWA_BOOST'
-  | 'YUKIYA_ROOM_BOOST'
-  | 'VOLCANO_FLAME_20'
-  | 'OCEAN_SANCTUARY_HEAL_15'
-  | 'WORLD_TREE_SWARM_15'
-  | 'CYBER_REACTOR_ENERGY'
-  | 'HOLY_CITADEL_SHIELD_15'
-  | 'ABYSS_GRAVEYARD_20'
-  | 'SKY_COLOSSEUM_HIGH_LV_20'
-  | 'TWILIGHT_BAZAAR_DRAW';
+  | 'HAND_RELOAD_3'
+  | 'PHOENIX_WALL_TOKEN';
 
 export interface EvolutionInfo {
   family: string;
@@ -153,7 +142,6 @@ export interface CardAbilities {
   onPlaySkill?: OnPlayUnitSkill;
   combatSkill?: CombatUnitSkill;
   spellEffect?: SpellEffectKind;
-  environmentEffect?: EnvironmentEffectKind;
 }
 
 export interface CardUiMetadata {
@@ -223,10 +211,9 @@ export interface CardDefinition {
   flavorText?: string;
   artSymbol: string;
   spellEffect?: SpellEffectKind;
-  environmentEffect?: EnvironmentEffectKind;
 }
 
-export type CardZone = 'DECK' | 'HAND' | 'ACTIVE' | 'BENCH' | 'ENVIRONMENT' | 'TRASH';
+export type CardZone = 'DECK' | 'HAND' | 'ACTIVE' | 'BENCH' | 'TRASH';
 
 export interface CardInstance {
   instanceId: string;

@@ -62,6 +62,7 @@ export const CardView: React.FC<CardViewProps> = ({
   className = '',
   style = {},
 }) => {
+  if (!card) return null;
   const def = getCardDefinition(card.definitionId);
   if (!def) return null;
 
@@ -116,7 +117,7 @@ export const CardView: React.FC<CardViewProps> = ({
             <span
               className={`px-1 py-0.1 rounded text-[6.5px] leading-tight font-black shrink-0 ${theme.badgeBg} ${theme.badgeText}`}
             >
-              {def.type === 'ATTACK' ? `Lv.${def.level}` : def.type === 'SPELL' ? '魔法' : '環境'}
+              {def.type === 'ATTACK' ? `Lv.${def.level}` : '魔法'}
             </span>
             {isEvolutionCard && (
               <span className="px-0.5 py-0.1 rounded bg-amber-950/90 border border-amber-400/70 text-amber-200 text-[5.5px] leading-tight font-black">
@@ -241,7 +242,7 @@ export const CardView: React.FC<CardViewProps> = ({
           </div>
         ) : (
           <div className="text-center font-black py-0.5 rounded bg-black/60 text-white text-[7px] leading-tight truncate px-1 border border-white/15">
-            {def.type === 'SPELL' ? '⚡0 魔法発動' : '⚡0 環境展開'}
+            ⚡0 魔法発動
           </div>
         )}
       </div>

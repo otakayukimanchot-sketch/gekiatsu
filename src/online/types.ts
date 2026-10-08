@@ -1,5 +1,5 @@
 import { CardInstance, MaskedCardInstance } from '../cards/types';
-import { ActiveEnvironment, GameAnimationEvent, GameEventLog, GamePhase, PlayerKey } from '../game/types';
+import { GameAnimationEvent, GameEventLog, GamePhase, PlayerKey } from '../game/types';
 
 export interface SanitizedPlayerState {
   playerId: string;
@@ -34,7 +34,6 @@ export interface SanitizedGameState {
   myPlayerKey: PlayerKey;
   me: SanitizedPlayerState;
   opponent: SanitizedPlayerState;
-  environment: ActiveEnvironment | null;
   stateVersion: number;
   winnerPlayerId?: string;
   winReason?: string;

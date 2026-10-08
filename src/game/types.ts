@@ -27,12 +27,6 @@ export interface PlayerBattleState {
   isConnected: boolean;
 }
 
-export interface ActiveEnvironment {
-  cardInstance: CardInstance;
-  placedByPlayerId: string;
-  placedTurn: number;
-}
-
 export type AnimationEventType =
   | 'GAME_START'
   | 'DRAW'
@@ -44,7 +38,6 @@ export type AnimationEventType =
   | 'RETREAT'
   | 'PROMOTE'
   | 'SPELL'
-  | 'ENVIRONMENT'
   | 'HEAL'
   | 'GAME_OVER';
 
@@ -85,7 +78,6 @@ export interface GameState {
   promotionRequiredPlayerKey?: PlayerKey;
   playerA: PlayerBattleState;
   playerB: PlayerBattleState;
-  environment: ActiveEnvironment | null;
   stateVersion: number;
   winnerPlayerId?: string;
   winReason?: string;
@@ -103,7 +95,6 @@ export type GameActionType =
   | 'PROMOTE_BENCH_CARD'
   | 'ATTACK'
   | 'USE_SPELL_CARD'
-  | 'PLAY_ENVIRONMENT'
   | 'END_TURN'
   | 'SURRENDER';
 
