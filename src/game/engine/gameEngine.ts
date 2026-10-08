@@ -874,6 +874,14 @@ function activateSpellCard(
       }
       break;
     }
+    case 'BUFF_ATK_50': {
+      if (player.activeCard) {
+        player.activeCard.tempAtkBuff += 50;
+        const actDef = getCardDefinition(player.activeCard.definitionId);
+        effectSummary = `${player.name} が「${def.name}」を発動！このターン「${actDef?.name}」の攻撃ダメージ＋50！！`;
+      }
+      break;
+    }
     case 'HEAL_30_BUFF_10': {
       if (player.activeCard) {
         player.activeCard.currentHp = Math.min(
@@ -1019,7 +1027,7 @@ function activateSpellCard(
     }
   }
 
-  // カード固有の追加ボーナス処理（trio / ブラックコーヒー / 酒 / ポカリ）
+  // カード固有の追加ボーナス処理（trio / ブラックコーヒー / 酒）
   if (def.id === 'spl_trio_akihabara' && player.activeCard) {
     player.activeCard.tempAtkBuff += 10;
     effectSummary += '（さらにバトル場の攻撃力＋10！）';
@@ -1029,9 +1037,6 @@ function activateSpellCard(
   } else if (def.id === 'spl_sake' && player.activeCard) {
     player.activeCard.tempAtkBuff += 20;
     effectSummary += '（さらに酔拳効果でバトル場の攻撃力＋20！）';
-  } else if (def.id === 'spl_pocari' && player.activeCard) {
-    player.activeCard.damageReductionNextTurn += 10;
-    effectSummary += '（さらに次ターンの被ダメージ−10！）';
   }
 
   recalculateDynamicStats(state);

@@ -99,6 +99,7 @@ export type SpellEffectKind =
   | 'SURGE_ENERGY_IF_SWARM'
   | 'BUFF_ATK_20'
   | 'BUFF_ATK_30'
+  | 'BUFF_ATK_50'
   | 'OVERDRIVE_ATK_40_SELF_15'
   | 'EQUIP_ARMOR_HP_20_SHIELD_20'
   | 'EQUIP_BLADE_ATK_25_ENERGY_1'

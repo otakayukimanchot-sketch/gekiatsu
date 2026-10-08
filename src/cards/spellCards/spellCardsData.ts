@@ -2,12 +2,12 @@ import { CardDefinition, RawCardSeed } from '../types';
 import { buildCardDefinition } from '../levelSystem';
 
 /**
- * 魔法（サポート）カード定義一覧 (全43種・Lv.1統一)
+ * 魔法（サポート）カード定義一覧 (全44種・Lv.1統一)
  *
  * 【記載順序】
- * 1. ドロー・サーチ系: Superfly / 数珠カード / さびしがりやのゆきや / のぞきのそうくん / モリシア（今は亡きショッピングセンター） / 秋葉原 / バキバキ童貞 / 受験パルキアニキ / trio（秋葉原のアイドルグッズ専門店） / ブラックコーヒー
+ * 1. ドロー・サーチ系: Superfly / 数珠カード / さびしがりやのゆきや / のぞきのそうくん / モリシア（今は亡きショッピングセンター） / 秋葉原 / 受験パルキアニキ / trio（秋葉原のアイドルグッズ専門店） / ブラックコーヒー / バニラ
  * 2. エネルギー加速系: ふともも / 待てないそうくん / モンスターエナジー / ZONE / アル中カラカラ / 松岡修造 / 酒
- * 3. 火力強化系: 顎カード / 安松 / ユキやカード / 浅草寺 / FCバルセロナ / 21歳 拳で / ﾄﾞｩﾜｧ!!ｾﾝﾅﾅﾋｬｸ!! / 10人ニキ
+ * 3. 火力強化系: 顎カード / 安松 / ユキやカード / 浅草寺 / FCバルセロナ / 21歳 拳で / ﾄﾞｩﾜｧ!!ｾﾝﾅﾅﾋｬｸ!! / 10人ニキ / バキ童
  * 4. 防御・回復・展開・機動力系: 見えてます / 三者面談 / グローバルラウンジ / イタリアン♡ / カラオケ / フェニックスホール（講堂） / 隅田川 / マクドナルド / 自己防衛おじさん / 離れるそうくん / ポカリ
  * 5. 直接ダメージ・妨害・入れ替え系: うんこかーど / 蛍光マーカーのりゅーのすけ / トレード / 五郎丸のキック / インフル / 朝のラッシュ / おでんツンツン男
  */
@@ -830,26 +830,26 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
   },
   {
     id: 'spl_bakibaki_dotei',
-    name: 'バキバキ童貞',
+    name: 'バキ童',
     type: 'SPELL',
     evolution: {
-      family: '情報魔法',
+      family: '強化魔法',
       stage: 1,
       evolvesFrom: null,
       evolvesTo: null,
     },
     level: 1,
     abilities: {
-      attackName: '街頭インタビュー直撃',
-      activeEffect: '相手の手札をログに公開し、山札からカードを1枚引く',
+      attackName: 'バキバキフルパワー覚醒',
+      activeEffect: 'このターン、自分のバトル場のカードの攻撃ダメージ＋50',
       description:
-        '【魔法】バッキバキの瞳で相手の手札を見透かしてログに公開し、さらに山札からカードを1枚引く。',
-      spellEffect: 'PEEK_AND_DRAW',
+        '【魔法】バッキバキの眼光で限界突破！このターン、自分のバトル場のカードが使う攻撃のダメージを＋50する！！',
+      spellEffect: 'BUFF_ATK_50',
     },
     ui: {
-      tags: ['魔法', '情報開示', 'ドロー'],
-      flavorText: '「はい、そうですね。ネットではバキバキ童貞と呼ばれています。」',
-      artSymbol: 'Sparkles',
+      tags: ['魔法', '超絶強化', 'バキ童'],
+      flavorText: '「はい、そうですね。攻撃力＋50のバキ童と呼ばれています。」',
+      artSymbol: 'Flame',
     },
   },
   {
@@ -1033,15 +1033,39 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     level: 1,
     abilities: {
       attackName: '急速イオン水分補給',
-      activeEffect: '自分の場（バトル場・ベンチ）すべてのカードのHPを25回復し、バトル場の被ダメージ−10',
+      activeEffect: '自分の場（バトル場・ベンチ）のすべてのカードのHPを25回復する',
       description:
-        '【魔法】乾いた身体に染み渡るイオンサプライ！自分の場すべてのカードのHPを25回復し、次の相手ターンにバトル場が受けるダメージを−10する。',
+        '【魔法】乾いた身体に染み渡るイオンサプライ！自分の場とベンチのすべてのカードのHPを25回復する。',
       spellEffect: 'HEAL_ALL_25',
     },
     ui: {
       tags: ['魔法', '全体回復', '水分補給'],
       flavorText: '「乾いた戦場に潤いを。飲む点滴で仲間全員が蘇る！」',
       artSymbol: 'Heart',
+    },
+  },
+  {
+    id: 'spl_vanilla',
+    name: 'バニラ',
+    type: 'SPELL',
+    evolution: {
+      family: 'そうくん系列サポート',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '高収入求人テーマソング',
+      activeEffect: '山札からカードを1枚引く（手札が3枚以下なら2枚引く）',
+      description:
+        '【魔法】街中に響き渡るおなじみのメロディ！山札からカードを1枚引く（手札が3枚以下なら2枚引く）。',
+      spellEffect: 'DRAW_2_IF_LOW_HAND',
+    },
+    ui: {
+      tags: ['魔法', 'ドロー', 'バニラ'],
+      flavorText: '「バーニラ、バニラ、バーニラ♪ 耳から離れない中毒性で手札を補充！」',
+      artSymbol: 'Sparkles',
     },
   },
 ];
