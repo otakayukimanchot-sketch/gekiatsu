@@ -2,14 +2,14 @@ import { CardDefinition, RawCardSeed } from '../types';
 import { buildCardDefinition } from '../levelSystem';
 
 /**
- * 魔法（サポート）カード定義一覧 (全29種・Lv.1統一)
+ * 魔法（サポート）カード定義一覧 (全38種・Lv.1統一)
  *
  * 【記載順序】
- * 1. ドロー・サーチ系: Superfly / 数珠カード / さびしがりやのゆきや / のぞきのそうくん / モリシア（今は亡きショッピングセンター） / 秋葉原
- * 2. エネルギー加速系: ふともも / 待てないそうくん / モンスターエナジー / ZONE
- * 3. 火力強化系: 顎カード / 安松 / ユキやカード / 浅草寺 / FCバルセロナ
- * 4. 防御・回復・展開系: 見えてます / 三者面談 / グローバルラウンジ / イタリアン♡ / カラオケ / フェニックスホール（講堂） / 隅田川 / マクドナルド
- * 5. 直接ダメージ・妨害・入れ替え系: うんこかーど / 蛍光マーカーのりゅーのすけ / トレード / 五郎丸のキック / インフル / 朝のラッシュ
+ * 1. ドロー・サーチ系: Superfly / 数珠カード / さびしがりやのゆきや / のぞきのそうくん / モリシア（今は亡きショッピングセンター） / 秋葉原 / バキバキ童貞 / 受験パルキアニキ
+ * 2. エネルギー加速系: ふともも / 待てないそうくん / モンスターエナジー / ZONE / アル中カラカラ / 松岡修造
+ * 3. 火力強化系: 顎カード / 安松 / ユキやカード / 浅草寺 / FCバルセロナ / 21歳 拳で / ﾄﾞｩﾜｧ!!ｾﾝﾅﾅﾋｬｸ!! / 10人ニキ
+ * 4. 防御・回復・展開系: 見えてます / 三者面談 / グローバルラウンジ / イタリアン♡ / カラオケ / フェニックスホール（講堂） / 隅田川 / マクドナルド / 自己防衛おじさん
+ * 5. 直接ダメージ・妨害・入れ替え系: うんこかーど / 蛍光マーカーのりゅーのすけ / トレード / 五郎丸のキック / インフル / 朝のラッシュ / おでんツンツン男
  */
 const SPELL_CARD_SEEDS: RawCardSeed[] = [
   // ============================================================================
@@ -702,6 +702,226 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
       tags: ['魔法', '入れ替え', 'ラッシュ'],
       flavorText: '「押さないでくださーい！そのままベンチへ押し流される！」',
       artSymbol: 'Wind',
+    },
+  },
+
+  // ============================================================================
+  // 6. 新規追加魔法カード（ネットミーム・レジェンド系）
+  // ============================================================================
+  {
+    id: 'spl_21sai_kobushide',
+    name: '21歳 拳で',
+    type: 'SPELL',
+    evolution: {
+      family: '強化魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '拳で抵抗',
+      activeEffect: 'このターン、自分のバトル場のカードの攻撃ダメージ＋30',
+      description:
+        '【魔法】「何歳ですか？」「21歳！」「どうやって抵抗する？」「拳で！」このターン、自分のバトル場の攻撃ダメージを＋30する！',
+      spellEffect: 'BUFF_ATK_30',
+    },
+    ui: {
+      tags: ['魔法', '超強化', '拳で'],
+      flavorText: '「21歳！拳でッ！！」',
+      artSymbol: 'Sword',
+    },
+  },
+  {
+    id: 'spl_jikoboei_ojisan',
+    name: '自己防衛おじさん',
+    type: 'SPELL',
+    evolution: {
+      family: '防御魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '究極の自己防衛',
+      activeEffect: '次の相手ターン、自分のバトル場の被ダメージ−30',
+      description:
+        '【魔法】「誰も頼れないからこそ自己防衛！」次の相手のターン、自分のバトル場のカードが受けるダメージを−30する。',
+      spellEffect: 'SHIELD_30',
+    },
+    ui: {
+      tags: ['魔法', '防御', '自己防衛'],
+      flavorText: '「国なんかあてにしちゃダメ。やっぱり自己防衛ですよ。」',
+      artSymbol: 'Shield',
+    },
+  },
+  {
+    id: 'spl_aruchu_karakara',
+    name: 'アル中カラカラ',
+    type: 'SPELL',
+    evolution: {
+      family: 'エナジー魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: 'ハイボール濃いめチャージ（できた！）',
+      activeEffect: '自分のバトル場のカードにボーナスエネルギーを＋1個付与する',
+      description:
+        '【魔法】氷をカラカラ鳴らしてウイスキーをドバドバ注入！自分のバトル場のカードにボーナスエネルギーを＋1個付与する。',
+      spellEffect: 'BONUS_ENERGY_ACTIVE',
+    },
+    ui: {
+      tags: ['魔法', 'エネルギー加速', 'カラカラ'],
+      flavorText: '「氷入れて〜、ハイボール濃いめ……できた！（ゴクゴク）」',
+      artSymbol: 'Zap',
+    },
+  },
+  {
+    id: 'spl_duwaa_1700',
+    name: 'ﾄﾞｩﾜｧ!!ｾﾝﾅﾅﾋｬｸ!!',
+    type: 'SPELL',
+    evolution: {
+      family: '強化魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '驚愕の1700オーバーブースト',
+      activeEffect: 'このターン、自分のバトル場のカードの攻撃ダメージ＋30',
+      description:
+        '【魔法】桁違いの数値にテンション爆発！このターン、自分のバトル場のカードの攻撃ダメージを＋30する！',
+      spellEffect: 'BUFF_ATK_30',
+    },
+    ui: {
+      tags: ['魔法', '超強化', '1700'],
+      flavorText: '「ﾄﾞｩﾜｧ!! ｾﾝﾅﾅﾋｬｸ!!」',
+      artSymbol: 'Flame',
+    },
+  },
+  {
+    id: 'spl_oden_tsuntsun',
+    name: 'おでんツンツン男',
+    type: 'SPELL',
+    evolution: {
+      family: '妨害魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '熱々ちくわぶツンツン',
+      activeEffect: '相手のバトル場に10ダメージ＆エネルギー1個トラッシュ',
+      description:
+        '【魔法】相手のバトル場のカードをツンツンして10ダメージを与え、さらに相手のバトル場のエネルギーを1個トラッシュする。',
+      spellEffect: 'DRAIN_ENERGY_DMG_10',
+    },
+    ui: {
+      tags: ['魔法', '妨害', 'エネ破壊'],
+      flavorText: '「ツンツン！相手の戦意とエネルギーを削ぎ落とす迷惑攻撃！」',
+      artSymbol: 'Crosshair',
+    },
+  },
+  {
+    id: 'spl_bakibaki_dotei',
+    name: 'バキバキ童貞',
+    type: 'SPELL',
+    evolution: {
+      family: '情報魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '街頭インタビュー直撃',
+      activeEffect: '相手の手札をログに公開し、山札からカードを1枚引く',
+      description:
+        '【魔法】バッキバキの瞳で相手の手札を見透かしてログに公開し、さらに山札からカードを1枚引く。',
+      spellEffect: 'PEEK_AND_DRAW',
+    },
+    ui: {
+      tags: ['魔法', '情報開示', 'ドロー'],
+      flavorText: '「はい、そうですね。ネットではバキバキ童貞と呼ばれています。」',
+      artSymbol: 'Sparkles',
+    },
+  },
+  {
+    id: 'spl_juken_palkia_niki',
+    name: '受験パルキアニキ',
+    type: 'SPELL',
+    evolution: {
+      family: 'ドロー魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: 'あくうせつだん受験突破',
+      activeEffect: '山札からカードを1枚引く（手札が3枚以下なら2枚引く）',
+      description:
+        '【魔法】空間を切り裂く勢いで難関突破！山札からカードを1枚引く（手札が3枚以下なら2枚引く）。',
+      spellEffect: 'DRAW_2_IF_LOW_HAND',
+    },
+    ui: {
+      tags: ['魔法', 'ドロー', '受験'],
+      flavorText: '「受験会場に響き渡る渾身のパルキア咆哮！！」',
+      artSymbol: 'BookOpen',
+    },
+  },
+  {
+    id: 'spl_10nin_niki',
+    name: '10人ニキ',
+    type: 'SPELL',
+    evolution: {
+      family: '強化魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '1対10伝説のハッタリ',
+      activeEffect: 'このターン、自分のバトル場のカードの攻撃ダメージ＋20',
+      description:
+        '【魔法】「10人同時に相手した」伝説の威圧感！このターン、自分のバトル場の攻撃ダメージを＋20する。',
+      spellEffect: 'BUFF_ATK_20',
+    },
+    ui: {
+      tags: ['魔法', '火力強化', '10人ニキ'],
+      flavorText: '「10人相手でも余裕っすよ！（自己申告）」',
+      artSymbol: 'Sword',
+    },
+  },
+  {
+    id: 'spl_matsuoka_shuzo',
+    name: '松岡修造',
+    type: 'SPELL',
+    evolution: {
+      family: '熱血魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: 'あきらめんなよ！熱血太陽エール',
+      activeEffect: '自分のバトル場のHPを30回復し、このターンの攻撃ダメージ＋10',
+      description:
+        '【魔法】「どうしてそこでやめるんだ、そこで！！もっと熱くなれよ！！」自分のバトル場のHPを30回復し、このターンの攻撃ダメージを＋10する！',
+      spellEffect: 'HEAL_30_BUFF_10',
+    },
+    ui: {
+      tags: ['魔法', '熱血回復', '強化'],
+      flavorText: '「君ならできる！今日から君は富士山だ！！」',
+      artSymbol: 'Flame',
     },
   },
 ];
