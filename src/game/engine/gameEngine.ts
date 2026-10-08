@@ -373,7 +373,7 @@ function handleKnockoutAndTurnTransition(
 }
 
 /**
- * 1. バトル場へのカード配置処理
+ * 1. バトル場へのカード配置処理（基礎カードのみ直接配置可能）
  */
 function playCardToActive(
   state: GameState,
@@ -391,6 +391,13 @@ function playCardToActive(
   const def = getCardDefinition(card.definitionId);
   if (!def || def.type !== 'ATTACK') {
     return { success: false, error: 'バトル場に出せるのは攻撃カードのみです。' };
+  }
+  if (def.evolution.evolvesFrom !== null) {
+    const baseDef = getCardDefinition(def.evolution.evolvesFrom);
+    return {
+      success: false,
+      error: `「${def.name}」は進化カードです。場の「${baseDef?.name || '進化元'}」に重ねて進化させてください。`,
+    };
   }
 
   player.hand.splice(handIdx, 1);
@@ -415,7 +422,7 @@ function playCardToActive(
 }
 
 /**
- * 2. ベンチへのカード配置処理
+ * 2. ベンチへのカード配置処理（基礎カードのみ直接配置可能）
  */
 function playCardToBench(
   state: GameState,
@@ -431,6 +438,13 @@ function playCardToBench(
   const def = getCardDefinition(card.definitionId);
   if (!def || def.type !== 'ATTACK') {
     return { success: false, error: 'ベンチに出せるのは攻撃カードのみです。' };
+  }
+  if (def.evolution.evolvesFrom !== null) {
+    const baseDef = getCardDefinition(def.evolution.evolvesFrom);
+    return {
+      success: false,
+      error: `「${def.name}」は進化カードです。直接ベンチには出せません（「${baseDef?.name || '進化元'}」から進化可能）。`,
+    };
   }
 
   if (player.activeCard === null) {
@@ -464,6 +478,126 @@ function playCardToBench(
     sourceCardId: card.instanceId,
     cardName: def.name,
   });
+  return { success: true };
+}
+
+/**
+ * 2-B. 進化判定ヘルパー関数 (canEvolveCard)
+ * - 進化カード（evolvesFrom !== null）であること
+ * - 進化元の definitionId が evolvesFrom と完全一致すること（段階飛ばし不可）
+ * - 出したばかり・またはこのターン既に進化したカード（baseCard.summonTurn >= currentTurn）ではないこと
+ */
+export function canEvolveCard(
+  baseCard: CardInstance | null | undefined,
+  evolutionCard: CardInstance | null | undefined,
+  currentTurn: number
+): { ok: boolean; reason?: string } {
+  if (!baseCard || !evolutionCard) {
+    return { ok: false, reason: '進化対象のカードが選択されていません。' };
+  }
+  const evoDef = getCardDefinition(evolutionCard.definitionId);
+  const baseDef = getCardDefinition(baseCard.definitionId);
+  if (!evoDef || evoDef.type !== 'ATTACK' || !evoDef.evolution.evolvesFrom) {
+    return { ok: false, reason: 'このカードは進化カードではありません。' };
+  }
+  const requiredBaseDef = getCardDefinition(evoDef.evolution.evolvesFrom);
+  if (!baseDef || baseCard.definitionId !== evoDef.evolution.evolvesFrom) {
+    return {
+      ok: false,
+      reason: `「${evoDef.name}」は「${requiredBaseDef?.name || '対応する基礎カード'}」からのみ進化できます。`,
+    };
+  }
+  if (baseCard.summonTurn >= currentTurn) {
+    return {
+      ok: false,
+      reason: `場に出したターンや、このターン既に進化した「${baseDef.name}」はすぐには進化できません（次の自分のターンから進化可能）。`,
+    };
+  }
+  return { ok: true };
+}
+
+/**
+ * 2-C. 場のカード（バトル場またはベンチ）を進化させる処理
+ */
+function evolveFieldCard(
+  state: GameState,
+  player: PlayerBattleState,
+  cardInstanceId?: string,
+  targetCardInstanceId?: string
+): { success: boolean; error?: string } {
+  const handIdx = player.hand.findIndex((c) => c.instanceId === cardInstanceId);
+  if (handIdx === -1) {
+    return { success: false, error: '手札にその進化カードがありません。' };
+  }
+  const evoCard = player.hand[handIdx];
+  const evoDef = getCardDefinition(evoCard.definitionId);
+  if (!evoDef || evoDef.type !== 'ATTACK' || !evoDef.evolution.evolvesFrom) {
+    return { success: false, error: '選択されたカードは進化カードではありません。' };
+  }
+
+  let targetCard: CardInstance | null = null;
+  if (targetCardInstanceId) {
+    if (player.activeCard?.instanceId === targetCardInstanceId) {
+      targetCard = player.activeCard;
+    } else {
+      targetCard = player.bench.find((b) => b?.instanceId === targetCardInstanceId) || null;
+    }
+  } else {
+    // ターゲット未指定の場合は進化可能な自分の場のカードを自動検索
+    const candidates = [player.activeCard, ...player.bench].filter((c): c is CardInstance =>
+      Boolean(c && canEvolveCard(c, evoCard, state.turnNumber).ok)
+    );
+    if (candidates.length > 0) {
+      targetCard = candidates[0];
+    }
+  }
+
+  if (!targetCard) {
+    const reqDef = getCardDefinition(evoDef.evolution.evolvesFrom);
+    return {
+      success: false,
+      error: `進化元となる「${reqDef?.name || '基礎カード'}」（前のターン以前に出たカード）が場にいません。`,
+    };
+  }
+
+  const check = canEvolveCard(targetCard, evoCard, state.turnNumber);
+  if (!check.ok) {
+    return { success: false, error: check.reason };
+  }
+
+  const oldDef = getCardDefinition(targetCard.definitionId);
+  const damageTaken = Math.max(0, targetCard.maxHp - targetCard.currentHp);
+
+  // 手札から進化カードを消費
+  player.hand.splice(handIdx, 1);
+
+  // 場のカードインスタンスのステータスを進化後の定義へ更新（付与エネルギーや被ダメージ量を維持）
+  targetCard.definitionId = evoDef.id;
+  targetCard.maxHp = evoDef.hp;
+  targetCard.currentHp = Math.max(10, evoDef.hp - damageTaken);
+  targetCard.baseAtk = evoDef.attack;
+  targetCard.currentAtk = evoDef.attack;
+  targetCard.energyCost = evoDef.energyCost;
+  targetCard.retreatCost = evoDef.retreatCost;
+  targetCard.summonTurn = state.turnNumber; // 同一ターン内の連続2段階進化を防止
+
+  recalculateDynamicStats(state);
+
+  addLog(
+    state,
+    player.playerId,
+    player.name,
+    'EVOLVE',
+    `${player.name} の「${oldDef?.name}」が「${evoDef.name}」(Lv.${evoDef.level}) に進化した！（HP: ${targetCard.currentHp}/${targetCard.maxHp}・攻撃力: ${targetCard.currentAtk}）`,
+    evoDef.name,
+    oldDef?.name
+  );
+  setAnimation(state, 'EVOLVE', player.playerId, {
+    sourceCardId: evoCard.instanceId,
+    targetCardId: targetCard.instanceId,
+    cardName: evoDef.name,
+  });
+
   return { success: true };
 }
 
@@ -1022,6 +1156,14 @@ export function handleGameAction(
       break;
     case 'PLAY_CARD_TO_BENCH':
       result = playCardToBench(state, player, payload.cardInstanceId, payload.benchIndex);
+      break;
+    case 'EVOLVE_CARD':
+      result = evolveFieldCard(
+        state,
+        player,
+        payload.cardInstanceId,
+        payload.targetCardInstanceId
+      );
       break;
     case 'ATTACH_ENERGY':
       result = attachEnergyToCard(state, player, payload.targetCardInstanceId);

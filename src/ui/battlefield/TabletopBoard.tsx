@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SanitizedGameState } from '../../online/types';
 import { CardInstance } from '../../cards/types';
 import { getCardDefinition } from '../../cards/cardRegistry';
+import { canEvolveCard } from '../../game/engine/gameEngine';
 import { CardView } from '../cards/CardView';
 import { GraveyardModal } from '../graveyard/GraveyardModal';
 import { FieldSlot } from './FieldSlot';
@@ -111,6 +112,12 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
       return () => clearTimeout(t);
     }
 
+    if (lastAnimation.type === 'EVOLVE') {
+      setAnimBanner(`🌟 進化！「${lastAnimation.cardName || ''}」が降臨！`);
+      const t = setTimeout(() => setAnimBanner(null), 1500);
+      return () => clearTimeout(t);
+    }
+
     if (lastAnimation.type === 'SPELL' || lastAnimation.type === 'ENVIRONMENT') {
       setAnimBanner(`✨ 「${lastAnimation.cardName || ''}」を発動！`);
       const t = setTimeout(() => setAnimBanner(null), 1200);
@@ -123,6 +130,16 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     setIsAttachingEnergy(false);
     setIsRetreating(false);
     setActionError(null);
+  };
+
+  const getValidEvolutionTargetsForCard = (handCard: CardInstance | null): CardInstance[] => {
+    if (!handCard) return [];
+    const def = getCardDefinition(handCard.definitionId);
+    if (!def || def.type !== 'ATTACK' || !def.evolution.evolvesFrom) return [];
+    return [me.activeCard, ...me.bench].filter(
+      (fc): fc is CardInstance =>
+        fc !== null && canEvolveCard(fc, handCard, gameState.turnNumber).ok
+    );
   };
 
   const handleSelectHandCard = (card: CardInstance) => {
@@ -140,12 +157,29 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     setActionError(null);
   };
 
-  const handlePlaySelectedHandCard = (benchSlotIndex?: number) => {
+  const handlePlaySelectedHandCard = (benchSlotIndex?: number, targetCardInstanceId?: string) => {
     if (!selectedHandCard || !isMyTurn) return;
     const def = getCardDefinition(selectedHandCard.definitionId);
     if (!def) return;
 
     if (def.type === 'ATTACK') {
+      if (def.evolution.evolvesFrom !== null) {
+        const targets = getValidEvolutionTargetsForCard(selectedHandCard);
+        const baseDef = getCardDefinition(def.evolution.evolvesFrom);
+        if (targets.length === 0) {
+          setActionError(
+            `進化元「${baseDef?.name || '基礎カード'}」（前のターン以前に出たカード）が場にいません。`
+          );
+          return;
+        }
+        onSendAction('EVOLVE_CARD', {
+          cardInstanceId: selectedHandCard.instanceId,
+          targetCardInstanceId: targetCardInstanceId || targets[0].instanceId,
+        });
+        clearModes();
+        return;
+      }
+
       if (!me.activeCard) {
         onSendAction('PLAY_CARD_TO_ACTIVE', {
           cardInstanceId: selectedHandCard.instanceId,
@@ -192,12 +226,24 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
 
     if (isMyTurn && selectedHandCard) {
       const def = getCardDefinition(selectedHandCard.definitionId);
-      if (def?.type === 'ATTACK' && !me.activeCard) {
-        onSendAction('PLAY_CARD_TO_ACTIVE', {
-          cardInstanceId: selectedHandCard.instanceId,
-        });
-        clearModes();
-        return;
+      if (def?.type === 'ATTACK') {
+        if (def.evolution.evolvesFrom !== null && me.activeCard) {
+          const evoCheck = canEvolveCard(me.activeCard, selectedHandCard, gameState.turnNumber);
+          if (evoCheck.ok) {
+            handlePlaySelectedHandCard(undefined, me.activeCard.instanceId);
+            return;
+          } else {
+            setActionError(evoCheck.reason || 'このカードは進化できません。');
+            return;
+          }
+        }
+        if (def.evolution.evolvesFrom === null && !me.activeCard) {
+          onSendAction('PLAY_CARD_TO_ACTIVE', {
+            cardInstanceId: selectedHandCard.instanceId,
+          });
+          clearModes();
+          return;
+        }
       }
     }
 
@@ -240,9 +286,21 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
 
     if (selectedHandCard) {
       const def = getCardDefinition(selectedHandCard.definitionId);
-      if (def?.type === 'ATTACK' && card === null) {
-        handlePlaySelectedHandCard(benchIdx);
-        return;
+      if (def?.type === 'ATTACK') {
+        if (def.evolution.evolvesFrom !== null && card) {
+          const evoCheck = canEvolveCard(card, selectedHandCard, gameState.turnNumber);
+          if (evoCheck.ok) {
+            handlePlaySelectedHandCard(benchIdx, card.instanceId);
+            return;
+          } else {
+            setActionError(evoCheck.reason || 'このカードには進化できません。');
+            return;
+          }
+        }
+        if (def.evolution.evolvesFrom === null && card === null) {
+          handlePlaySelectedHandCard(benchIdx);
+          return;
+        }
       }
     }
 
@@ -252,6 +310,13 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
   };
 
   const selectedDef = selectedHandCard ? getCardDefinition(selectedHandCard.definitionId) : null;
+  const selectedIsEvolution =
+    selectedDef?.type === 'ATTACK' && selectedDef.evolution.evolvesFrom !== null;
+  const selectedEvoBaseDef =
+    selectedIsEvolution && selectedDef?.evolution.evolvesFrom
+      ? getCardDefinition(selectedDef.evolution.evolvesFrom)
+      : null;
+  const validEvoTargetsForSelected = getValidEvolutionTargetsForCard(selectedHandCard);
   const myActiveDef = me.activeCard ? getCardDefinition(me.activeCard.definitionId) : null;
 
   const canAttachEnergyNow =
@@ -287,6 +352,11 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     }
     if (selectedHandCard && selectedDef) {
       if (selectedDef.type === 'ATTACK') {
+        if (selectedIsEvolution) {
+          return validEvoTargetsForSelected.length > 0
+            ? `🌟 場の「${selectedEvoBaseDef?.name}」または「進化する」をタップ！`
+            : `⚠️ 進化元「${selectedEvoBaseDef?.name}」が場にいないため直接出せません`;
+        }
         return !me.activeCard
           ? 'バトル場をタップして配置'
           : '空きベンチ枠または「ベンチに出す」をタップ！';
@@ -297,7 +367,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
       return '環境ゾーンまたは「環境を展開」をタップ！';
     }
     if (canAttachEnergyNow) {
-      return '①⚡エネルギー付与 ➔ ②手札をベンチへ ➔ ③⚔️わざ攻撃！';
+      return '①⚡エネルギー付与 ➔ ②手札をベンチへ/進化 ➔ ③⚔️わざ攻撃！';
     }
     if (canAttackNow) {
       return `⚔️「${myActiveDef?.attackName}」で攻撃可能！`;
@@ -334,6 +404,13 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
           {me.hand.map((card, idx) => {
             const isSelected = selectedHandCard?.instanceId === card.instanceId;
             const isHovered = hoveredHandCardId === card.instanceId;
+            const cardDef = getCardDefinition(card.definitionId);
+            const isEvoCard =
+              cardDef?.type === 'ATTACK' && cardDef.evolution.evolvesFrom !== null;
+            const hasEvoTargetNow = isEvoCard
+              ? getValidEvolutionTargetsForCard(card).length > 0
+              : true;
+
             const centerIndex = (total - 1) / 2;
             const normalizedOffset = idx - centerIndex;
 
@@ -366,7 +443,8 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   card={card}
                   size="hand"
                   isSelected={isSelected}
-                  canAct={isMyTurn}
+                  canAct={isMyTurn && hasEvoTargetNow}
+                  isUnplayableEvolution={isEvoCard && !hasEvoTargetNow}
                 />
               </div>
             );
@@ -379,23 +457,49 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
   // Floating Action Bar when a card in Hand is selected (Does not push layout down)
   const renderSelectedHandFloatingBar = () => {
     if (!selectedHandCard || !isMyTurn || !selectedDef) return null;
+    const canPlaySelectedNow = selectedIsEvolution
+      ? validEvoTargetsForSelected.length > 0
+      : true;
+
     return (
       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-50 w-[94%] max-w-md px-2.5 py-1.5 rounded-xl bg-slate-900/95 border-2 border-amber-400 shadow-2xl flex items-center justify-between gap-2 backdrop-blur-md animate-fadeIn">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span
-            className={`px-1.5 py-0.5 rounded text-[8px] font-black shrink-0 ${selectedDef.colorTheme.badgeBg} ${selectedDef.colorTheme.badgeText}`}
-          >
-            {selectedDef.colorTheme.tierLabel}
-          </span>
-          <span className="font-black text-xs text-white truncate">{selectedDef.name}</span>
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span
+              className={`px-1.5 py-0.5 rounded text-[8px] font-black shrink-0 ${selectedDef.colorTheme.badgeBg} ${selectedDef.colorTheme.badgeText}`}
+            >
+              {selectedDef.colorTheme.tierLabel}
+            </span>
+            <span className="font-black text-xs text-white truncate">{selectedDef.name}</span>
+          </div>
+          {selectedIsEvolution && (
+            <span
+              className={`text-[9px] font-bold truncate ${
+                canPlaySelectedNow ? 'text-emerald-300' : 'text-rose-300'
+              }`}
+            >
+              {canPlaySelectedNow
+                ? `進化元「${selectedEvoBaseDef?.name}」から進化可能！`
+                : `※「${selectedEvoBaseDef?.name}」から進化できます（進化元が場にありません）`}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button
+            disabled={!canPlaySelectedNow}
             onClick={() => handlePlaySelectedHandCard()}
-            className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-stone-950 font-black text-[11px] shadow cursor-pointer active:scale-95"
+            className={`px-2.5 py-1 rounded-lg font-black text-[11px] shadow transition-all ${
+              canPlaySelectedNow
+                ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-stone-950 cursor-pointer active:scale-95'
+                : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+            }`}
           >
             {selectedDef.type === 'ATTACK'
-              ? !me.activeCard
+              ? selectedIsEvolution
+                ? canPlaySelectedNow
+                  ? `「${selectedEvoBaseDef?.name}」を進化`
+                  : '進化元なし'
+                : !me.activeCard
                 ? 'バトル場に出す'
                 : 'ベンチに出す'
               : selectedDef.type === 'SPELL'
@@ -662,9 +766,27 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
               isFriendly={true}
               canAct={canAttackNow}
               isAttacker={attackingCardId === me.activeCard?.instanceId}
-              isTargetable={isAttachingEnergy && !!me.activeCard}
-              targetBadgeText={isAttachingEnergy ? '⚡エネ付与' : undefined}
-              canPlaceCard={!me.activeCard && selectedDef?.type === 'ATTACK' && isMyTurn}
+              isTargetable={
+                (isAttachingEnergy && !!me.activeCard) ||
+                (selectedIsEvolution &&
+                  !!me.activeCard &&
+                  canEvolveCard(me.activeCard, selectedHandCard, gameState.turnNumber).ok)
+              }
+              targetBadgeText={
+                isAttachingEnergy
+                  ? '⚡エネ付与'
+                  : selectedIsEvolution &&
+                    !!me.activeCard &&
+                    canEvolveCard(me.activeCard, selectedHandCard, gameState.turnNumber).ok
+                  ? '🌟進化可能'
+                  : undefined
+              }
+              canPlaceCard={
+                !me.activeCard &&
+                selectedDef?.type === 'ATTACK' &&
+                !selectedIsEvolution &&
+                isMyTurn
+              }
               damagePopup={
                 damagePopup?.targetCardId === me.activeCard?.instanceId
                   ? damagePopup.damage
@@ -738,8 +860,15 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
               const isAttachTarget = isAttachingEnergy && !!card;
               const isRetreatTarget = isRetreating && !!card;
               const isPromoteTarget = mustPromoteBench && !!card;
+              const isEvoTarget =
+                selectedIsEvolution &&
+                !!card &&
+                canEvolveCard(card, selectedHandCard, gameState.turnNumber).ok;
               const canPlaceOnBench =
-                isMyTurn && selectedDef?.type === 'ATTACK' && card === null;
+                isMyTurn &&
+                selectedDef?.type === 'ATTACK' &&
+                !selectedIsEvolution &&
+                card === null;
 
               return (
                 <FieldSlot
@@ -748,7 +877,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   slotIndex={idx}
                   slotRole="BENCH"
                   isFriendly={true}
-                  isTargetable={isAttachTarget || isRetreatTarget || isPromoteTarget}
+                  isTargetable={isAttachTarget || isRetreatTarget || isPromoteTarget || isEvoTarget}
                   targetBadgeText={
                     isPromoteTarget
                       ? 'バトル場へ'
@@ -756,6 +885,8 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                       ? '⚡エネ付与'
                       : isRetreatTarget
                       ? '交代'
+                      : isEvoTarget
+                      ? '🌟進化可能'
                       : undefined
                   }
                   canPlaceCard={canPlaceOnBench}
@@ -963,9 +1094,27 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
               isFriendly={true}
               canAct={canAttackNow}
               isAttacker={attackingCardId === me.activeCard?.instanceId}
-              isTargetable={isAttachingEnergy && !!me.activeCard}
-              targetBadgeText={isAttachingEnergy ? '⚡エネ付与' : undefined}
-              canPlaceCard={!me.activeCard && selectedDef?.type === 'ATTACK' && isMyTurn}
+              isTargetable={
+                (isAttachingEnergy && !!me.activeCard) ||
+                (selectedIsEvolution &&
+                  !!me.activeCard &&
+                  canEvolveCard(me.activeCard, selectedHandCard, gameState.turnNumber).ok)
+              }
+              targetBadgeText={
+                isAttachingEnergy
+                  ? '⚡エネ付与'
+                  : selectedIsEvolution &&
+                    !!me.activeCard &&
+                    canEvolveCard(me.activeCard, selectedHandCard, gameState.turnNumber).ok
+                  ? '🌟進化可能'
+                  : undefined
+              }
+              canPlaceCard={
+                !me.activeCard &&
+                selectedDef?.type === 'ATTACK' &&
+                !selectedIsEvolution &&
+                isMyTurn
+              }
               damagePopup={
                 damagePopup?.targetCardId === me.activeCard?.instanceId
                   ? damagePopup.damage
@@ -982,8 +1131,15 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
               const isAttachTarget = isAttachingEnergy && !!card;
               const isRetreatTarget = isRetreating && !!card;
               const isPromoteTarget = mustPromoteBench && !!card;
+              const isEvoTarget =
+                selectedIsEvolution &&
+                !!card &&
+                canEvolveCard(card, selectedHandCard, gameState.turnNumber).ok;
               const canPlaceOnBench =
-                isMyTurn && selectedDef?.type === 'ATTACK' && card === null;
+                isMyTurn &&
+                selectedDef?.type === 'ATTACK' &&
+                !selectedIsEvolution &&
+                card === null;
 
               return (
                 <FieldSlot
@@ -992,7 +1148,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   slotIndex={idx}
                   slotRole="BENCH"
                   isFriendly={true}
-                  isTargetable={isAttachTarget || isRetreatTarget || isPromoteTarget}
+                  isTargetable={isAttachTarget || isRetreatTarget || isPromoteTarget || isEvoTarget}
                   targetBadgeText={
                     isPromoteTarget
                       ? 'バトル場へ'
@@ -1000,6 +1156,8 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                       ? '⚡エネ付与'
                       : isRetreatTarget
                       ? '交代'
+                      : isEvoTarget
+                      ? '🌟進化可能'
                       : undefined
                   }
                   canPlaceCard={canPlaceOnBench}

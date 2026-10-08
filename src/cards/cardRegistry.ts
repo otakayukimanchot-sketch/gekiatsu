@@ -64,39 +64,39 @@ export function getCardDefinition(id: string): CardDefinition | undefined {
 export const DECK_SIZE = 20;
 
 /**
- * ポケポケ型 コンパクト20枚デッキ（バランス構築）
- * Lv.1〜Lv.5の攻撃カード14枚 ＋ 魔法カード4枚（Superfly等） ＋ 環境カード2枚（グロラン等）
+ * ポケポケ型 コンパクト20枚デッキ（進化系列完備バランス構築）
+ * 基礎カードから進化カードへの進化ラインが確実に成立する構成
  */
 export function createStandardDeckDefinitionIds(): string[] {
   return [
-    // Lv.1 速攻カード (4枚)
+    // Lv.1 速攻・基礎カード (3枚)
     'atk_info_grandma',
     'atk_ryunosuke',
     'atk_ago',
-    'token_inoue_professor',
 
-    // Lv.2 標準カード (4枚)
-    'atk_yoshie_clean',
+    // Lv.2 標準・基礎カード (4枚)
+    'atk_yoshie_clean', // 塩よしえの進化元
     'atk_yoton',
     'atk_headphone_niki',
     'atk_vanilla_sokun',
 
-    // Lv.3 主力カード (3枚)
-    'evo_yoshie_salt',
+    // Lv.3 主力・基礎/1進化カード (4枚)
+    'atk_mayu_sable', // 顎・キャノンの進化元
+    'evo_yoshie_salt', // 綺麗なよしえから進化 → 嘉慧へ進化
     'atk_shochan',
     'atk_orichan',
 
-    // Lv.4 強襲カード (2枚)
+    // Lv.4 強襲・進化/基礎カード (3枚)
+    'evo_yoshie_kakei', // 塩よしえから進化 → よしえEXへ進化
+    'evo_ago_cannon', // まゆサブレから進化
     'atk_mue',
-    'evo_ago_cannon',
 
-    // Lv.5 最上位EXカード (1枚)
-    'evo_yoshie_ex',
+    // Lv.5 最上位EX・最終進化カード (1枚)
+    'evo_yoshie_ex', // 嘉慧から進化
 
-    // Lv.1 魔法カード (4枚)
+    // Lv.1 魔法カード (3枚)
     'spl_superfly',
     'spl_futomomo',
-    'spl_ago_card',
     'spl_yasumatsu',
 
     // Lv.1 環境カード (2枚)

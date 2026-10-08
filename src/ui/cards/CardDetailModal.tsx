@@ -112,8 +112,8 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
               <span>系列: {def.evolution.family} (Stage {def.evolution.stage})</span>
             </div>
             {evolvesFromCard && (
-              <div className="text-stone-300">
-                進化元: <span className="font-bold text-white">{evolvesFromCard.name}</span>
+              <div className="text-amber-300 bg-amber-950/50 border border-amber-500/40 rounded-lg px-2 py-1 mt-1">
+                【進化条件】場の「<span className="font-black text-white">{evolvesFromCard.name}</span>」から進化できます（直接場には出せません）。
               </div>
             )}
             {evolvesToCard && (

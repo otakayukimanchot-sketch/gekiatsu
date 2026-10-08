@@ -68,6 +68,10 @@ export const RuleModal: React.FC<RuleModalProps> = ({ onClose }) => {
               <li>
                 バトル場のカードは、逃げるコスト分のエネルギーを消費してベンチのカードと<strong>「にげる（入れ替え）」</strong>ことができます（1ターン1回）。
               </li>
+              <li>
+                <strong className="text-amber-300">進化ルール:</strong>{' '}
+                進化元が設定されている進化カードは、直接バトル場やベンチには出せません。前のターン以前に場に出ている対応する基礎カードに重ねて<strong>段階通りに進化</strong>させます（進化時、付与エネルギーを引き継ぎます）。
+              </li>
             </ul>
           </div>
 

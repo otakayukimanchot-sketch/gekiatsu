@@ -2,31 +2,132 @@ export type CardType = 'ATTACK' | 'SPELL' | 'ENVIRONMENT';
 
 export type CardLevel = 1 | 2 | 3 | 4 | 5;
 
+export type CardRarity =
+  | 'COMMON'
+  | 'UNCOMMON'
+  | 'RARE'
+  | 'EPIC'
+  | 'LEGENDARY'
+  | 'MYTHIC';
+
+export type CardElement =
+  | 'FLAME'   // 紅蓮 (高火力・速攻・リスク＆リターン)
+  | 'AQUA'    // 蒼海 (回復・コントロール・手札補充・妨害)
+  | 'VERDANT' // 翠森 (ベンチ展開・全体強化・成長シナジー)
+  | 'VOLT'    // 紫電 (エネルギー加速・機動力・超帯電)
+  | 'LIGHT'   // 聖光 (シールド防御・支援・ダメージ軽減)
+  | 'ABYSS';  // 深淵 (トラッシュ利用・背水・手札干渉)
+
+export type CardFaction =
+  | '連邦学園'
+  | '紅蓮騎士団'
+  | '蒼海魔導院'
+  | '翠緑獣王連'
+  | '機巧都市アーク'
+  | '黄昏影教団'
+  | '天空聖域';
+
+export type CardSetId =
+  | 'SET_000_ORIGIN' // Set 000: 原初の学園伝承 (既存38枚)
+  | 'SET_001_DAWN'   // Set 001: 始まりの大地
+  | 'SET_002_CYBER'  // Set 002: 機巧都市アーク
+  | 'SET_003_ABYSS'  // Set 003: 深淵の夜想曲
+  | 'SET_004_SKY';   // Set 004: 天空の遺跡
+
+export type CardSubCategory =
+  | 'BASIC_UNIT'      // 基本ユニット
+  | 'ADVANCED_UNIT'   // 上位ユニット
+  | 'LEGEND_UNIT'     // レジェンド級ユニット
+  | 'SUPPORT_SPELL'   // サポートカード
+  | 'EQUIPMENT_SPELL' // 装備カード
+  | 'EVENT_SPELL'     // イベント/スペル
+  | 'FIELD_ENV'       // フィールド/環境カード
+  | 'SPECIAL_TECH';   // 特殊戦術カード
+
+export type DeckArchetypeId =
+  | 'CLASSIC'
+  | 'AGGRO'
+  | 'MIDRANGE'
+  | 'CONTROL'
+  | 'COMBO'
+  | 'SWARM'
+  | 'DEFENSIVE'
+  | 'RAMP'
+  | 'DISCARD'
+  | 'RECOVERY'
+  | 'RISK_REWARD';
+
+export type OnPlayUnitSkill =
+  | 'NONE'
+  | 'DRAW_1'
+  | 'GAIN_ENERGY_1'
+  | 'BOOST_BENCH_ENERGY'
+  | 'HEAL_ACTIVE_20'
+  | 'HEAL_ALL_15'
+  | 'PING_ENEMY_15'
+  | 'SHIELD_ACTIVE_20'
+  | 'BUFF_ACTIVE_20'
+  | 'RECYCLE_TRASH_UNIT'
+  | 'SYNERGY_ELEMENT_DRAW'
+  | 'SYNERGY_SWARM_ENERGY';
+
+export type CombatUnitSkill =
+  | 'NONE'
+  | 'BERSERK_LOW_HP_30'       // 背水: HP50%以下でダメージ+30
+  | 'SWARM_BONUS_10_PER_BENCH'// 陣形: ベンチ1体につきダメージ+10
+  | 'HAND_SCALE_BONUS_20'     // 叡智: 手札4枚以上でダメージ+20
+  | 'TRASH_SCALE_BONUS_25'    // 深淵: トラッシュ3枚以上でダメージ+25
+  | 'ENERGY_OVERFLOW_20'      // 超帯電: 余剰エネルギー1個につきダメージ+20
+  | 'DRAIN_HEAL_20'           // 吸収: 攻撃時HP20回復
+  | 'PIERCE_SHIELD_15'        // 貫通: ダメージ軽減を貫通し+15
+  | 'COUNTER_ARMOR_15'        // 鉄壁: 被ダメージ常時-15
+  | 'SNIPE_BENCH_15'          // 追撃: 攻撃時相手ベンチ1体にも15ダメージ
+  | 'GAMBLE_STRIKE_30'        // 捨身: 攻撃時自傷10でダメージ+30
+  | 'ELEMENT_RESONANCE_20'    // 共鳴: ベンチに同属性がいればダメージ+20
+  | 'GIANT_SLAYER_30';        // 巨竜狩り: 相手がLv.4以上ならダメージ+30
+
 export type SpellEffectKind =
   | 'DRAW_1'
+  | 'DRAW_2_IF_LOW_HAND'
   | 'SEARCH_ATTACK_CARD'
+  | 'SEARCH_LOW_COST_2'
+  | 'SEARCH_HIGH_LEVEL_UNIT'
+  | 'RECYCLE_TRASH_2'
   | 'BONUS_ENERGY_ACTIVE'
+  | 'BONUS_ENERGY_BENCH'
+  | 'SURGE_ENERGY_IF_SWARM'
   | 'BUFF_ATK_20'
   | 'BUFF_ATK_30'
+  | 'OVERDRIVE_ATK_40_SELF_15'
+  | 'EQUIP_ARMOR_HP_20_SHIELD_20'
+  | 'EQUIP_BLADE_ATK_25_ENERGY_1'
   | 'HEAL_30_BUFF_10'
+  | 'HEAL_ALL_25'
   | 'HEAL_20_SHIELD_20'
   | 'SHIELD_30'
   | 'DIRECT_DMG_20'
+  | 'DIRECT_DMG_30_IF_TRASH_3'
+  | 'BENCH_STORM_15_ALL'
   | 'DRAIN_ENERGY_DMG_10'
   | 'SWAP_OPPONENT_BENCH'
-  | 'PEEK_AND_DRAW';
+  | 'PEEK_AND_DRAW'
+  | 'HAND_RELOAD_3';
 
 export type EnvironmentEffectKind =
   | 'GROLAN_FULL_HEAL'
   | 'PHOENIX_WALL'
   | 'SENSOJI_BOOST'
   | 'SUMIDAGAWA_BOOST'
-  | 'YUKIYA_ROOM_BOOST';
+  | 'YUKIYA_ROOM_BOOST'
+  | 'VOLCANO_FLAME_20'
+  | 'OCEAN_SANCTUARY_HEAL_15'
+  | 'WORLD_TREE_SWARM_15'
+  | 'CYBER_REACTOR_ENERGY'
+  | 'HOLY_CITADEL_SHIELD_15'
+  | 'ABYSS_GRAVEYARD_20'
+  | 'SKY_COLOSSEUM_HIGH_LV_20'
+  | 'TWILIGHT_BAZAAR_DRAW';
 
-/**
- * カードの進化・系列関係を表す構造体
- * 「どの系列に属し、どのカードから進化し、次にどのカードへ進化するか」を一目で把握できる
- */
 export interface EvolutionInfo {
   family: string;
   stage: 1 | 2 | 3 | 4;
@@ -35,9 +136,6 @@ export interface EvolutionInfo {
   triggerCardId?: string;
 }
 
-/**
- * カードのバトルステータス（レベルに応じた統一値）
- */
 export interface LevelStats {
   level: CardLevel;
   hp: number;
@@ -47,21 +145,17 @@ export interface LevelStats {
   pointValue: number;
 }
 
-/**
- * カードの能力・わざ・固有効果情報
- */
 export interface CardAbilities {
   attackName: string;
   description: string;
   passiveEffect?: string;
   activeEffect?: string;
+  onPlaySkill?: OnPlayUnitSkill;
+  combatSkill?: CombatUnitSkill;
   spellEffect?: SpellEffectKind;
   environmentEffect?: EnvironmentEffectKind;
 }
 
-/**
- * カードのUI表示・アート情報
- */
 export interface CardUiMetadata {
   tags: string[];
   flavorText?: string;
@@ -78,11 +172,6 @@ export interface CardColorTheme {
   tierLabel: string;
 }
 
-/**
- * カード定義の入力シード
- * プロパティ順序:
- * 1. id -> 2. name -> 3. type -> 4. evolution -> 5. level (stats基準) -> 6. abilities -> 7. ui
- */
 export interface RawCardSeed {
   id: string;
   name: string;
@@ -91,29 +180,37 @@ export interface RawCardSeed {
   level: CardLevel;
   abilities: CardAbilities;
   ui: CardUiMetadata;
+  // Optional extended metadata (auto-populated if omitted)
+  collectionNumber?: number;
+  setId?: CardSetId;
+  rarity?: CardRarity;
+  element?: CardElement;
+  faction?: CardFaction;
+  subCategory?: CardSubCategory;
+  keywords?: string[];
+  archetypes?: DeckArchetypeId[];
 }
 
-/**
- * ゲーム全体で参照される正規化済みカード定義 (Single Source of Truth)
- */
 export interface CardDefinition {
-  // 1. ID
   id: string;
-  // 2. 表示名
+  collectionNumber: number;
+  setId: CardSetId;
   name: string;
-  // 3. 種別
   type: CardType;
-  // 4. 進化・系列情報
+  subCategory: CardSubCategory;
+  rarity: CardRarity;
+  element: CardElement;
+  faction: CardFaction;
+  keywords: string[];
+  archetypes: DeckArchetypeId[];
   evolution: EvolutionInfo;
-  // 5. ステータス
   stats: LevelStats;
-  // 6. 能力・効果
   abilities: CardAbilities;
-  // 7. UI表示情報
   ui: CardUiMetadata;
   colorTheme: CardColorTheme;
+  balanceScore: number;
 
-  // 既存コード互換のフラットアクセサ (Single Source of Truth から自動導出)
+  // Flat accessors (Single Source of Truth)
   level: CardLevel;
   hp: number;
   attack: number;

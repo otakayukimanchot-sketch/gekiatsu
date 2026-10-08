@@ -39,7 +39,24 @@ export function shuffleArray<T>(items: T[]): T[] {
 }
 
 /**
- * 20枚デッキを生成し、ポケポケ仕様として「初期手札5枚に必ず最低1枚の攻撃カードが含まれる」ように調整する
+ * デッキ内の進化カードに対応する進化元カードが含まれているか検証する
+ */
+export function isDeckEvolutionValid(deckIds: string[]): boolean {
+  const idSet = new Set(deckIds);
+  for (const id of deckIds) {
+    const def = getCardDefinition(id);
+    if (!def) return false;
+    if (def.type === 'ATTACK' && def.evolution.evolvesFrom !== null) {
+      if (!idSet.has(def.evolution.evolvesFrom)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+/**
+ * 20枚デッキを生成し、ポケポケ仕様として「初期バトル場には必ず基礎カード（進化元を持たない攻撃カード）が配置される」ように調整する
  */
 export function buildInitialDeckAndSetup(
   ownerId: string,
@@ -53,21 +70,27 @@ export function buildInitialDeckAndSetup(
 
   if (customDeckIds && customDeckIds.length === DECK_SIZE) {
     const valid = customDeckIds.every((id) => !!getCardDefinition(id));
-    const hasAttack = customDeckIds.some((id) => getCardDefinition(id)?.type === 'ATTACK');
-    if (valid && hasAttack) {
+    const hasBasicAttack = customDeckIds.some((id) => {
+      const def = getCardDefinition(id);
+      return def?.type === 'ATTACK' && def.evolution.evolvesFrom === null;
+    });
+    if (valid && hasBasicAttack && isDeckEvolutionValid(customDeckIds)) {
       deckIds = customDeckIds;
     }
   }
 
   let allCards = shuffleArray(deckIds.map((id) => createCardInstance(id, ownerId)));
 
-  // Find a suitable opening active card (prefer Lv.1 or Lv.2 attack card, or any attack card)
+  // Find a suitable opening active card: MUST be a Basic Attack card (evolvesFrom === null)
   let openingIdx = allCards.findIndex((c) => {
     const def = getCardDefinition(c.definitionId);
-    return def?.type === 'ATTACK' && def.level <= 2;
+    return def?.type === 'ATTACK' && def.evolution.evolvesFrom === null && def.level <= 2;
   });
   if (openingIdx === -1) {
-    openingIdx = allCards.findIndex((c) => getCardDefinition(c.definitionId)?.type === 'ATTACK');
+    openingIdx = allCards.findIndex((c) => {
+      const def = getCardDefinition(c.definitionId);
+      return def?.type === 'ATTACK' && def.evolution.evolvesFrom === null;
+    });
   }
   if (openingIdx === -1) {
     openingIdx = 0;

@@ -37,6 +37,7 @@ export type AnimationEventType =
   | 'GAME_START'
   | 'DRAW'
   | 'PLAY_CARD'
+  | 'EVOLVE'
   | 'ATTACH_ENERGY'
   | 'ATTACK'
   | 'KNOCKOUT'
@@ -96,6 +97,7 @@ export interface GameState {
 export type GameActionType =
   | 'PLAY_CARD_TO_ACTIVE'
   | 'PLAY_CARD_TO_BENCH'
+  | 'EVOLVE_CARD'
   | 'ATTACH_ENERGY'
   | 'RETREAT_ACTIVE'
   | 'PROMOTE_BENCH_CARD'

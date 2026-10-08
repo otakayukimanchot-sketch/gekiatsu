@@ -25,6 +25,7 @@ interface CardViewProps {
   isTargetable?: boolean;
   isAttacker?: boolean;
   canAct?: boolean;
+  isUnplayableEvolution?: boolean;
   onClick?: () => void;
   className?: string;
   style?: React.CSSProperties;
@@ -56,6 +57,7 @@ export const CardView: React.FC<CardViewProps> = ({
   isTargetable = false,
   isAttacker = false,
   canAct = false,
+  isUnplayableEvolution = false,
   onClick,
   className = '',
   style = {},
@@ -65,6 +67,7 @@ export const CardView: React.FC<CardViewProps> = ({
 
   const IconComp = SYMBOL_MAP[def.artSymbol] || Sparkles;
   const theme = def.colorTheme;
+  const isEvolutionCard = def.type === 'ATTACK' && def.evolution.evolvesFrom !== null;
 
   const sizeClasses = {
     small: 'card-size-small',
@@ -98,20 +101,29 @@ export const CardView: React.FC<CardViewProps> = ({
       } ${
         isAttacker ? 'ring-2 ring-red-500 shadow-red-500/60 shadow-lg z-20' : ''
       } ${
-        canAct ? 'ring-1 ring-yellow-300/80' : ''
-      } ${isDead ? 'opacity-40 grayscale' : ''} ${className}`}
+        canAct && !isUnplayableEvolution ? 'ring-1 ring-yellow-300/80' : ''
+      } ${isUnplayableEvolution && !isSelected ? 'opacity-65 saturate-50' : ''} ${
+        isDead ? 'opacity-40 grayscale' : ''
+      } ${className}`}
     >
       {/* Inner Card Frame Highlight */}
       <div className="absolute inset-0.5 border border-white/20 rounded-md pointer-events-none" />
 
-      {/* Top Row: Level Badge + Name + HP */}
+      {/* Top Row: Level Badge + Evolution Badge + Name + HP */}
       <div className="z-10 flex flex-col gap-0.2 min-w-0">
         <div className="flex items-center justify-between gap-0.5">
-          <span
-            className={`px-1 py-0.1 rounded text-[6.5px] leading-tight font-black shrink-0 ${theme.badgeBg} ${theme.badgeText}`}
-          >
-            {def.type === 'ATTACK' ? `Lv.${def.level}` : def.type === 'SPELL' ? '魔法' : '環境'}
-          </span>
+          <div className="flex items-center gap-0.5 shrink-0">
+            <span
+              className={`px-1 py-0.1 rounded text-[6.5px] leading-tight font-black shrink-0 ${theme.badgeBg} ${theme.badgeText}`}
+            >
+              {def.type === 'ATTACK' ? `Lv.${def.level}` : def.type === 'SPELL' ? '魔法' : '環境'}
+            </span>
+            {isEvolutionCard && (
+              <span className="px-0.5 py-0.1 rounded bg-amber-950/90 border border-amber-400/70 text-amber-200 text-[5.5px] leading-tight font-black">
+                進化
+              </span>
+            )}
+          </div>
           {def.type === 'ATTACK' && (
             <div className="flex items-center gap-0.5 font-black text-white drop-shadow-xs text-[7.5px] leading-none">
               <span className="text-[6px] text-rose-200">HP</span>

@@ -1,9 +1,10 @@
 import { GameActionPayload, GameState, PlayerKey } from '../types';
 import { getCardDefinition } from '../../cards/cardRegistry';
+import { canEvolveCard } from '../engine/gameEngine';
 
 /**
  * ポケポケ型 CPU 条件分岐ロジック
- * 現在のHP・必要エネルギー・相手のHP・ベンチ・手札・カードレベルを固定ルールで評価して次の1手を決定する
+ * 現在のHP・必要エネルギー・相手のHP・ベンチ・手札・カードレベル・進化条件を固定ルールで評価して次の1手を決定する
  */
 export function decideNextBotAction(
   state: GameState,
@@ -44,29 +45,51 @@ export function decideNextBotAction(
 
   if (state.activePlayerKey !== botKey) return null;
 
-  // 2. If Active Spot is empty, play an Attack card to Active Spot
+  // 2. If Active Spot is empty, play a Basic Attack card (evolvesFrom === null) to Active Spot
   if (!bot.activeCard) {
-    const attackCardsInHand = bot.hand.filter(
-      (c) => getCardDefinition(c.definitionId)?.type === 'ATTACK'
-    );
-    if (attackCardsInHand.length > 0) {
+    const basicAttackCardsInHand = bot.hand.filter((c) => {
+      const def = getCardDefinition(c.definitionId);
+      return def?.type === 'ATTACK' && def.evolution.evolvesFrom === null;
+    });
+    if (basicAttackCardsInHand.length > 0) {
       return {
         actionType: 'PLAY_CARD_TO_ACTIVE',
-        cardInstanceId: attackCardsInHand[0].instanceId,
+        cardInstanceId: basicAttackCardsInHand[0].instanceId,
       };
     }
   }
 
-  // 3. Place Attack cards from Hand onto empty Bench slots
+  // 3. Evolve any eligible card on Active Spot or Bench if matching evolution card is in hand
+  const fieldCards = [bot.activeCard, ...bot.bench].filter(
+    (fc): fc is NonNullable<typeof fc> => fc !== null
+  );
+  for (const handCard of bot.hand) {
+    const handDef = getCardDefinition(handCard.definitionId);
+    if (!handDef || handDef.type !== 'ATTACK' || !handDef.evolution.evolvesFrom) continue;
+
+    const matchingTarget = fieldCards.find(
+      (fc) => canEvolveCard(fc, handCard, state.turnNumber).ok
+    );
+    if (matchingTarget) {
+      return {
+        actionType: 'EVOLVE_CARD',
+        cardInstanceId: handCard.instanceId,
+        targetCardInstanceId: matchingTarget.instanceId,
+      };
+    }
+  }
+
+  // 4. Place Basic Attack cards (evolvesFrom === null) from Hand onto empty Bench slots
   const emptyBenchIdx = bot.bench.findIndex((b) => b === null);
   if (emptyBenchIdx !== -1) {
-    const attackInHand = bot.hand.find(
-      (c) => getCardDefinition(c.definitionId)?.type === 'ATTACK'
-    );
-    if (attackInHand) {
+    const basicAttackInHand = bot.hand.find((c) => {
+      const def = getCardDefinition(c.definitionId);
+      return def?.type === 'ATTACK' && def.evolution.evolvesFrom === null;
+    });
+    if (basicAttackInHand) {
       return {
         actionType: 'PLAY_CARD_TO_BENCH',
-        cardInstanceId: attackInHand.instanceId,
+        cardInstanceId: basicAttackInHand.instanceId,
         benchIndex: emptyBenchIdx,
       };
     }
