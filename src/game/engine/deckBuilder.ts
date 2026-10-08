@@ -112,16 +112,61 @@ export function buildInitialDeckAndSetup(
   activeCard.zone = 'ACTIVE';
   activeCard.summonTurn = 1;
 
-  // Draw initial hand:
-  // - standard: 4 cards in hand (+ 1 in Active Spot = 5 opening cards)
-  // - allstar: 10 cards in hand (全員参加大乱闘モードのみ初期手札10枚)
-  const initialHandCount = battleFormat === 'allstar' ? 10 : 4;
-  const hand = allCards.splice(0, initialHandCount).map((c) => {
+  // 初期手札の配分:
+  // - standard (標準デッキ対戦): 初期手札5枚（魔法カード2枚 ＋ 攻撃カード3枚［うちLv.1〜2を必ず1枚以上含む］）
+  // - allstar (全員参加大乱闘対戦): 初期手札10枚（魔法カード4枚 ＋ 攻撃カード6枚［うちLv.1〜2を必ず2枚以上含む］）
+  const targetSpellCount = battleFormat === 'allstar' ? 4 : 2;
+  const targetOtherCount = battleFormat === 'allstar' ? 6 : 3;
+  const requiredLowLevelAtkCount = battleFormat === 'allstar' ? 2 : 1;
+  const targetTotalHand = targetSpellCount + targetOtherCount;
+
+  const pickedHand: CardInstance[] = [];
+  const afterLowLevelPass: CardInstance[] = [];
+  let otherPicked = 0;
+
+  // Step 1: まず攻撃カード枠のうち必須となる Lv.1〜2 の攻撃カード（1枚 / 2枚）を優先確保
+  for (const card of allCards) {
+    const def = getCardDefinition(card.definitionId);
+    if (
+      def?.type === 'ATTACK' &&
+      def.level <= 2 &&
+      otherPicked < requiredLowLevelAtkCount
+    ) {
+      pickedHand.push(card);
+      otherPicked++;
+    } else {
+      afterLowLevelPass.push(card);
+    }
+  }
+
+  // Step 2: 残りの攻撃カード枠（標準:あと2枚 / 大乱闘:あと4枚）と魔法カード枠（標準:2枚 / 大乱闘:4枚）を確保
+  const remainingDeck: CardInstance[] = [];
+  let spellPicked = 0;
+
+  for (const card of afterLowLevelPass) {
+    const def = getCardDefinition(card.definitionId);
+    if (def?.type === 'SPELL' && spellPicked < targetSpellCount) {
+      pickedHand.push(card);
+      spellPicked++;
+    } else if (def?.type !== 'SPELL' && otherPicked < targetOtherCount) {
+      pickedHand.push(card);
+      otherPicked++;
+    } else {
+      remainingDeck.push(card);
+    }
+  }
+
+  // カスタムデッキ等で万が一どちらかの種別が不足していた場合は残りの山札から補充して規定枚数を満たす
+  while (pickedHand.length < targetTotalHand && remainingDeck.length > 0) {
+    pickedHand.push(remainingDeck.shift()!);
+  }
+
+  const hand = pickedHand.map((c) => {
     c.zone = 'HAND';
     return c;
   });
 
-  const deck = allCards.map((c) => {
+  const deck = shuffleArray(remainingDeck).map((c) => {
     c.zone = 'DECK';
     return c;
   });
