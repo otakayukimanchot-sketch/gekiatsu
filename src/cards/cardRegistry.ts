@@ -72,6 +72,26 @@ export const CARD_EVOLUTION_LINES = {
     stages: ['atk_agasa', 'evo_fo_agasa', 'evo_agasa_ex'],
     relatedSupportCards: [],
   },
+  gabonLine: {
+    familyName: 'ガボン系列',
+    stages: ['atk_gabon', 'evo_maid_gabon', 'evo_gabon_ex'],
+    relatedSupportCards: [],
+  },
+  zukkyLine: {
+    familyName: 'づっきー系列',
+    stages: ['atk_zukky', 'evo_chuya_zukky', 'evo_composer_zukky', 'evo_zukky_ex'],
+    relatedSupportCards: [],
+  },
+  niseiLine: {
+    familyName: '２世系列',
+    stages: ['atk_nisei', 'evo_hashagu_nisei', 'evo_nisei_ex'],
+    relatedSupportCards: [],
+  },
+  ohtaniGroup: {
+    familyName: '大谷翔平',
+    stages: ['atk_ohtani_shohei'],
+    relatedSupportCards: [],
+  },
   tsudanumazuGroup: {
     familyName: 'つだぬまず＆特効系列',
     stages: [

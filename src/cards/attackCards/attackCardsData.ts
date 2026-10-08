@@ -2,7 +2,7 @@ import { CardDefinition, RawCardSeed } from '../types';
 import { buildCardDefinition } from '../levelSystem';
 
 /**
- * 攻撃カード定義一覧 (全50種)
+ * 攻撃カード定義一覧 (全61種)
  *
  * 【収録系列一覧】
  * 1. よしえ進化系列: 綺麗なよしえ (Lv.2) → 塩よしえ (Lv.3) → 「普通に話すだけならいいよー（嘘）」嘉慧 (Lv.4) → よしえEX (Lv.5)
@@ -17,8 +17,11 @@ import { buildCardDefinition } from '../levelSystem';
  * 10. ワンワン進化系列: ワンワン (Lv.2) → 凶暴なワンワン (Lv.4)
  * 11. マスオさん進化系列: マスオさん (Lv.2) → え～！マスオさん (Lv.4) → マスオさんEX (Lv.5)
  * 12. アガサ博士進化系列: アガサ博士 (Lv.2) → ふぉアガサ博士 (Lv.4) → アガサ博士EX (Lv.5)
- * 13. つだぬまず＆特効系列: しょーちゃん (Lv.3) / おりちゃん (Lv.3) / ムエ (Lv.4) / もえきゅん (Lv.2・しょーちゃん即死) / りょち (Lv.2・ムエ即死) / メンヘラな泰松 (Lv.3)
- * 14. 単体アタッカー: 情報処理基礎のおばぁ (Lv.1) / 顎 (Lv.1) / 井上教授（壁） (Lv.1) / ヨートン (Lv.2) / バニラなそうくん (Lv.2) / 野々村議員 (Lv.2)
+ * 13. ガボン進化系列: ガボン (Lv.2) → メイド服のガボン (Lv.4) → ガボンEX (Lv.5)
+ * 14. づっきー進化系列: づっきー (Lv.2) → 昼夜逆転のづっきー (Lv.3) → 作曲家なづっきー (Lv.4) → づっきーEX (Lv.5)
+ * 15. ２世進化系列: ２世 (Lv.2) → はしゃぐ２世 (Lv.4) → ２世EX (Lv.5)
+ * 16. つだぬまず＆特効系列: しょーちゃん (Lv.3) / おりちゃん (Lv.3) / ムエ (Lv.4) / もえきゅん (Lv.2・しょーちゃん即死) / りょち (Lv.2・ムエ即死) / メンヘラな泰松 (Lv.3)
+ * 17. 単体アタッカー: 情報処理基礎のおばぁ (Lv.1) / 顎 (Lv.1) / 井上教授（壁） (Lv.1) / ヨートン (Lv.2) / バニラなそうくん (Lv.2) / 野々村議員 (Lv.2) / 大谷翔平 (Lv.4)
  */
 const ATTACK_CARD_SEEDS: RawCardSeed[] = [
   // ============================================================================
@@ -1218,6 +1221,278 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
       tags: ['会見', '号泣', 'Lv.2'],
       flavorText: '「この世の中をぉぉ！変えたい一心でぇぇぇ！！」',
       artSymbol: 'Zap',
+    },
+  },
+
+  // ============================================================================
+  // 15. ガボン進化系列
+  //     ガボン (Lv.2) → メイド服のガボン (Lv.4) → ガボンEX (Lv.5)
+  // ============================================================================
+  {
+    id: 'atk_gabon',
+    name: 'ガボン',
+    type: 'ATTACK',
+    evolution: {
+      family: 'ガボン系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: 'evo_maid_gabon',
+    },
+    level: 2,
+    abilities: {
+      attackName: 'ガボンタックル',
+      activeEffect: '2エネルギーで50ダメージを与える基本攻撃',
+      description: 'ガボン進化系列の起点となるLv.2基礎カード。「メイド服のガボン」へ進化可能。',
+    },
+    ui: {
+      tags: ['ガボン系', '基礎', 'Lv.2'],
+      flavorText: '「パワフルな体当たりで前線を切り拓くガボン！」',
+      artSymbol: 'Shield',
+    },
+  },
+  {
+    id: 'evo_maid_gabon',
+    name: 'メイド服のガボン',
+    type: 'ATTACK',
+    evolution: {
+      family: 'ガボン系列',
+      stage: 2,
+      evolvesFrom: 'atk_gabon',
+      evolvesTo: 'evo_gabon_ex',
+    },
+    level: 4,
+    abilities: {
+      attackName: '萌え萌えキュン・フルスイング',
+      activeEffect: '3エネルギーで100ダメージを与える強襲攻撃',
+      description:
+        '「ガボン」から進化。ギャップ萌えと圧倒的破壊力を兼ね備え、3エネルギー100ダメージを叩き込む。「ガボンEX」へ進化可能。',
+    },
+    ui: {
+      tags: ['ガボン系', 'メイド', '進化', 'Lv.4'],
+      flavorText: '「お帰りなさいませご主人様！特大の一撃をお届けします♡」',
+      artSymbol: 'Heart',
+    },
+  },
+  {
+    id: 'evo_gabon_ex',
+    name: 'ガボンEX',
+    type: 'ATTACK',
+    evolution: {
+      family: 'ガボン系列',
+      stage: 3,
+      evolvesFrom: 'evo_maid_gabon',
+      evolvesTo: null,
+    },
+    level: 5,
+    abilities: {
+      attackName: 'EXアルティメット・ガボンインパクト',
+      activeEffect: '4エネルギーで130ダメージを与えるEX必殺技',
+      passiveEffect: 'EXルール：きぜつした際、相手は2ポイントを獲得する',
+      description:
+        '【EX級】「メイド服のガボン」から進化する最終形態！HP160・攻撃力130の超弩級フィニッシャー。',
+    },
+    ui: {
+      tags: ['ガボン系', 'EX', '進化', 'Lv.5'],
+      flavorText: '「すべてのリミッターを解き放った究極のガボンEX降臨！！」',
+      artSymbol: 'Crown',
+    },
+  },
+
+  // ============================================================================
+  // 16. づっきー進化系列
+  //     づっきー (Lv.2) → 昼夜逆転のづっきー (Lv.3) → 作曲家なづっきー (Lv.4) → づっきーEX (Lv.5)
+  // ============================================================================
+  {
+    id: 'atk_zukky',
+    name: 'づっきー',
+    type: 'ATTACK',
+    evolution: {
+      family: 'づっきー系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: 'evo_chuya_zukky',
+    },
+    level: 2,
+    abilities: {
+      attackName: 'づっきービート',
+      activeEffect: '2エネルギーで50ダメージを与える基本攻撃',
+      description: 'づっきー進化系列の起点となるLv.2基礎カード。「昼夜逆転のづっきー」へ進化可能。',
+    },
+    ui: {
+      tags: ['づっきー系', '基礎', 'Lv.2'],
+      flavorText: '「まだ生活リズムが整っている頃のづっきー。」',
+      artSymbol: 'Sparkles',
+    },
+  },
+  {
+    id: 'evo_chuya_zukky',
+    name: '昼夜逆転のづっきー',
+    type: 'ATTACK',
+    evolution: {
+      family: 'づっきー系列',
+      stage: 2,
+      evolvesFrom: 'atk_zukky',
+      evolvesTo: 'evo_composer_zukky',
+    },
+    level: 3,
+    abilities: {
+      attackName: '午前4時のハイテンション',
+      activeEffect: '2エネルギーで70ダメージを与える主力攻撃',
+      description:
+        '「づっきー」から進化。深夜に覚醒し2エネルギー70ダメージを放つ。「作曲家なづっきー」へ進化可能。',
+    },
+    ui: {
+      tags: ['づっきー系', '夜行性', '進化', 'Lv.3'],
+      flavorText: '「朝日が昇る頃に一番目が冴えてくるタイプ。」',
+      artSymbol: 'Zap',
+    },
+  },
+  {
+    id: 'evo_composer_zukky',
+    name: '作曲家なづっきー',
+    type: 'ATTACK',
+    evolution: {
+      family: 'づっきー系列',
+      stage: 3,
+      evolvesFrom: 'evo_chuya_zukky',
+      evolvesTo: 'evo_zukky_ex',
+    },
+    level: 4,
+    abilities: {
+      attackName: '神曲マスタリング爆撃',
+      activeEffect: '3エネルギーで100ダメージを与える強襲攻撃',
+      description:
+        '「昼夜逆転のづっきー」から進化。魂のメロディで3エネルギー100ダメージを響かせる。「づっきーEX」へ進化可能。',
+    },
+    ui: {
+      tags: ['づっきー系', '作曲家', '進化', 'Lv.4'],
+      flavorText: '「徹夜の果てに降りてきた神フレーズが戦場を震わせる！」',
+      artSymbol: 'Sparkles',
+    },
+  },
+  {
+    id: 'evo_zukky_ex',
+    name: 'づっきーEX',
+    type: 'ATTACK',
+    evolution: {
+      family: 'づっきー系列',
+      stage: 4,
+      evolvesFrom: 'evo_composer_zukky',
+      evolvesTo: null,
+    },
+    level: 5,
+    abilities: {
+      attackName: 'EXグランド・シンフォニア',
+      activeEffect: '4エネルギーで130ダメージを与えるEX必殺技',
+      passiveEffect: 'EXルール：きぜつした際、相手は2ポイントを獲得する',
+      description:
+        '【EX級】「作曲家なづっきー」から進化する第4段階・最終形態！HP160・攻撃力130の究極マエストロ。',
+    },
+    ui: {
+      tags: ['づっきー系', 'EX', '進化', 'Lv.5'],
+      flavorText: '「世界を塗り替える究極の交響曲！づっきーEX、開演！！」',
+      artSymbol: 'Crown',
+    },
+  },
+
+  // ============================================================================
+  // 17. ２世進化系列
+  //     ２世 (Lv.2) → はしゃぐ２世 (Lv.4) → ２世EX (Lv.5)
+  // ============================================================================
+  {
+    id: 'atk_nisei',
+    name: '２世',
+    type: 'ATTACK',
+    evolution: {
+      family: '２世系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: 'evo_hashagu_nisei',
+    },
+    level: 2,
+    abilities: {
+      attackName: 'サラブレッドショット',
+      activeEffect: '2エネルギーで50ダメージを与える基本攻撃',
+      description: '２世進化系列の起点となるLv.2基礎カード。「はしゃぐ２世」へ進化可能。',
+    },
+    ui: {
+      tags: ['２世系', '基礎', 'Lv.2'],
+      flavorText: '「受け継がれし血統。そのポテンシャルは計り知れない。」',
+      artSymbol: 'Sparkles',
+    },
+  },
+  {
+    id: 'evo_hashagu_nisei',
+    name: 'はしゃぐ２世',
+    type: 'ATTACK',
+    evolution: {
+      family: '２世系列',
+      stage: 2,
+      evolvesFrom: 'atk_nisei',
+      evolvesTo: 'evo_nisei_ex',
+    },
+    level: 4,
+    abilities: {
+      attackName: '全力ハイテンション暴走',
+      activeEffect: '3エネルギーで100ダメージを与える強襲攻撃',
+      description:
+        '「２世」から進化。全力ではしゃぎ回り3エネルギー100ダメージを叩き出す。「２世EX」へ進化可能。',
+    },
+    ui: {
+      tags: ['２世系', '進化', 'Lv.4'],
+      flavorText: '「テンション最高潮！！もう誰にも止められない！！」',
+      artSymbol: 'Flame',
+    },
+  },
+  {
+    id: 'evo_nisei_ex',
+    name: '２世EX',
+    type: 'ATTACK',
+    evolution: {
+      family: '２世系列',
+      stage: 3,
+      evolvesFrom: 'evo_hashagu_nisei',
+      evolvesTo: null,
+    },
+    level: 5,
+    abilities: {
+      attackName: 'EXレジェンド・サクセサー',
+      activeEffect: '4エネルギーで130ダメージを与えるEX必殺技',
+      passiveEffect: 'EXルール：きぜつした際、相手は2ポイントを獲得する',
+      description:
+        '【EX級】「はしゃぐ２世」から進化する最終形態！HP160・攻撃力130で初代をも超える覚醒を果たした。',
+    },
+    ui: {
+      tags: ['２世系', 'EX', '進化', 'Lv.5'],
+      flavorText: '「初代を超えし新時代の覇者、２世EXここに極まる！！」',
+      artSymbol: 'Crown',
+    },
+  },
+
+  // ============================================================================
+  // 18. 超大型単体アタッカー: 大谷翔平
+  // ============================================================================
+  {
+    id: 'atk_ohtani_shohei',
+    name: '大谷翔平',
+    type: 'ATTACK',
+    evolution: {
+      family: '単体',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 4,
+    abilities: {
+      attackName: '二刀流特大ホームラン＆165キロ剛速球',
+      activeEffect: '3エネルギーで100ダメージを与える超一流の二刀流攻撃',
+      description:
+        '進化なしで場に出せるLv.4二刀流スーパースター！HP130・攻撃力100で攻守ともに別次元の強さを誇る。',
+    },
+    ui: {
+      tags: ['二刀流', 'MVP', 'Lv.4'],
+      flavorText: '「憧れるのをやめましょう。打って投げて戦場を支配する世界のショウヘイ！」',
+      artSymbol: 'Flame',
     },
   },
 ];
