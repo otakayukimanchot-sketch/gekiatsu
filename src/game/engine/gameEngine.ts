@@ -928,7 +928,7 @@ function activateSpellCard(
       if (player.activeCard) {
         player.activeCard.damageReductionNextTurn += 20;
       }
-      effectSummary = `${player.name} が「${def.name}」を発動！手札に「井上教授（壁）」を加え、次ターンの被ダメージ−20！`;
+      effectSummary = `${player.name} が「${def.name}」を発動！手札に「井上教授」を加え、次ターンの被ダメージ−20！`;
       break;
     }
     case 'HEAL_20_SHIELD_20': {

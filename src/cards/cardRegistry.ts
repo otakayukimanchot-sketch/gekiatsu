@@ -9,7 +9,7 @@ import { SPELL_CARDS } from './spellCards/spellCardsData';
 export const CARD_EVOLUTION_LINES = {
   yoshieLine: {
     familyName: 'よしえ系列',
-    stages: ['atk_yoshie_clean', 'evo_yoshie_salt', 'evo_yoshie_kakei', 'evo_yoshie_ex'],
+    stages: ['atk_yoshie_clean', 'evo_yoshie_kakei', 'evo_yoshie_ex'],
     relatedSupportCards: ['spl_juzu_card', 'spl_unko_card'],
   },
   ryukuLine: {
@@ -20,7 +20,7 @@ export const CARD_EVOLUTION_LINES = {
   sableCannonLine: {
     familyName: 'サブレ・キャノン系列',
     stages: ['atk_mayu_sable', 'evo_ago_cannon'],
-    relatedSupportCards: ['spl_ago_card', 'atk_ago', 'atk_cannon_naguri', 'atk_voicememo_cannon'],
+    relatedSupportCards: ['spl_ago_card', 'atk_ago'],
   },
   headphoneNikiLine: {
     familyName: 'ヘッドフォンニキ系列',
@@ -30,11 +30,7 @@ export const CARD_EVOLUTION_LINES = {
   yukiyaLine: {
     familyName: 'ゆきや系列',
     stages: ['atk_yukiya', 'evo_uragiri_yukiya', 'evo_yukiya_ex'],
-    relatedSupportCards: [
-      'atk_samishii_yukiya',
-      'atk_henkin_yukiya',
-      'atk_odoru_yukiya',
-    ],
+    relatedSupportCards: ['atk_odoru_yukiya'],
   },
   hirokoLine: {
     familyName: '博子系列',
@@ -46,8 +42,8 @@ export const CARD_EVOLUTION_LINES = {
     stages: ['atk_ryunosuke', 'evo_juryunosuke', 'evo_ryunosuke_ex'],
     relatedSupportCards: [],
   },
-  nakamuraLine: {
-    familyName: '中村先生系列',
+  mongolLine: {
+    familyName: 'モンゴル系列',
     stages: ['atk_nakamura_sensei', 'evo_superfly_unit', 'evo_nakamura_ex'],
     relatedSupportCards: [],
   },
@@ -86,6 +82,31 @@ export const CARD_EVOLUTION_LINES = {
     stages: ['atk_nisei', 'evo_hashagu_nisei', 'evo_nisei_ex'],
     relatedSupportCards: [],
   },
+  yotonLine: {
+    familyName: 'ヨートン系列',
+    stages: ['atk_yoton', 'evo_ohayoton', 'evo_yoton_ex'],
+    relatedSupportCards: [],
+  },
+  boonLine: {
+    familyName: 'ブーン系列',
+    stages: ['atk_boon', 'evo_kawaii_boon', 'evo_boon_ex'],
+    relatedSupportCards: [],
+  },
+  vanillaLine: {
+    familyName: 'バニラ系列',
+    stages: ['atk_vanilla_sokun', 'evo_vanilla_janakute', 'evo_vanilla_ex'],
+    relatedSupportCards: ['spl_vanilla'],
+  },
+  keroroLine: {
+    familyName: 'ケロロ軍曹系列',
+    stages: ['atk_keroro_gunso', 'evo_geroro_gunso', 'evo_gunso_ex'],
+    relatedSupportCards: [],
+  },
+  africaLine: {
+    familyName: 'アフリカ系列',
+    stages: ['atk_africa', 'evo_senmon_africa', 'evo_africa_ex'],
+    relatedSupportCards: [],
+  },
   tsudanumazuGroup: {
     familyName: 'つだぬまず＆特効系列',
     stages: [
@@ -96,7 +117,6 @@ export const CARD_EVOLUTION_LINES = {
       'atk_ryochi',
       'atk_moka',
       'atk_kohaku',
-      'atk_menhera_yasumatsu',
     ],
     relatedSupportCards: ['spl_yasumatsu', 'spl_sensoji', 'spl_sensoji_lawn', 'spl_sumidagawa'],
   },
@@ -120,11 +140,11 @@ export const DECK_SIZE = 20;
 
 /**
  * 標準デッキ生成（20枚・バランス構築＆ローテーション）
- * 特定カードだけが出続ける偏りを解消し、全進化系列・単体カード（メンヘラな泰松・大谷翔平・特効など）・魔法カード（安松・トレード・離れるそうくん・trio・酒・ポカリ・ブラックコーヒー等）がバランス良く登場する
+ * 特定カードだけが出続ける偏りを解消し、全進化系列・単体カード・魔法カードがバランス良く登場する
  */
 export function createStandardDeckDefinitionIds(): string[] {
   const evolutionChains: string[][] = [
-    ['atk_yoshie_clean', 'evo_yoshie_salt', 'evo_yoshie_kakei', 'evo_yoshie_ex'],
+    ['atk_yoshie_clean', 'evo_yoshie_kakei', 'evo_yoshie_ex'],
     ['atk_yoshida_ryuku', 'evo_ryuku_skywalker'],
     ['atk_mayu_sable', 'evo_ago_cannon'],
     ['atk_headphone_niki', 'evo_onhood_headphone_niki'],
@@ -139,6 +159,11 @@ export function createStandardDeckDefinitionIds(): string[] {
     ['atk_gabon', 'evo_maid_gabon', 'evo_gabon_ex'],
     ['atk_zukky', 'evo_chuya_zukky', 'evo_composer_zukky', 'evo_zukky_ex'],
     ['atk_nisei', 'evo_hashagu_nisei', 'evo_nisei_ex'],
+    ['atk_yoton', 'evo_ohayoton', 'evo_yoton_ex'],
+    ['atk_boon', 'evo_kawaii_boon', 'evo_boon_ex'],
+    ['atk_vanilla_sokun', 'evo_vanilla_janakute', 'evo_vanilla_ex'],
+    ['atk_keroro_gunso', 'evo_geroro_gunso', 'evo_gunso_ex'],
+    ['atk_africa', 'evo_senmon_africa', 'evo_africa_ex'],
   ];
 
   const singleAttackIds: string[] = ATTACK_CARDS.filter(

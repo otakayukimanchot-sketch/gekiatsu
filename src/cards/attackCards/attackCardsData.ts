@@ -2,17 +2,17 @@ import { CardDefinition, RawCardSeed } from '../types';
 import { buildCardDefinition } from '../levelSystem';
 
 /**
- * 攻撃カード定義一覧 (全61種)
+ * 攻撃カード定義一覧
  *
  * 【収録系列一覧】
- * 1. よしえ進化系列: 綺麗なよしえ (Lv.2) → 塩よしえ (Lv.3) → 「普通に話すだけならいいよー（嘘）」嘉慧 (Lv.4) → よしえEX (Lv.5)
+ * 1. よしえ進化系列: 綺麗なよしえ (Lv.2) → 「普通に話すだけならいいよー（嘘）」嘉慧 (Lv.4) → よしえEX (Lv.5)
  * 2. りゅうく進化系列: 吉田りゅうく (Lv.3) → リューク・スカイウォーカー (Lv.5)
- * 3. サブレ・キャノン系列: まゆサブレ (Lv.3) → 顎・キャノン (Lv.4) / キャノンの殴り (Lv.2) / ボイメキャノン (Lv.3)
+ * 3. サブレ・キャノン系列: まゆサブレ (Lv.3) → 顎・キャノン (Lv.4)
  * 4. ヘッドフォンニキ系列: ヘッドフォンニキ (Lv.2) → オンフードヘッドフォンニキ (Lv.4)
- * 5. ゆきや進化系列＆派生: ゆきや (Lv.2) → 裏切りのゆきや (Lv.4) → ゆきやEX (Lv.5) / さみしいゆきや (Lv.1) / 返金のゆきや (Lv.2) / おどるゆきや (Lv.3)
+ * 5. ゆきや進化系列＆派生: ゆきや (Lv.2) → 裏切りのゆきや (Lv.4) → ゆきやEX (Lv.5) / おどるゆきや (Lv.3)
  * 6. 博子進化系列: 博子 (Lv.2) → ピロコ (Lv.4) → 博子EX (Lv.5)
  * 7. りゅーのすけ進化系列: りゅーのすけ (Lv.1) → じゅーりゅーのすけ (Lv.3) → りゅーのすけEX (Lv.5)
- * 8. 中村先生進化系列: 中村先生 (Lv.2) → スーパーフライ (Lv.4) → 中村EX (Lv.5)
+ * 8. モンゴル進化系列: モンゴル (Lv.2) → スーパーフライ (Lv.4) → モンゴルEX (Lv.5)
  * 9. うーたん進化系列: うーたん (Lv.1) → 凶暴なうーたん (Lv.3)
  * 10. ワンワン進化系列: ワンワン (Lv.2) → 凶暴なワンワン (Lv.4)
  * 11. マスオさん進化系列: マスオさん (Lv.2) → え～！マスオさん (Lv.4) → マスオさんEX (Lv.5)
@@ -20,12 +20,18 @@ import { buildCardDefinition } from '../levelSystem';
  * 13. ガボン進化系列: ガボン (Lv.2) → メイド服のガボン (Lv.4) → ガボンEX (Lv.5)
  * 14. づっきー進化系列: づっきー (Lv.2) → 昼夜逆転のづっきー (Lv.3) → 作曲家なづっきー (Lv.4) → づっきーEX (Lv.5)
  * 15. ２世進化系列: ２世 (Lv.2) → はしゃぐ２世 (Lv.4) → ２世EX (Lv.5)
- * 16. つだぬまず＆特効系列: しょーちゃん (Lv.3) / おりちゃん (Lv.3) / ムエ (Lv.4) / もえきゅん (Lv.2・しょーちゃん即死) / りょち (Lv.2・ムエ即死) / もか (Lv.2・ムエ＆しょーちゃん+30) / こはく (Lv.2・ムエ＆しょーちゃん+30) / メンヘラな泰松 (Lv.3)
- * 17. 単体アタッカー: 情報処理基礎のおばぁ (Lv.1) / 顎 (Lv.1) / 井上教授（壁） (Lv.1) / ヨートン (Lv.2) / バニラなそうくん (Lv.2) / 野々村議員 (Lv.2) / Rikua (Lv.3) / 中央大学教授（ピザを持ってくる） (Lv.3) / ブーン (Lv.2) / レジェンド校長 (Lv.4)
+ * 16. ヨートン進化系列: ヨートン (Lv.2) → おはヨートン (Lv.4) → ヨートンEX (Lv.5)
+ * 17. ブーン進化系列: ブーン (Lv.2) → かわいいブーン (Lv.4) → ブーンEX (Lv.5)
+ * 18. バニラ進化系列: バニラなそうくん (Lv.2) → バニラじゃなくていいじゃん (Lv.4) → バニラEX (Lv.5)
+ * 19. ケロロ軍曹進化系列: ケロロ軍曹 (Lv.2) → ゲロロ軍曹 (Lv.4) → 軍曹EX (Lv.5)
+ * 20. アフリカ進化系列: アフリカ (Lv.2) → 専門はアフリカ (Lv.4) → アフリカEX (Lv.5)
+ * 21. つだぬまず＆特効系列: しょーちゃん (Lv.3) / おりちゃん (Lv.3) / ムエ (Lv.4) / もえきゅん (Lv.2・しょーちゃん即死) / りょち (Lv.2・ムエ即死) / もか (Lv.2・ムエ＆しょーちゃん+30) / こはく (Lv.2・ムエ＆しょーちゃん+30)
+ * 22. 単体アタッカー: 情報処理基礎のおばぁ (Lv.1) / 顎 (Lv.1) / 井上教授 (Lv.1) / 野々村議員 (Lv.2) / 中央大学教授（ピザを持ってくる） (Lv.3)
  */
 const ATTACK_CARD_SEEDS: RawCardSeed[] = [
   // ============================================================================
   // 1. よしえ進化系列
+  //    綺麗なよしえ (Lv.2) → 「普通に話すだけならいいよー（嘘）」嘉慧 (Lv.4) → よしえEX (Lv.5)
   // ============================================================================
   {
     id: 'atk_yoshie_clean',
@@ -35,42 +41,20 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
       family: 'よしえ系列',
       stage: 1,
       evolvesFrom: null,
-      evolvesTo: 'evo_yoshie_salt',
+      evolvesTo: 'evo_yoshie_kakei',
       triggerCardId: 'spl_juzu_card',
     },
     level: 2,
     abilities: {
       attackName: 'ピュアストライク',
       activeEffect: '2エネルギーで50ダメージを与える安定攻撃',
-      description: '攻守のバランスに優れたLv.2基礎カード。塩よしえへ進化可能。',
+      description:
+        '攻守のバランスに優れたLv.2基礎カード。「普通に話すだけならいいよー（嘘）」嘉慧へ進化可能。',
     },
     ui: {
       tags: ['よしえ系', 'Lv.2'],
-      flavorText: '「清らかで美しいよしえ。まだ塩分は控えめ。」',
+      flavorText: '「清らかで美しいよしえ。その裏に秘められた本性とは。」',
       artSymbol: 'Sparkles',
-    },
-  },
-  {
-    id: 'evo_yoshie_salt',
-    name: '塩よしえ',
-    type: 'ATTACK',
-    evolution: {
-      family: 'よしえ系列',
-      stage: 2,
-      evolvesFrom: 'atk_yoshie_clean',
-      evolvesTo: 'evo_yoshie_kakei',
-      triggerCardId: 'spl_unko_card',
-    },
-    level: 3,
-    abilities: {
-      attackName: '塩対応スラッシュ',
-      activeEffect: '2エネルギーで70ダメージを与える主力攻撃',
-      description: '「綺麗なよしえ」から進化。2エネルギーで70ダメージを叩き出す主力アタッカー。',
-    },
-    ui: {
-      tags: ['よしえ系', '進化', 'Lv.3'],
-      flavorText: '「塩対応が冴え渡るよしえ。近づく者には容赦ない。」',
-      artSymbol: 'Zap',
     },
   },
   {
@@ -79,15 +63,16 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
     type: 'ATTACK',
     evolution: {
       family: 'よしえ系列',
-      stage: 3,
-      evolvesFrom: 'evo_yoshie_salt',
+      stage: 2,
+      evolvesFrom: 'atk_yoshie_clean',
       evolvesTo: 'evo_yoshie_ex',
     },
     level: 4,
     abilities: {
       attackName: '嘘つきオーバーキル',
       activeEffect: '3エネルギーで100ダメージを与える強襲攻撃',
-      description: '「塩よしえ」から進化。3エネルギーで100ダメージを放つ重量級アタッカー。',
+      description:
+        '「綺麗なよしえ」から進化。3エネルギーで100ダメージを放つ重量級アタッカー。「よしえEX」へ進化可能。',
     },
     ui: {
       tags: ['よしえ系', '嘉慧', '進化', 'Lv.4'],
@@ -101,7 +86,7 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
     type: 'ATTACK',
     evolution: {
       family: 'よしえ系列',
-      stage: 4,
+      stage: 3,
       evolvesFrom: 'evo_yoshie_kakei',
       evolvesTo: null,
     },
@@ -217,50 +202,6 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
       tags: ['キャノン', '顎', '進化', 'Lv.4'],
       flavorText: '「突き出た顎から放たれる超高出力キャノン砲！」',
       artSymbol: 'Flame',
-    },
-  },
-  {
-    id: 'atk_cannon_naguri',
-    name: 'キャノンの殴り',
-    type: 'ATTACK',
-    evolution: {
-      family: 'サブレ・キャノン系列',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 2,
-    abilities: {
-      attackName: 'ゼロ距離ストレート',
-      activeEffect: '2エネルギーで50ダメージを与える近接打撃',
-      description: '砲撃ではなく物理で殴りかかるLv.2基礎カード。堅実な50ダメージを与える。',
-    },
-    ui: {
-      tags: ['キャノン', '格闘', 'Lv.2'],
-      flavorText: '「撃つより殴った方が早い！！」',
-      artSymbol: 'Sword',
-    },
-  },
-  {
-    id: 'atk_voicememo_cannon',
-    name: 'ボイメキャノン',
-    type: 'ATTACK',
-    evolution: {
-      family: 'サブレ・キャノン系列',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 3,
-    abilities: {
-      attackName: '爆音ボイスメッセージ砲',
-      activeEffect: '2エネルギーで70ダメージを与える音響砲撃',
-      description: '怒涛のボイスメッセージを撃ち込むLv.3主力アタッカー。2エネルギー70ダメージ。',
-    },
-    ui: {
-      tags: ['キャノン', 'ボイメ', 'Lv.3'],
-      flavorText: '「再生ボタンを押した瞬間、鼓膜と精神が吹き飛ぶ。」',
-      artSymbol: 'Zap',
     },
   },
 
@@ -383,50 +324,6 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
       tags: ['ゆきや系', 'EX', '進化', 'Lv.5'],
       flavorText: '「裏切りの果てに辿り着いた絶対王政。すべてはゆきやの手のひらの上。」',
       artSymbol: 'Crown',
-    },
-  },
-  {
-    id: 'atk_samishii_yukiya',
-    name: 'さみしいゆきや',
-    type: 'ATTACK',
-    evolution: {
-      family: 'ゆきや系列',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 1,
-    abilities: {
-      attackName: 'かまってタックル',
-      activeEffect: '1エネルギーで30ダメージを与える速攻攻撃',
-      description: '1エネルギーで即座に動けるLv.1速攻カード。寂しさを力に変えて序盤から攻める。',
-    },
-    ui: {
-      tags: ['ゆきや系', '速攻', 'Lv.1'],
-      flavorText: '「ねえ、なんで既読つかないの……？」',
-      artSymbol: 'Heart',
-    },
-  },
-  {
-    id: 'atk_henkin_yukiya',
-    name: '返金のゆきや',
-    type: 'ATTACK',
-    evolution: {
-      family: 'ゆきや系列',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 2,
-    abilities: {
-      attackName: '全額返金クレーム',
-      activeEffect: '2エネルギーで50ダメージを与える追及攻撃',
-      description: '1円単位まで徹底的に取り立てるLv.2標準アタッカー。HP80・攻撃力50。',
-    },
-    ui: {
-      tags: ['ゆきや系', '返金', 'Lv.2'],
-      flavorText: '「領収書ありますよね？今すぐ返金してください！」',
-      artSymbol: 'Lock',
     },
   },
   {
@@ -599,29 +496,29 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
   },
 
   // ============================================================================
-  // 8. 中村先生進化系列
-  //    中村先生 (Lv.2) → スーパーフライ (Lv.4) → 中村EX (Lv.5)
+  // 8. モンゴル進化系列
+  //    モンゴル (Lv.2) → スーパーフライ (Lv.4) → モンゴルEX (Lv.5)
   // ============================================================================
   {
     id: 'atk_nakamura_sensei',
-    name: '中村先生',
+    name: 'モンゴル',
     type: 'ATTACK',
     evolution: {
-      family: '中村先生系列',
+      family: 'モンゴル系列',
       stage: 1,
       evolvesFrom: null,
       evolvesTo: 'evo_superfly_unit',
     },
     level: 2,
     abilities: {
-      attackName: '熱血チョーク投げ',
+      attackName: '草原の疾風アタック',
       activeEffect: '2エネルギーで50ダメージを与える基本攻撃',
-      description: '教壇から鋭い一撃を放つLv.2基礎カード。「スーパーフライ」へ進化可能。',
+      description: 'モンゴル進化系列の起点となるLv.2基礎カード。「スーパーフライ」へ進化可能。',
     },
     ui: {
-      tags: ['中村系', '先生', 'Lv.2'],
-      flavorText: '「ここテストに出るぞー！しっかり聞いておけ！」',
-      artSymbol: 'BookOpen',
+      tags: ['モンゴル系', '基礎', 'Lv.2'],
+      flavorText: '「果てしない大草原から吹き抜ける熱き風！」',
+      artSymbol: 'Wind',
     },
   },
   {
@@ -629,7 +526,7 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
     name: 'スーパーフライ',
     type: 'ATTACK',
     evolution: {
-      family: '中村先生系列',
+      family: 'モンゴル系列',
       stage: 2,
       evolvesFrom: 'atk_nakamura_sensei',
       evolvesTo: 'evo_nakamura_ex',
@@ -638,35 +535,35 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
     abilities: {
       attackName: 'モンゴル大飛翔インパクト',
       activeEffect: '3エネルギーで100ダメージを与える強襲攻撃',
-      description: '「中村先生」から進化。大草原の風を纏い3エネルギー100ダメージを叩き出す。「中村EX」へ進化可能。',
+      description: '「モンゴル」から進化。大草原の風を纏い3エネルギー100ダメージを叩き出す。「モンゴルEX」へ進化可能。',
     },
     ui: {
-      tags: ['中村系', '進化', 'Lv.4'],
+      tags: ['モンゴル系', '進化', 'Lv.4'],
       flavorText: '「大地を越えて羽ばたくスーパーフライの魂！！」',
       artSymbol: 'Wind',
     },
   },
   {
     id: 'evo_nakamura_ex',
-    name: '中村EX',
+    name: 'モンゴルEX',
     type: 'ATTACK',
     evolution: {
-      family: '中村先生系列',
+      family: 'モンゴル系列',
       stage: 3,
       evolvesFrom: 'evo_superfly_unit',
       evolvesTo: null,
     },
     level: 5,
     abilities: {
-      attackName: 'EXグランドマスター講義',
+      attackName: 'EX大草原アルティメットストーム',
       activeEffect: '4エネルギーで130ダメージを与えるEX必殺技',
       passiveEffect: 'EXルール：きぜつした際、相手は2ポイントを獲得する',
       description:
-        '【EX級】「スーパーフライ」から進化する最終形態！HP160・攻撃力130の伝説級教育者。',
+        '【EX級】「スーパーフライ」から進化する最終形態！HP160・攻撃力130の伝説級モンゴルEX。',
     },
     ui: {
-      tags: ['中村系', 'EX', '進化', 'Lv.5'],
-      flavorText: '「これぞ究極の授業！単位と共に相手を吹き飛ばす！」',
+      tags: ['モンゴル系', 'EX', '進化', 'Lv.5'],
+      flavorText: '「大地と蒼き狼の力を宿した究極形態、モンゴルEX降臨！」',
       artSymbol: 'Crown',
     },
   },
@@ -1086,31 +983,9 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
       artSymbol: 'Sparkles',
     },
   },
-  {
-    id: 'atk_menhera_yasumatsu',
-    name: 'メンヘラな泰松',
-    type: 'ATTACK',
-    evolution: {
-      family: 'つだぬまず系列',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 3,
-    abilities: {
-      attackName: '深夜の長文連投',
-      activeEffect: '2エネルギーで70ダメージを与える重圧攻撃',
-      description: '重すぎる感情をぶつけて2エネルギー70ダメージを与えるLv.3主力アタッカー。',
-    },
-    ui: {
-      tags: ['泰松', 'メンヘラ', 'Lv.3'],
-      flavorText: '「なんで返信くれないの？もういいよね全部消すね。」',
-      artSymbol: 'Skull',
-    },
-  },
 
   // ============================================================================
-  // 14. 単体アタッカー (Lv.1 〜 Lv.2)
+  // 14. 単体アタッカー & 新進化系列
   // ============================================================================
   {
     id: 'atk_info_grandma',
@@ -1160,7 +1035,7 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
   },
   {
     id: 'token_inoue_professor',
-    name: '井上教授（壁）',
+    name: '井上教授',
     type: 'ATTACK',
     evolution: {
       family: 'フェニックスホール系列',
@@ -1177,54 +1052,146 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
       description: 'フェニックスホールに立ちはだかる教授。1エネルギーで堅実に戦線を支える。',
     },
     ui: {
-      tags: ['井上教授', '壁', 'Lv.1'],
-      flavorText: '「立ちはだかる学術の壁。」',
+      tags: ['井上教授', 'Lv.1'],
+      flavorText: '「立ちはだかる学術の権威。」',
       artSymbol: 'Shield',
     },
   },
+  // ヨートン進化系列: ヨートン (Lv.2) → おはヨートン (Lv.4) → ヨートンEX (Lv.5)
   {
     id: 'atk_yoton',
     name: 'ヨートン',
     type: 'ATTACK',
     evolution: {
-      family: '単体',
+      family: 'ヨートン系列',
       stage: 1,
       evolvesFrom: null,
-      evolvesTo: null,
+      evolvesTo: 'evo_ohayoton',
     },
     level: 2,
     abilities: {
       attackName: 'ヨートンスラッシュ',
       activeEffect: '2エネルギーで50ダメージを与える安定攻撃',
-      description: '安定したHP80と2エネルギー50ダメージを兼ね備えた堅実なファイター。',
+      description: '安定したHP80と2エネルギー50ダメージを兼ね備えた基礎カード。「おはヨートン」へ進化可能。',
     },
     ui: {
-      tags: ['戦士', 'Lv.2'],
+      tags: ['ヨートン系', 'Lv.2'],
       flavorText: '「ヨートン参上！」',
       artSymbol: 'Sword',
     },
   },
   {
+    id: 'evo_ohayoton',
+    name: 'おはヨートン',
+    type: 'ATTACK',
+    evolution: {
+      family: 'ヨートン系列',
+      stage: 2,
+      evolvesFrom: 'atk_yoton',
+      evolvesTo: 'evo_yoton_ex',
+    },
+    level: 4,
+    abilities: {
+      attackName: 'モーニング・ヨートン砲',
+      activeEffect: '3エネルギーで100ダメージを与える強襲攻撃',
+      description: '「ヨートン」から進化。爽やかな朝の挨拶と共に100ダメージを叩き込む。「ヨートンEX」へ進化可能。',
+    },
+    ui: {
+      tags: ['ヨートン系', '進化', 'Lv.4'],
+      flavorText: '「おはヨートン！！朝からフルパワー全開！」',
+      artSymbol: 'Flame',
+    },
+  },
+  {
+    id: 'evo_yoton_ex',
+    name: 'ヨートンEX',
+    type: 'ATTACK',
+    evolution: {
+      family: 'ヨートン系列',
+      stage: 3,
+      evolvesFrom: 'evo_ohayoton',
+      evolvesTo: null,
+    },
+    level: 5,
+    abilities: {
+      attackName: 'EXアルティメット・ヨートンブレイク',
+      activeEffect: '4エネルギーで130ダメージを与えるEX必殺技',
+      passiveEffect: 'EXルール：きぜつした際、相手は2ポイントを獲得する',
+      description: '【EX級】「おはヨートン」から進化する最終形態！HP160・攻撃力130の究極ヨートン。',
+    },
+    ui: {
+      tags: ['ヨートン系', 'EX', '進化', 'Lv.5'],
+      flavorText: '「極限進化を遂げたヨートンEXの前に敵はなし！！」',
+      artSymbol: 'Crown',
+    },
+  },
+  // バニラ進化系列: バニラなそうくん (Lv.2) → バニラじゃなくていいじゃん (Lv.4) → バニラEX (Lv.5)
+  {
     id: 'atk_vanilla_sokun',
     name: 'バニラなそうくん',
     type: 'ATTACK',
     evolution: {
-      family: 'そうくん系列',
+      family: 'バニラ系列',
       stage: 1,
       evolvesFrom: null,
-      evolvesTo: null,
+      evolvesTo: 'evo_vanilla_janakute',
       triggerCardId: 'spl_vanilla',
     },
     level: 2,
     abilities: {
       attackName: 'バニラアタック',
       activeEffect: '2エネルギーで50ダメージを与える安定攻撃',
-      description: 'クセがなく扱いやすいLv.2標準カード。序盤から中盤の繋ぎとして活躍。',
+      description: 'クセがなく扱いやすいLv.2基礎カード。「バニラじゃなくていいじゃん」へ進化可能。',
     },
     ui: {
-      tags: ['そうくん系', 'Lv.2'],
+      tags: ['バニラ系', 'そうくん系', 'Lv.2'],
       flavorText: '「バニラじゃなくていいじゃぁん！」',
       artSymbol: 'Heart',
+    },
+  },
+  {
+    id: 'evo_vanilla_janakute',
+    name: 'バニラじゃなくていいじゃん',
+    type: 'ATTACK',
+    evolution: {
+      family: 'バニラ系列',
+      stage: 2,
+      evolvesFrom: 'atk_vanilla_sokun',
+      evolvesTo: 'evo_vanilla_ex',
+    },
+    level: 4,
+    abilities: {
+      attackName: '脱バニラ・フルバースト',
+      activeEffect: '3エネルギーで100ダメージを与える強襲攻撃',
+      description: '「バニラなそうくん」から進化。3エネルギー100ダメージを放ち、「バニラEX」へ進化可能。',
+    },
+    ui: {
+      tags: ['バニラ系', '進化', 'Lv.4'],
+      flavorText: '「だからバニラじゃなくていいじゃんって言ってるでしょ！！」',
+      artSymbol: 'Flame',
+    },
+  },
+  {
+    id: 'evo_vanilla_ex',
+    name: 'バニラEX',
+    type: 'ATTACK',
+    evolution: {
+      family: 'バニラ系列',
+      stage: 3,
+      evolvesFrom: 'evo_vanilla_janakute',
+      evolvesTo: null,
+    },
+    level: 5,
+    abilities: {
+      attackName: 'EX高収入アルティメット・シンフォニー',
+      activeEffect: '4エネルギーで130ダメージを与えるEX必殺技',
+      passiveEffect: 'EXルール：きぜつした際、相手は2ポイントを獲得する',
+      description: '【EX級】「バニラじゃなくていいじゃん」から進化する最終形態！HP160・攻撃力130の最高峰カード。',
+    },
+    ui: {
+      tags: ['バニラ系', 'EX', '進化', 'Lv.5'],
+      flavorText: '「バーニラ！バニラ！究極覚醒バニラEXで高収入＆高火力！！」',
+      artSymbol: 'Crown',
     },
   },
   {
@@ -1496,30 +1463,12 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
   },
 
   // ============================================================================
-  // 18. 新規単体アタッカー: Rikua / 中央大学教授（ピザを持ってくる） / ブーン / レジェンド校長
+  // 18. 新規単体アタッカー＆進化系列:
+  //     中央大学教授（ピザを持ってくる）
+  //     ブーン → かわいいブーン → ブーンEX
+  //     ケロロ軍曹 → ゲロロ軍曹 → 軍曹EX
+  //     アフリカ → 専門はアフリカ → アフリカEX
   // ============================================================================
-  {
-    id: 'atk_rikua',
-    name: 'Rikua',
-    type: 'ATTACK',
-    evolution: {
-      family: '単体',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 3,
-    abilities: {
-      attackName: 'スタイリッシュ・スラッシュ',
-      activeEffect: '2エネルギーで70ダメージを与える主力攻撃',
-      description: 'クールな立ち回りで2エネルギー70ダメージを叩き込むLv.3主力アタッカー。',
-    },
-    ui: {
-      tags: ['Rikua', '主力', 'Lv.3'],
-      flavorText: '「Rikuaの洗練された一撃が戦場を駆け抜ける！」',
-      artSymbol: 'Zap',
-    },
-  },
   {
     id: 'atk_chuo_pizza_prof',
     name: '中央大学教授（ピザを持ってくる）',
@@ -1543,49 +1492,216 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
       artSymbol: 'Flame',
     },
   },
+  // ブーン進化系列: ブーン (Lv.2) → かわいいブーン (Lv.4) → ブーンEX (Lv.5)
   {
     id: 'atk_boon',
     name: 'ブーン',
     type: 'ATTACK',
     evolution: {
-      family: '単体',
+      family: 'ブーン系列',
       stage: 1,
       evolvesFrom: null,
-      evolvesTo: null,
+      evolvesTo: 'evo_kawaii_boon',
     },
     level: 2,
     abilities: {
       attackName: '超速ブーン突撃',
       activeEffect: '2エネルギーで50ダメージを与える高速突撃',
       description:
-        '両手を広げて風を切り裂くLv.2アタッカー！2エネルギーで50ダメージをテンポ良く与える。',
+        '両手を広げて風を切り裂くLv.2基礎カード！「かわいいブーン」へ進化可能。',
     },
     ui: {
-      tags: ['ブーン', '高速', 'Lv.2'],
+      tags: ['ブーン系', '高速', 'Lv.2'],
       flavorText: '「⊂二二二（ ＾ω＾）二⊃ ブーン！！」',
       artSymbol: 'Wind',
     },
   },
   {
-    id: 'atk_legend_principal',
-    name: 'レジェンド校長',
+    id: 'evo_kawaii_boon',
+    name: 'かわいいブーン',
     type: 'ATTACK',
     evolution: {
-      family: '単体',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
+      family: 'ブーン系列',
+      stage: 2,
+      evolvesFrom: 'atk_boon',
+      evolvesTo: 'evo_boon_ex',
     },
     level: 4,
     abilities: {
-      attackName: '伝説の全校朝礼演説',
-      activeEffect: '3エネルギーで100ダメージを与える威厳の一撃',
+      attackName: 'プリティ・ブーン旋風',
+      activeEffect: '3エネルギーで100ダメージを与える強襲攻撃',
       description:
-        '進化なしで場に出せるLv.4のレジェンド校長！HP130・攻撃力100の圧倒的威厳で戦場を掌握する。',
+        '「ブーン」から進化。愛くるしい姿から3エネルギー100ダメージを繰り出す。「ブーンEX」へ進化可能。',
     },
     ui: {
-      tags: ['校長', 'レジェンド', 'Lv.4'],
-      flavorText: '「えー、皆さんが静かになるまで3分かかりました。これより伝説の訓話を始めます！」',
+      tags: ['ブーン系', 'かわいい', '進化', 'Lv.4'],
+      flavorText: '「⊂二二二（ ✿＾ω＾✿ ）二⊃ かわいくブーン！！」',
+      artSymbol: 'Heart',
+    },
+  },
+  {
+    id: 'evo_boon_ex',
+    name: 'ブーンEX',
+    type: 'ATTACK',
+    evolution: {
+      family: 'ブーン系列',
+      stage: 3,
+      evolvesFrom: 'evo_kawaii_boon',
+      evolvesTo: null,
+    },
+    level: 5,
+    abilities: {
+      attackName: 'EX超音速ジェット・ブーン',
+      activeEffect: '4エネルギーで130ダメージを与えるEX必殺技',
+      passiveEffect: 'EXルール：きぜつした際、相手は2ポイントを獲得する',
+      description:
+        '【EX級】「かわいいブーン」から進化する最終形態！HP160・攻撃力130で音速を超えて戦場を翔ける！',
+    },
+    ui: {
+      tags: ['ブーン系', 'EX', '進化', 'Lv.5'],
+      flavorText: '「マッハの壁を突破した究極のブーンEX！！」',
+      artSymbol: 'Crown',
+    },
+  },
+  // ケロロ軍曹進化系列: ケロロ軍曹 (Lv.2) → ゲロロ軍曹 (Lv.4) → 軍曹EX (Lv.5)
+  {
+    id: 'atk_keroro_gunso',
+    name: 'ケロロ軍曹',
+    type: 'ATTACK',
+    evolution: {
+      family: 'ケロロ軍曹系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: 'evo_geroro_gunso',
+    },
+    level: 2,
+    abilities: {
+      attackName: 'ケロン星侵略アタック',
+      activeEffect: '2エネルギーで50ダメージを与える基本攻撃',
+      description:
+        'ケロロ軍曹進化系列の起点となるLv.2基礎カード。「ゲロロ軍曹」へ進化可能。',
+    },
+    ui: {
+      tags: ['軍曹系', '基礎', 'Lv.2'],
+      flavorText: '「本日よりペコポン侵略を開始するであります！ケロロ〜！」',
+      artSymbol: 'Trees',
+    },
+  },
+  {
+    id: 'evo_geroro_gunso',
+    name: 'ゲロロ軍曹',
+    type: 'ATTACK',
+    evolution: {
+      family: 'ケロロ軍曹系列',
+      stage: 2,
+      evolvesFrom: 'atk_keroro_gunso',
+      evolvesTo: 'evo_gunso_ex',
+    },
+    level: 4,
+    abilities: {
+      attackName: 'ゲロロ総攻撃キャノン',
+      activeEffect: '3エネルギーで100ダメージを与える強襲攻撃',
+      description:
+        '「ケロロ軍曹」から進化。本気モードで3エネルギー100ダメージを叩き込む。「軍曹EX」へ進化可能。',
+    },
+    ui: {
+      tags: ['軍曹系', '進化', 'Lv.4'],
+      flavorText: '「ゲロロ軍曹に改名したであります！火力も桁違いであります！」',
+      artSymbol: 'Flame',
+    },
+  },
+  {
+    id: 'evo_gunso_ex',
+    name: '軍曹EX',
+    type: 'ATTACK',
+    evolution: {
+      family: 'ケロロ軍曹系列',
+      stage: 3,
+      evolvesFrom: 'evo_geroro_gunso',
+      evolvesTo: null,
+    },
+    level: 5,
+    abilities: {
+      attackName: 'EX最終兵器ケロン・オーバーロード',
+      activeEffect: '4エネルギーで130ダメージを与えるEX必殺技',
+      passiveEffect: 'EXルール：きぜつした際、相手は2ポイントを獲得する',
+      description:
+        '【EX級】「ゲロロ軍曹」から進化する最終形態！HP160・攻撃力130の宇宙最強クラス軍曹EX。',
+    },
+    ui: {
+      tags: ['軍曹系', 'EX', '進化', 'Lv.5'],
+      flavorText: '「全宇宙を制圧する究極の軍曹EX、ここに誕生であります！！」',
+      artSymbol: 'Crown',
+    },
+  },
+  // アフリカ進化系列: アフリカ (Lv.2) → 専門はアフリカ (Lv.4) → アフリカEX (Lv.5)
+  {
+    id: 'atk_africa',
+    name: 'アフリカ',
+    type: 'ATTACK',
+    evolution: {
+      family: 'アフリカ系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: 'evo_senmon_africa',
+    },
+    level: 2,
+    abilities: {
+      attackName: 'サバンナ・スタンプ',
+      activeEffect: '2エネルギーで50ダメージを与える基本攻撃',
+      description:
+        '広大な大地を思わせるLv.2基礎カード。「専門はアフリカ」へ進化可能。',
+    },
+    ui: {
+      tags: ['アフリカ系', '基礎', 'Lv.2'],
+      flavorText: '「果てしなく広がる大地の鼓動。」',
+      artSymbol: 'Trees',
+    },
+  },
+  {
+    id: 'evo_senmon_africa',
+    name: '専門はアフリカ',
+    type: 'ATTACK',
+    evolution: {
+      family: 'アフリカ系列',
+      stage: 2,
+      evolvesFrom: 'atk_africa',
+      evolvesTo: 'evo_africa_ex',
+    },
+    level: 4,
+    abilities: {
+      attackName: 'アフリカ専門フィールドワーク',
+      activeEffect: '3エネルギーで100ダメージを与える強襲攻撃',
+      description:
+        '「アフリカ」から進化。圧倒的な専門知識と行動力で3エネルギー100ダメージを与える。「アフリカEX」へ進化可能。',
+    },
+    ui: {
+      tags: ['アフリカ系', '専門', '進化', 'Lv.4'],
+      flavorText: '「私の専門はアフリカです。何でも聞いてください！」',
+      artSymbol: 'BookOpen',
+    },
+  },
+  {
+    id: 'evo_africa_ex',
+    name: 'アフリカEX',
+    type: 'ATTACK',
+    evolution: {
+      family: 'アフリカ系列',
+      stage: 3,
+      evolvesFrom: 'evo_senmon_africa',
+      evolvesTo: null,
+    },
+    level: 5,
+    abilities: {
+      attackName: 'EXマザー・コンチネント・インパクト',
+      activeEffect: '4エネルギーで130ダメージを与えるEX必殺技',
+      passiveEffect: 'EXルール：きぜつした際、相手は2ポイントを獲得する',
+      description:
+        '【EX級】「専門はアフリカ」から進化する最終形態！HP160・攻撃力130の大陸級フィニッシャー。',
+    },
+    ui: {
+      tags: ['アフリカ系', 'EX', '進化', 'Lv.5'],
+      flavorText: '「大陸そのもののエネルギーが凝縮された究極のアフリカEX！！」',
       artSymbol: 'Crown',
     },
   },

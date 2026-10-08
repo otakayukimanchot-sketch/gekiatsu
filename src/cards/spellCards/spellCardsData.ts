@@ -364,9 +364,9 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     level: 1,
     abilities: {
       attackName: 'フェニックスの守り',
-      activeEffect: '手札に「井上教授（壁）」(Lv.1) を1枚加え、次の相手ターンの被ダメージ−20',
+      activeEffect: '手札に「井上教授」(Lv.1) を1枚加え、次の相手ターンの被ダメージ−20',
       description:
-        '【魔法】自分の手札に「井上教授（壁）」（Lv.1）を1枚生成し、さらに次の相手ターンに自分のバトル場が受けるダメージを−20する。',
+        '【魔法】自分の手札に「井上教授」（Lv.1）を1枚生成し、さらに次の相手ターンに自分のバトル場が受けるダメージを−20する。',
       spellEffect: 'PHOENIX_WALL_TOKEN',
     },
     ui: {
