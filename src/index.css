@@ -9,15 +9,13 @@
 
 @layer base {
   html, body {
-    @apply font-sans bg-slate-50 text-slate-900 transition-colors duration-300;
+    @apply font-sans bg-slate-950 text-slate-100;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100dvh;
+    overscroll-behavior: none;
   }
-  html.dark, html.dark body {
-    @apply bg-slate-950 text-slate-100;
-  }
-}
-
-.card-pack-shadow {
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1), 0 6px 6px rgba(0,0,0,0.1);
 }
 
 .pokepoke-scroll {
@@ -28,13 +26,140 @@
   display: none;
 }
 
+/* ============================================================================
+   Game Screen Viewport & Safe-Area Container
+   ============================================================================ */
+.game-screen {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  box-sizing: border-box;
+}
+
+/* ============================================================================
+   Portrait vs Compact Landscape Layout Switching
+   - Compact/Mobile Landscape: orientation is landscape AND height <= 560px
+   - Portrait & Standard Desktop: vertical stack layout
+   ============================================================================ */
+.layout-portrait {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.layout-landscape {
+  display: none;
+}
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .layout-portrait {
+    display: none !important;
+  }
+  .layout-landscape {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
+/* ============================================================================
+   Responsive Card Sizing (Portrait, Mobile Landscape, and Desktop)
+   Ensures cards never overflow vertically or horizontally while keeping text legible
+   ============================================================================ */
+
+/* 1. Hand Card Size */
+.card-size-hand {
+  width: clamp(56px, min(17.5vw, 10.2dvh), 86px);
+  height: clamp(78px, min(24.5vw, 14.2dvh), 120px);
+  font-size: 9px;
+}
+
+/* 2. Field / Bench Card Size */
+.card-size-field {
+  width: clamp(52px, min(16vw, 9.4dvh), 82px);
+  height: clamp(72px, min(22.5vw, 13.2dvh), 114px);
+  font-size: 8.5px;
+}
+
+/* 3. Active Battle Spot Card Size */
+.card-size-active {
+  width: clamp(66px, min(21vw, 12.2dvh), 108px);
+  height: clamp(92px, min(29vw, 17dvh), 150px);
+  font-size: 10px;
+}
+
+/* 4. Small Card Size (Environment icon preview) */
+.card-size-small {
+  width: clamp(44px, min(12vw, 7.5dvh), 58px);
+  height: clamp(60px, min(16vw, 10.2dvh), 80px);
+  font-size: 7.5px;
+}
+
+/* Landscape overrides when height is constrained (e.g., 844x390, 667x375, 568x320) */
+@media (orientation: landscape) and (max-height: 560px) {
+  .card-size-hand {
+    width: clamp(54px, min(10.5vw, 17.5dvh), 78px);
+    height: clamp(74px, min(14.5vw, 24.5dvh), 108px);
+    font-size: 8.5px;
+  }
+  .card-size-field {
+    width: clamp(48px, min(9.2vw, 16.5dvh), 72px);
+    height: clamp(68px, min(13vw, 23dvh), 100px);
+    font-size: 8px;
+  }
+  .card-size-active {
+    width: clamp(58px, min(11.5vw, 21dvh), 88px);
+    height: clamp(82px, min(16vw, 29dvh), 122px);
+    font-size: 9px;
+  }
+  .card-size-small {
+    width: clamp(38px, min(7vw, 13dvh), 50px);
+    height: clamp(52px, min(9.5vw, 18dvh), 68px);
+    font-size: 7px;
+  }
+}
+
+/* Desktop / Large Screen (Wide AND Tall) */
+@media (min-width: 768px) and (min-height: 760px) {
+  .card-size-hand {
+    width: 84px;
+    height: 116px;
+    font-size: 9.5px;
+  }
+  .card-size-field {
+    width: 80px;
+    height: 112px;
+    font-size: 9px;
+  }
+  .card-size-active {
+    width: 104px;
+    height: 144px;
+    font-size: 10px;
+  }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.97); }
   to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -45,4 +170,3 @@
 .animate-slideUp {
   animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-

@@ -1,7 +1,5 @@
 {
-  "name": "激アツ英単語",
-  "description": "Quizletと早押しクイズを掛け合わせた、カードパック形式の英単語クイズアプリ。トレーニングとリアルタイム対戦モードを搭載。",
-  "requestFramePermissions": [
-    "camera"
-  ]
+  "name": "ホンモノカードバトル",
+  "description": "ポケポケ風シンプル＆ハイテンポ1対1オンラインカードバトルゲーム。エネルギーを付与して強力な攻撃を放ち、3ポイント先取で勝利を掴め！",
+  "requestFramePermissions": []
 }

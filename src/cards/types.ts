@@ -1,103 +1,154 @@
 export type CardType = 'ATTACK' | 'SPELL' | 'ENVIRONMENT';
 
-export type SpellSubType = 'NORMAL' | 'ATTACHMENT' | 'EVOLUTION';
+export type CardLevel = 1 | 2 | 3 | 4 | 5;
 
-export type EffectTrigger = 
-  | 'ON_PLAY'
-  | 'ON_ATTACK'
-  | 'ON_DESTROY'
-  | 'ON_TURN_START'
-  | 'ON_TURN_END'
-  | 'ON_DEFEND';
+export type SpellEffectKind =
+  | 'DRAW_1'
+  | 'SEARCH_ATTACK_CARD'
+  | 'BONUS_ENERGY_ACTIVE'
+  | 'BUFF_ATK_20'
+  | 'BUFF_ATK_30'
+  | 'HEAL_30_BUFF_10'
+  | 'HEAL_20_SHIELD_20'
+  | 'SHIELD_30'
+  | 'DIRECT_DMG_20'
+  | 'DRAIN_ENERGY_DMG_10'
+  | 'SWAP_OPPONENT_BENCH'
+  | 'PEEK_AND_DRAW';
 
-export type TargetType =
-  | 'NONE'
-  | 'ENEMY_CARD'
-  | 'FRIENDLY_CARD'
-  | 'ANY_CARD'
-  | 'ENEMY_PLAYER'
-  | 'FRIENDLY_PLAYER'
-  | 'ALL_ENEMY_CARDS'
-  | 'ALL_FRIENDLY_CARDS'
-  | 'ALL_CARDS';
+export type EnvironmentEffectKind =
+  | 'GROLAN_FULL_HEAL'
+  | 'PHOENIX_WALL'
+  | 'SENSOJI_BOOST'
+  | 'SUMIDAGAWA_BOOST'
+  | 'YUKIYA_ROOM_BOOST';
 
-export interface CardEffect {
-  id: string;
-  trigger: EffectTrigger;
-  targetType: TargetType;
+/**
+ * カードの進化・系列関係を表す構造体
+ * 「どの系列に属し、どのカードから進化し、次にどのカードへ進化するか」を一目で把握できる
+ */
+export interface EvolutionInfo {
+  family: string;
+  stage: 1 | 2 | 3 | 4;
+  evolvesFrom: string | null;
+  evolvesTo: string | null;
+  triggerCardId?: string;
+}
+
+/**
+ * カードのバトルステータス（レベルに応じた統一値）
+ */
+export interface LevelStats {
+  level: CardLevel;
+  hp: number;
+  attack: number;
+  energyCost: number;
+  retreatCost: number;
+  pointValue: number;
+}
+
+/**
+ * カードの能力・わざ・固有効果情報
+ */
+export interface CardAbilities {
+  attackName: string;
   description: string;
-  // Effect action payload
-  damage?: number;
-  healPlayer?: number;
-  healCard?: number;
-  drawCards?: number;
-  buffAtk?: number;
-  buffHp?: number;
-  isRandom?: boolean;
-  randomEffectType?: 'SHIRANKEDO' | 'COIN_FLIP';
-  specialAction?: 'RESURRECT_ONCE' | 'DISCARD_RANDOM' | 'TAUNT' | 'CHARGE' | 'PIERCE_TAUNT';
+  passiveEffect?: string;
+  activeEffect?: string;
+  spellEffect?: SpellEffectKind;
+  environmentEffect?: EnvironmentEffectKind;
 }
 
-export interface EvolutionRule {
-  targetDefinitionId: string; // The card definition that this evolves into OR from
-  fromDefinitionId?: string;  // Which card can be evolved from
-  statBonusAtk?: number;
-  statBonusHp?: number;
+/**
+ * カードのUI表示・アート情報
+ */
+export interface CardUiMetadata {
+  tags: string[];
+  flavorText?: string;
+  artSymbol: string;
 }
 
-export interface AttachmentRule {
-  allowedTarget: 'FRIENDLY_ATTACK' | 'ANY_ATTACK';
-  atkBonus: number;
-  hpBonus: number;
-  grantTaunt?: boolean;
-  grantCharge?: boolean;
-  endTurnHeal?: number;
+export interface CardColorTheme {
+  frameGradient: string;
+  borderClass: string;
+  badgeBg: string;
+  badgeText: string;
+  artGradient: string;
+  accentHex: string;
+  tierLabel: string;
 }
 
-export interface CardDefinition {
+/**
+ * カード定義の入力シード
+ * プロパティ順序:
+ * 1. id -> 2. name -> 3. type -> 4. evolution -> 5. level (stats基準) -> 6. abilities -> 7. ui
+ */
+export interface RawCardSeed {
   id: string;
   name: string;
   type: CardType;
-  subType?: SpellSubType;
-  cost: number;
-  baseAtk?: number;
-  baseHp?: number;
-  tags: string[];
-  description: string;
-  flavorText?: string;
-  artColor: string;
-  artGradient: string;
-  artSymbol: string;
-  effects: CardEffect[];
-  evolutionRule?: EvolutionRule;
-  attachmentRule?: AttachmentRule;
-  isEvolutionOnly?: boolean; // Cannot be placed in main deck directly if true
+  evolution: EvolutionInfo;
+  level: CardLevel;
+  abilities: CardAbilities;
+  ui: CardUiMetadata;
 }
 
-export type CardZone = 'DECK' | 'HAND' | 'FIELD' | 'ATTACHED' | 'GRAVEYARD' | 'EXILE';
+/**
+ * ゲーム全体で参照される正規化済みカード定義 (Single Source of Truth)
+ */
+export interface CardDefinition {
+  // 1. ID
+  id: string;
+  // 2. 表示名
+  name: string;
+  // 3. 種別
+  type: CardType;
+  // 4. 進化・系列情報
+  evolution: EvolutionInfo;
+  // 5. ステータス
+  stats: LevelStats;
+  // 6. 能力・効果
+  abilities: CardAbilities;
+  // 7. UI表示情報
+  ui: CardUiMetadata;
+  colorTheme: CardColorTheme;
+
+  // 既存コード互換のフラットアクセサ (Single Source of Truth から自動導出)
+  level: CardLevel;
+  hp: number;
+  attack: number;
+  energyCost: number;
+  retreatCost: number;
+  pointValue: number;
+  attackName: string;
+  description: string;
+  tags: string[];
+  flavorText?: string;
+  artSymbol: string;
+  spellEffect?: SpellEffectKind;
+  environmentEffect?: EnvironmentEffectKind;
+}
+
+export type CardZone = 'DECK' | 'HAND' | 'ACTIVE' | 'BENCH' | 'ENVIRONMENT' | 'TRASH';
 
 export interface CardInstance {
   instanceId: string;
   definitionId: string;
   ownerId: string;
   zone: CardZone;
-  slotIndex?: number; // 0..4 on FIELD
+  benchIndex?: number;
   currentHp: number;
   maxHp: number;
-  currentAtk: number;
   baseAtk: number;
-  canAttack: boolean;
-  attacksThisTurn: number;
+  currentAtk: number;
+  energyCost: number;
+  retreatCost: number;
+  attachedEnergy: number;
+  tempAtkBuff: number;
+  damageReductionNextTurn: number;
   summonTurn: number;
-  attachedCards: CardInstance[];
-  hostCardId?: string;
-  hasResurrected?: boolean;
-  isTaunt?: boolean;
-  hasCharge?: boolean;
-  canPierceTaunt?: boolean;
 }
 
-// Client-facing masked card for hidden zones (Opponent's Hand / Deck)
 export interface MaskedCardInstance {
   instanceId: string;
   zone: CardZone;

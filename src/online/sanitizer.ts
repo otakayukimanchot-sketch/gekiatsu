@@ -1,8 +1,11 @@
-import { GameState, PlayerCombatState, PlayerKey } from '../game/types';
+import { GameState, PlayerKey } from '../game/types';
 import { SanitizedGameState, SanitizedPlayerState } from './types';
 import { MaskedCardInstance } from '../cards/types';
 
-export function sanitizeGameStateForPlayer(state: GameState, viewingPlayerId: string): SanitizedGameState {
+export function sanitizeGameStateForPlayer(
+  state: GameState,
+  viewingPlayerId: string
+): SanitizedGameState {
   const isPlayerA = state.playerA.playerId === viewingPlayerId;
   const myKey: PlayerKey = isPlayerA ? 'playerA' : 'playerB';
   const opponentKey: PlayerKey = isPlayerA ? 'playerB' : 'playerA';
@@ -14,39 +17,44 @@ export function sanitizeGameStateForPlayer(state: GameState, viewingPlayerId: st
     playerId: myRaw.playerId,
     name: myRaw.name,
     avatarIcon: myRaw.avatarIcon,
-    hp: myRaw.hp,
-    maxHp: myRaw.maxHp,
+    score: myRaw.score,
+    maxScore: myRaw.maxScore,
+    activeCard: myRaw.activeCard,
+    bench: myRaw.bench,
     deckCount: myRaw.deck.length,
     handCount: myRaw.hand.length,
-    hand: myRaw.hand, // View own hand fully
-    field: myRaw.field,
-    graveyard: myRaw.graveyard,
-    attacksCountThisTurn: myRaw.attacksCountThisTurn,
-    hasDrawnThisTurn: myRaw.hasDrawnThisTurn,
-    isConnected: myRaw.isConnected
+    hand: myRaw.hand,
+    trash: myRaw.trash,
+    energyAvailable: myRaw.energyAvailable,
+    hasAttachedEnergyThisTurn: myRaw.hasAttachedEnergyThisTurn,
+    hasRetreatedThisTurn: myRaw.hasRetreatedThisTurn,
+    hasUsedSpellThisTurn: myRaw.hasUsedSpellThisTurn,
+    isConnected: myRaw.isConnected,
   };
 
-  // Mask opponent hand strictly according to Prompt #14
-  const maskedOpponentHand: MaskedCardInstance[] = oppRaw.hand.map(card => ({
+  const maskedOpponentHand: MaskedCardInstance[] = oppRaw.hand.map((card) => ({
     instanceId: card.instanceId,
     zone: 'HAND',
-    isFaceDown: true
+    isFaceDown: true,
   }));
 
   const opponent: SanitizedPlayerState = {
     playerId: oppRaw.playerId,
     name: oppRaw.name,
     avatarIcon: oppRaw.avatarIcon,
-    hp: oppRaw.hp,
-    maxHp: oppRaw.maxHp,
+    score: oppRaw.score,
+    maxScore: oppRaw.maxScore,
+    activeCard: oppRaw.activeCard,
+    bench: oppRaw.bench,
     deckCount: oppRaw.deck.length,
     handCount: oppRaw.hand.length,
-    maskedHand: maskedOpponentHand, // Opponent cards have NO definitionId or stats
-    field: oppRaw.field,
-    graveyard: oppRaw.graveyard,
-    attacksCountThisTurn: oppRaw.attacksCountThisTurn,
-    hasDrawnThisTurn: oppRaw.hasDrawnThisTurn,
-    isConnected: oppRaw.isConnected
+    maskedHand: maskedOpponentHand,
+    trash: oppRaw.trash,
+    energyAvailable: oppRaw.energyAvailable,
+    hasAttachedEnergyThisTurn: oppRaw.hasAttachedEnergyThisTurn,
+    hasRetreatedThisTurn: oppRaw.hasRetreatedThisTurn,
+    hasUsedSpellThisTurn: oppRaw.hasUsedSpellThisTurn,
+    isConnected: oppRaw.isConnected,
   };
 
   return {
@@ -56,7 +64,10 @@ export function sanitizeGameStateForPlayer(state: GameState, viewingPlayerId: st
     turnNumber: state.turnNumber,
     activePlayerKey: state.activePlayerKey,
     firstPlayerKey: state.firstPlayerKey,
-    isMyTurn: state.activePlayerKey === myKey,
+    promotionRequiredPlayerKey: state.promotionRequiredPlayerKey,
+    isMyTurn: state.activePlayerKey === myKey && state.phase === 'MAIN',
+    mustPromoteBench:
+      state.phase === 'WAITING_FOR_PROMOTION' && state.promotionRequiredPlayerKey === myKey,
     myPlayerKey: myKey,
     me,
     opponent,
@@ -64,6 +75,7 @@ export function sanitizeGameStateForPlayer(state: GameState, viewingPlayerId: st
     stateVersion: state.stateVersion,
     winnerPlayerId: state.winnerPlayerId,
     winReason: state.winReason,
-    logs: state.logs.slice(-30) // Latest 30 logs for smooth UI
+    logs: state.logs.slice(-30),
+    lastAnimation: state.lastAnimation,
   };
 }

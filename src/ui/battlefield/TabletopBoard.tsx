@@ -1,19 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SanitizedGameState } from '../../online/types';
 import { CardInstance } from '../../cards/types';
 import { getCardDefinition } from '../../cards/cardRegistry';
-import { OpponentHand } from '../hand/OpponentHand';
 import { CardView } from '../cards/CardView';
-import { DeckStack3D } from '../deck/DeckStack3D';
-import { GraveyardPile } from '../graveyard/GraveyardPile';
 import { GraveyardModal } from '../graveyard/GraveyardModal';
 import { FieldSlot } from './FieldSlot';
 import { EnvironmentZone } from './EnvironmentZone';
 import { CardDetailModal } from '../cards/CardDetailModal';
 import { LogDrawer } from './LogDrawer';
-import { 
-  Heart, Sword, Shield, LogOut, Info, AlertTriangle, 
-  RotateCcw, Trophy, Skull, Flame, Sparkles, CheckCircle2 
+import {
+  Sword,
+  Zap,
+  Footprints,
+  Trophy,
+  Skull,
+  Sparkles,
+  AlertTriangle,
+  Layers,
+  Trash2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -21,620 +25,1156 @@ interface TabletopBoardProps {
   gameState: SanitizedGameState;
   onSendAction: (actionType: string, payload?: any) => void;
   onLeaveRoom: () => void;
-  onRematch?: () => void;
 }
 
 export const TabletopBoard: React.FC<TabletopBoardProps> = ({
   gameState,
   onSendAction,
   onLeaveRoom,
-  onRematch
 }) => {
-  const { me, opponent, isMyTurn, phase, environment, logs, winnerPlayerId, winReason } = gameState;
+  const {
+    me,
+    opponent,
+    isMyTurn,
+    mustPromoteBench,
+    phase,
+    environment,
+    logs,
+    winnerPlayerId,
+    winReason,
+    lastAnimation,
+  } = gameState;
 
-  // Local selection states
   const [selectedHandCard, setSelectedHandCard] = useState<CardInstance | null>(null);
   const [hoveredHandCardId, setHoveredHandCardId] = useState<string | null>(null);
-  const [selectedFieldCard, setSelectedFieldCard] = useState<CardInstance | null>(null);
+  const [isAttachingEnergy, setIsAttachingEnergy] = useState(false);
+  const [isRetreating, setIsRetreating] = useState(false);
   const [inspectCard, setInspectCard] = useState<CardInstance | null>(null);
-  const [viewingGraveyard, setViewingGraveyard] = useState<'me' | 'opp' | null>(null);
+  const [viewingTrash, setViewingTrash] = useState<'me' | 'opp' | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Trigger confetti on victory
-  React.useEffect(() => {
+  // Animation states
+  const [animBanner, setAnimBanner] = useState<string | null>(null);
+  const [damagePopup, setDamagePopup] = useState<{
+    targetCardId: string;
+    damage: number;
+  } | null>(null);
+  const [attackingCardId, setAttackingCardId] = useState<string | null>(null);
+
+  useEffect(() => {
     if (phase === 'GAME_OVER' && winnerPlayerId === me.playerId) {
       confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
+        particleCount: 110,
+        spread: 75,
+        origin: { y: 0.6 },
       });
     }
   }, [phase, winnerPlayerId, me.playerId]);
 
-  const clearSelection = () => {
+  useEffect(() => {
+    if (!lastAnimation) return;
+
+    if (lastAnimation.type === 'ATTACK') {
+      if (lastAnimation.sourceCardId) {
+        setAttackingCardId(lastAnimation.sourceCardId);
+      }
+      if (lastAnimation.targetCardId && lastAnimation.damage) {
+        setDamagePopup({
+          targetCardId: lastAnimation.targetCardId,
+          damage: lastAnimation.damage,
+        });
+      }
+      setAnimBanner(
+        `⚔️ ${lastAnimation.cardName || ''} の『${lastAnimation.attackName || 'アタック'}』！ ${
+          lastAnimation.damage || 0
+        } ダメージ！`
+      );
+      const t = setTimeout(() => {
+        setAttackingCardId(null);
+        setDamagePopup(null);
+        setAnimBanner(null);
+      }, 1400);
+      return () => clearTimeout(t);
+    }
+
+    if (lastAnimation.type === 'KNOCKOUT') {
+      setAnimBanner(
+        `💥 「${lastAnimation.cardName || ''}」がきぜつ！ +${lastAnimation.pointsGained || 1} ポイント！`
+      );
+      const t = setTimeout(() => setAnimBanner(null), 1600);
+      return () => clearTimeout(t);
+    }
+
+    if (lastAnimation.type === 'ATTACH_ENERGY') {
+      setAnimBanner(`⚡ 「${lastAnimation.cardName || ''}」にエネルギー付与！`);
+      const t = setTimeout(() => setAnimBanner(null), 1000);
+      return () => clearTimeout(t);
+    }
+
+    if (lastAnimation.type === 'SPELL' || lastAnimation.type === 'ENVIRONMENT') {
+      setAnimBanner(`✨ 「${lastAnimation.cardName || ''}」を発動！`);
+      const t = setTimeout(() => setAnimBanner(null), 1200);
+      return () => clearTimeout(t);
+    }
+  }, [lastAnimation?.id]);
+
+  const clearModes = () => {
     setSelectedHandCard(null);
-    setHoveredHandCardId(null);
-    setSelectedFieldCard(null);
+    setIsAttachingEnergy(false);
+    setIsRetreating(false);
     setActionError(null);
   };
 
-  // Hand card click handler
   const handleSelectHandCard = (card: CardInstance) => {
     if (!isMyTurn) {
       setInspectCard(card);
       return;
     }
-
     if (selectedHandCard?.instanceId === card.instanceId) {
-      clearSelection();
+      clearModes();
       return;
     }
-
     setSelectedHandCard(card);
-    setSelectedFieldCard(null);
+    setIsAttachingEnergy(false);
+    setIsRetreating(false);
     setActionError(null);
   };
 
-  // Friendly field card click handler
-  const handleFriendlyFieldCardClick = (card: CardInstance | null, slotIndex: number) => {
+  const handlePlaySelectedHandCard = (benchSlotIndex?: number) => {
+    if (!selectedHandCard || !isMyTurn) return;
+    const def = getCardDefinition(selectedHandCard.definitionId);
+    if (!def) return;
+
+    if (def.type === 'ATTACK') {
+      if (!me.activeCard) {
+        onSendAction('PLAY_CARD_TO_ACTIVE', {
+          cardInstanceId: selectedHandCard.instanceId,
+        });
+      } else {
+        onSendAction('PLAY_CARD_TO_BENCH', {
+          cardInstanceId: selectedHandCard.instanceId,
+          benchIndex: benchSlotIndex,
+        });
+      }
+      clearModes();
+      return;
+    }
+
+    if (def.type === 'SPELL') {
+      if (me.hasUsedSpellThisTurn) {
+        setActionError('魔法カードは1ターンに1枚まで使用できます。');
+        return;
+      }
+      onSendAction('USE_SPELL_CARD', {
+        cardInstanceId: selectedHandCard.instanceId,
+      });
+      clearModes();
+      return;
+    }
+
+    if (def.type === 'ENVIRONMENT') {
+      onSendAction('PLAY_ENVIRONMENT', {
+        cardInstanceId: selectedHandCard.instanceId,
+      });
+      clearModes();
+      return;
+    }
+  };
+
+  const handleMyActiveClick = () => {
+    if (isMyTurn && isAttachingEnergy && me.activeCard) {
+      onSendAction('ATTACH_ENERGY', {
+        targetCardInstanceId: me.activeCard.instanceId,
+      });
+      clearModes();
+      return;
+    }
+
+    if (isMyTurn && selectedHandCard) {
+      const def = getCardDefinition(selectedHandCard.definitionId);
+      if (def?.type === 'ATTACK' && !me.activeCard) {
+        onSendAction('PLAY_CARD_TO_ACTIVE', {
+          cardInstanceId: selectedHandCard.instanceId,
+        });
+        clearModes();
+        return;
+      }
+    }
+
+    if (me.activeCard) {
+      setInspectCard(me.activeCard);
+    }
+  };
+
+  const handleMyBenchClick = (card: CardInstance | null, benchIdx: number) => {
+    if (mustPromoteBench && card) {
+      onSendAction('PROMOTE_BENCH_CARD', {
+        benchIndex: benchIdx,
+        cardInstanceId: card.instanceId,
+      });
+      clearModes();
+      return;
+    }
+
     if (!isMyTurn) {
       if (card) setInspectCard(card);
       return;
     }
 
-    // If an attack card is selected in hand, placing it on this slot
-    if (selectedHandCard) {
-      const def = getCardDefinition(selectedHandCard.definitionId);
-      if (def?.type === 'ATTACK') {
-        if (card === null) {
-          onSendAction('PLAY_ATTACK_CARD', {
-            cardInstanceId: selectedHandCard.instanceId,
-            targetSlotIndex: slotIndex
-          });
-          clearSelection();
-          return;
-        } else {
-          setActionError('その枠には既にカードが配置されています。');
-          return;
-        }
-      }
-
-      // If an attachment spell is selected in hand, attach to this card!
-      if (def?.type === 'SPELL' && def.subType === 'ATTACHMENT') {
-        if (card) {
-          onSendAction('ATTACH_CARD', {
-            cardInstanceId: selectedHandCard.instanceId,
-            targetCardInstanceId: card.instanceId
-          });
-          clearSelection();
-          return;
-        } else {
-          setActionError('付着させる攻撃カードを選択してください。');
-          return;
-        }
-      }
-
-      // If evolution spell or target is selected
-      if (def?.type === 'SPELL' && def.subType === 'EVOLUTION') {
-        if (card) {
-          onSendAction('EVOLVE_CARD', {
-            cardInstanceId: selectedHandCard.instanceId,
-            targetCardInstanceId: card.instanceId
-          });
-          clearSelection();
-          return;
-        }
-      }
-    }
-
-    // If no hand card selected, toggle selecting this field card for attack
-    if (card) {
-      if (selectedFieldCard?.instanceId === card.instanceId) {
-        setSelectedFieldCard(null);
-      } else {
-        if (card.canAttack && card.attacksThisTurn === 0) {
-          setSelectedFieldCard(card);
-        } else {
-          setInspectCard(card);
-        }
-      }
-    }
-  };
-
-  // Opponent field card click handler
-  const handleOpponentFieldCardClick = (card: CardInstance | null) => {
-    if (!card) return;
-
-    // If spell targeting an enemy card
-    if (selectedHandCard) {
-      const def = getCardDefinition(selectedHandCard.definitionId);
-      if (def?.type === 'SPELL') {
-        if (def.subType === 'ATTACHMENT' && def.attachmentRule?.allowedTarget === 'ANY_ATTACK') {
-          onSendAction('ATTACH_CARD', {
-            cardInstanceId: selectedHandCard.instanceId,
-            targetCardInstanceId: card.instanceId
-          });
-          clearSelection();
-          return;
-        }
-        if (def.subType === 'NORMAL') {
-          onSendAction('USE_SPELL_CARD', {
-            cardInstanceId: selectedHandCard.instanceId,
-            targetCardInstanceId: card.instanceId
-          });
-          clearSelection();
-          return;
-        }
-      }
-    }
-
-    // If attacking with field card
-    if (selectedFieldCard && isMyTurn) {
-      onSendAction('ATTACK_CARD', {
-        cardInstanceId: selectedFieldCard.instanceId,
-        targetCardInstanceId: card.instanceId
+    if (isAttachingEnergy && card) {
+      onSendAction('ATTACH_ENERGY', {
+        targetCardInstanceId: card.instanceId,
       });
-      clearSelection();
+      clearModes();
       return;
     }
 
-    // Otherwise inspect
-    setInspectCard(card);
-  };
-
-  // Direct attack opponent player
-  const handleAttackOpponentPlayer = () => {
-    if (selectedFieldCard && isMyTurn) {
-      onSendAction('ATTACK_PLAYER', {
-        cardInstanceId: selectedFieldCard.instanceId
+    if (isRetreating && card) {
+      onSendAction('RETREAT_ACTIVE', {
+        benchIndex: benchIdx,
+        targetCardInstanceId: card.instanceId,
       });
-      clearSelection();
+      clearModes();
+      return;
     }
-  };
 
-  // Place environment card
-  const handlePlaceEnvironment = () => {
     if (selectedHandCard) {
       const def = getCardDefinition(selectedHandCard.definitionId);
-      if (def?.type === 'ENVIRONMENT') {
-        onSendAction('PLAY_ENVIRONMENT', {
-          cardInstanceId: selectedHandCard.instanceId
-        });
-        clearSelection();
+      if (def?.type === 'ATTACK' && card === null) {
+        handlePlaySelectedHandCard(benchIdx);
+        return;
       }
     }
-  };
 
-  // Cast selected normal spell
-  const handleCastSpell = () => {
-    if (selectedHandCard) {
-      const def = getCardDefinition(selectedHandCard.definitionId);
-      if (def?.type === 'SPELL' && def.subType === 'NORMAL') {
-        onSendAction('USE_SPELL_CARD', {
-          cardInstanceId: selectedHandCard.instanceId
-        });
-        clearSelection();
-      }
+    if (card) {
+      setInspectCard(card);
     }
   };
 
   const selectedDef = selectedHandCard ? getCardDefinition(selectedHandCard.definitionId) : null;
-  const isAttackCardSelected = selectedDef?.type === 'ATTACK';
-  const isSpellSelected = selectedDef?.type === 'SPELL' && selectedDef.subType === 'NORMAL';
-  const isAttachmentSelected = selectedDef?.type === 'SPELL' && selectedDef.subType === 'ATTACHMENT';
-  const isEnvironmentSelected = selectedDef?.type === 'ENVIRONMENT';
+  const myActiveDef = me.activeCard ? getCardDefinition(me.activeCard.definitionId) : null;
+
+  const canAttachEnergyNow =
+    isMyTurn && !me.hasAttachedEnergyThisTurn && me.energyAvailable > 0;
+  const canAttackNow =
+    isMyTurn &&
+    !!me.activeCard &&
+    !!opponent.activeCard &&
+    me.activeCard.attachedEnergy >= me.activeCard.energyCost;
+  const hasBenchCards = me.bench.some((b) => b !== null);
+  const canRetreatNow =
+    isMyTurn &&
+    !me.hasRetreatedThisTurn &&
+    !!me.activeCard &&
+    hasBenchCards &&
+    me.activeCard.attachedEnergy >= me.activeCard.retreatCost;
 
   const isGameOver = phase === 'GAME_OVER';
   const iWon = winnerPlayerId === me.playerId;
 
+  const getActionGuideText = (): string => {
+    if (mustPromoteBench) {
+      return '⚠️ ベンチのカードをタップしてバトル場へ出してください！';
+    }
+    if (!isMyTurn) {
+      return '相手のターン中…（カードタップで詳細確認）';
+    }
+    if (isAttachingEnergy) {
+      return '⚡ エネルギーを付ける自分のカードをタップ！';
+    }
+    if (isRetreating) {
+      return '🏃 バトル場と入れ替えるベンチカードをタップ！';
+    }
+    if (selectedHandCard && selectedDef) {
+      if (selectedDef.type === 'ATTACK') {
+        return !me.activeCard
+          ? 'バトル場をタップして配置'
+          : '空きベンチ枠または「ベンチに出す」をタップ！';
+      }
+      if (selectedDef.type === 'SPELL') {
+        return '「魔法を発動」ボタンをタップ！';
+      }
+      return '環境ゾーンまたは「環境を展開」をタップ！';
+    }
+    if (canAttachEnergyNow) {
+      return '①⚡エネルギー付与 ➔ ②手札をベンチへ ➔ ③⚔️わざ攻撃！';
+    }
+    if (canAttackNow) {
+      return `⚔️「${myActiveDef?.attackName}」で攻撃可能！`;
+    }
+    return '手札をベンチに出すか「ターン終了」をタップ';
+  };
+
+  // Shared Hand Renderer (Guarantees 100% full card visibility from top edge to bottom edge)
+  const renderHandCards = (isLandscapeMode: boolean) => {
+    if (!me.hand || me.hand.length === 0) {
+      return (
+        <div className="h-full flex items-center justify-center text-[11px] text-slate-500 italic px-4">
+          手札がありません
+        </div>
+      );
+    }
+
+    const total = me.hand.length;
+    const overlapClass = isLandscapeMode
+      ? total <= 4
+        ? 'space-x-1.5'
+        : total <= 6
+        ? '-space-x-2'
+        : '-space-x-4'
+      : total <= 4
+      ? 'space-x-1'
+      : total <= 6
+      ? '-space-x-2.5 sm:-space-x-1.5'
+      : '-space-x-5 sm:-space-x-3';
+
+    return (
+      <div className="w-full overflow-x-auto overflow-y-visible pokepoke-scroll flex items-center justify-center px-2 pt-2.5 pb-1">
+        <div className={`flex items-center justify-center ${overlapClass}`}>
+          {me.hand.map((card, idx) => {
+            const isSelected = selectedHandCard?.instanceId === card.instanceId;
+            const isHovered = hoveredHandCardId === card.instanceId;
+            const centerIndex = (total - 1) / 2;
+            const normalizedOffset = idx - centerIndex;
+
+            const rotDeg = isLandscapeMode
+              ? 0
+              : isSelected
+              ? 0
+              : normalizedOffset * Math.min(2.5, 12 / Math.max(1, total));
+            const translateY = isSelected ? -6 : isHovered ? -3 : 0;
+            const zIndex = isSelected ? 40 : isHovered ? 30 : 10 + idx;
+
+            return (
+              <div
+                key={card.instanceId}
+                style={{
+                  transform: `translateY(${translateY}px) rotate(${rotDeg}deg)`,
+                  zIndex,
+                  transition: 'transform 0.15s ease-out',
+                }}
+                className="relative shrink-0 cursor-pointer"
+                onClick={() => handleSelectHandCard(card)}
+                onMouseEnter={() => setHoveredHandCardId(card.instanceId)}
+                onMouseLeave={() => setHoveredHandCardId(null)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setInspectCard(card);
+                }}
+              >
+                <CardView
+                  card={card}
+                  size="hand"
+                  isSelected={isSelected}
+                  canAct={isMyTurn}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // Floating Action Bar when a card in Hand is selected (Does not push layout down)
+  const renderSelectedHandFloatingBar = () => {
+    if (!selectedHandCard || !isMyTurn || !selectedDef) return null;
+    return (
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-50 w-[94%] max-w-md px-2.5 py-1.5 rounded-xl bg-slate-900/95 border-2 border-amber-400 shadow-2xl flex items-center justify-between gap-2 backdrop-blur-md animate-fadeIn">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span
+            className={`px-1.5 py-0.5 rounded text-[8px] font-black shrink-0 ${selectedDef.colorTheme.badgeBg} ${selectedDef.colorTheme.badgeText}`}
+          >
+            {selectedDef.colorTheme.tierLabel}
+          </span>
+          <span className="font-black text-xs text-white truncate">{selectedDef.name}</span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={() => handlePlaySelectedHandCard()}
+            className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 text-stone-950 font-black text-[11px] shadow cursor-pointer active:scale-95"
+          >
+            {selectedDef.type === 'ATTACK'
+              ? !me.activeCard
+                ? 'バトル場に出す'
+                : 'ベンチに出す'
+              : selectedDef.type === 'SPELL'
+              ? '魔法を発動'
+              : '環境を展開'}
+          </button>
+          <button
+            onClick={() => setInspectCard(selectedHandCard)}
+            className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-stone-200 text-[10px] font-bold cursor-pointer"
+          >
+            詳細
+          </button>
+          <button
+            onClick={clearModes}
+            className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-stone-400 text-[10px] cursor-pointer"
+          >
+            取消
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="relative w-full h-[100dvh] flex flex-col justify-between overflow-hidden bg-stone-950 text-stone-100 select-none font-sans">
-      {/* Felt / Wood Tabletop Texture Background */}
+    <div className="game-screen relative bg-slate-950 text-stone-100 select-none font-sans">
+      {/* Arena Background */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-90"
+        className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse at center, #1b382b 0%, #0d2118 65%, #08140f 100%)',
-          boxShadow: 'inset 0 0 100px rgba(0,0,0,0.8)'
+          background:
+            'radial-gradient(ellipse at 50% 45%, #1e293b 0%, #0f172a 65%, #020617 100%)',
         }}
       />
-      {/* Subtle wood border framing */}
-      <div className="absolute inset-0 border-8 border-amber-950/80 rounded-none pointer-events-none shadow-2xl" />
 
-      {/* TOP: OPPONENT AREA */}
-      <div className="relative z-20 w-full flex flex-col px-3 pt-2">
-        {/* Opponent Header Bar */}
-        <div className="flex items-center justify-between gap-2 max-w-lg mx-auto w-full">
-          {/* Opponent Info */}
-          <div
-            onClick={handleAttackOpponentPlayer}
-            className={`flex items-center gap-2 p-1.5 rounded-lg bg-stone-900/80 border transition-all ${
-              selectedFieldCard && isMyTurn
-                ? 'border-red-500 ring-2 ring-red-500/80 bg-red-950/40 cursor-pointer animate-pulse'
-                : 'border-stone-800'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-full bg-stone-800 border border-stone-700 flex items-center justify-center text-sm font-bold shadow">
-              {opponent.avatarIcon === 'rocket' ? '🚀' : opponent.avatarIcon === 'ghost' ? '👻' : '👤'}
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-xs text-stone-200">{opponent.name}</span>
-                {!opponent.isConnected && (
-                  <span className="text-[9px] bg-red-900 text-red-300 px-1 rounded">切断中</span>
-                )}
-                {selectedFieldCard && isMyTurn && (
-                  <span className="text-[9px] bg-red-600 text-white font-black px-1.5 py-0.2 rounded animate-bounce">
-                    攻撃可能！
-                  </span>
-                )}
+      {/* Floating Animation Banner */}
+      {animBanner && (
+        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-50 px-3.5 py-1 rounded-full bg-stone-950/95 border-2 border-amber-400 text-amber-200 font-black text-[11px] shadow-2xl animate-bounce whitespace-nowrap">
+          {animBanner}
+        </div>
+      )}
+
+      {/* ====================================================================
+         1. PORTRAIT & DESKTOP LAYOUT (.layout-portrait)
+         GameScreen -> OpponentArea -> BattleArea (flex-1 min-h-0) -> ControlArea -> HandArea (shrink-0)
+         ==================================================================== */}
+      <div className="layout-portrait relative z-10 max-w-lg mx-auto w-full px-2 py-1 justify-between">
+        {/* A. OPPONENT AREA (shrink-0) */}
+        <div className="shrink-0 flex flex-col gap-1">
+          {/* Opponent Header Strip */}
+          <div className="flex items-center justify-between gap-1.5 bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-1 shadow">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs shrink-0">
+                {opponent.avatarIcon === 'rocket'
+                  ? '🚀'
+                  : opponent.avatarIcon === 'ghost'
+                  ? '🤖'
+                  : '😎'}
               </div>
-              {/* HP Bar */}
-              <div className="flex items-center gap-1">
-                <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500 shrink-0" />
-                <div className="w-24 h-3 bg-stone-950 rounded-full border border-stone-700 overflow-hidden relative">
+              <span className="font-black text-xs text-stone-100 truncate">{opponent.name}</span>
+              {/* Opponent 3-Point Orbs */}
+              <div className="flex items-center gap-0.5 ml-1 shrink-0">
+                {Array.from({ length: opponent.maxScore }).map((_, idx) => (
                   <div
-                    className="h-full bg-gradient-to-r from-rose-600 to-red-400 transition-all duration-300"
-                    style={{ width: `${Math.max(0, Math.min(100, (opponent.hp / opponent.maxHp) * 100))}%` }}
-                  />
-                </div>
-                <span className="text-[10px] font-black text-rose-300 ml-0.5">{opponent.hp}</span>
+                    key={idx}
+                    className={`w-3 h-3 rounded-full border flex items-center justify-center ${
+                      idx < opponent.score
+                        ? 'bg-amber-400 border-yellow-200 shadow-xs shadow-amber-400'
+                        : 'bg-slate-950 border-slate-700'
+                    }`}
+                  >
+                    {idx < opponent.score && <Trophy className="w-2 h-2 text-stone-950" />}
+                  </div>
+                ))}
+                <span className="text-[9px] font-black text-amber-300 ml-0.5">
+                  {opponent.score}/{opponent.maxScore}
+                </span>
               </div>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0 text-[10px] font-bold">
+              <div className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-stone-300">
+                手札 <span className="text-sky-300 font-mono">{opponent.handCount}</span>
+              </div>
+              <div className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-stone-300">
+                山札 <span className="text-amber-300 font-mono">{opponent.deckCount}</span>
+              </div>
+              <button
+                onClick={() => setViewingTrash('opp')}
+                className="px-1.5 py-0.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-stone-300 flex items-center gap-0.5 cursor-pointer"
+              >
+                <Trash2 className="w-2.5 h-2.5 text-stone-400" />
+                <span className="text-stone-400 font-mono">{opponent.trash.length}</span>
+              </button>
             </div>
           </div>
 
-          {/* Opponent Deck & Graveyard */}
-          <div className="flex items-center gap-3">
-            <DeckStack3D cardCount={opponent.deckCount} isOpponent label="山札" />
-            <GraveyardPile
-              cards={opponent.graveyard}
-              label="墓地"
-              onClick={() => setViewingGraveyard('opp')}
-            />
+          {/* Opponent Bench (3 Slots) */}
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-[8px] font-bold text-slate-500">相手ベンチ</span>
+            {opponent.bench.map((card, idx) => (
+              <FieldSlot
+                key={`opp_bench_p_${idx}`}
+                card={card}
+                slotIndex={idx}
+                slotRole="BENCH"
+                isFriendly={false}
+                onClick={() => card && setInspectCard(card)}
+                onInspectCard={setInspectCard}
+              />
+            ))}
           </div>
         </div>
 
-        {/* Opponent Fanned Hand (Face Down) */}
-        <div className="w-full flex justify-center -mt-1">
-          <OpponentHand cards={opponent.maskedHand} count={opponent.handCount} />
+        {/* B. BATTLE AREA (flex-1 min-h-0: Uses remaining vertical space) */}
+        <div className="flex-1 min-h-0 flex flex-col justify-evenly items-center w-full py-0.5 overflow-hidden">
+          {/* Opponent Active Spot */}
+          <div className="flex items-center justify-center gap-2.5 w-full">
+            <div className="flex flex-col items-end text-right min-w-[64px]">
+              <span className="text-[8px] font-bold text-rose-400">相手バトル場</span>
+              {opponent.activeCard ? (
+                <>
+                  <span className="text-[11px] font-black text-white truncate max-w-[92px]">
+                    {getCardDefinition(opponent.activeCard.definitionId)?.name}
+                  </span>
+                  <span className="text-[9px] font-bold text-rose-300">
+                    HP {opponent.activeCard.currentHp}/{opponent.activeCard.maxHp}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[9px] text-slate-500">待機中</span>
+              )}
+            </div>
+
+            <FieldSlot
+              card={opponent.activeCard}
+              slotRole="ACTIVE"
+              isFriendly={false}
+              isAttacker={attackingCardId === opponent.activeCard?.instanceId}
+              damagePopup={
+                damagePopup?.targetCardId === opponent.activeCard?.instanceId
+                  ? damagePopup.damage
+                  : null
+              }
+              onClick={() => opponent.activeCard && setInspectCard(opponent.activeCard)}
+              onInspectCard={setInspectCard}
+            />
+
+            <div className="min-w-[64px] flex flex-col items-start">
+              {opponent.activeCard && (
+                <div className="px-2 py-0.5 rounded-lg bg-slate-900/90 border border-slate-700 text-[9px]">
+                  <div className="text-stone-400 text-[7px]">わざ威力</div>
+                  <div className="font-black text-amber-300 flex items-center gap-0.5">
+                    <Sword className="w-2.5 h-2.5" /> {opponent.activeCard.currentAtk}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Center Status & Environment Bar */}
+          <div className="w-full flex items-center justify-between gap-1.5 py-1 px-2 rounded-xl bg-slate-900/90 border border-slate-700/80 shadow-inner">
+            <EnvironmentZone
+              environment={environment}
+              canPlace={selectedDef?.type === 'ENVIRONMENT' && isMyTurn}
+              onPlaceEnvironment={() => handlePlaySelectedHandCard()}
+              onInspect={() => {
+                if (environment) setInspectCard(environment.cardInstance);
+              }}
+            />
+
+            <div className="flex flex-col items-center justify-center flex-1 min-w-0 px-1">
+              <div
+                className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider shadow flex items-center gap-1 ${
+                  mustPromoteBench
+                    ? 'bg-rose-600 text-white animate-bounce'
+                    : isMyTurn
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-stone-950'
+                    : 'bg-slate-800 text-slate-400'
+                }`}
+              >
+                <Sparkles className="w-2.5 h-2.5" />
+                <span>
+                  {mustPromoteBench
+                    ? '控えを選択！'
+                    : isMyTurn
+                    ? `あなたのターン (T${gameState.turnNumber})`
+                    : `相手のターン (T${gameState.turnNumber})`}
+                </span>
+              </div>
+
+              <div className="mt-0.5 text-[9px] text-amber-200 font-bold text-center truncate w-full">
+                {getActionGuideText()}
+              </div>
+
+              {actionError && (
+                <div className="mt-0.5 text-[8px] bg-red-950 border border-red-500 text-red-200 px-1.5 py-0.2 rounded flex items-center gap-1">
+                  <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
+                  <span className="truncate">{actionError}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-0.5 items-end shrink-0">
+              <button
+                disabled={!isMyTurn}
+                onClick={() => {
+                  clearModes();
+                  onSendAction('END_TURN');
+                }}
+                className={`px-2.5 py-1 rounded-lg font-black text-[10px] shadow transition-all ${
+                  isMyTurn
+                    ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white hover:brightness-110 active:scale-95 cursor-pointer ring-1 ring-sky-300'
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                }`}
+              >
+                ターン終了
+              </button>
+              <button
+                onClick={() => onSendAction('SURRENDER')}
+                className="text-[8px] text-slate-500 hover:text-rose-400 px-1 cursor-pointer"
+              >
+                降参
+              </button>
+            </div>
+          </div>
+
+          {/* My Active Spot + Energy Zone & Attack/Retreat Controls */}
+          <div className="flex items-center justify-center gap-2 w-full">
+            {/* Energy Zone Button */}
+            <div className="w-22 sm:w-26 shrink-0">
+              <button
+                disabled={!canAttachEnergyNow}
+                onClick={() => {
+                  setSelectedHandCard(null);
+                  setIsRetreating(false);
+                  setIsAttachingEnergy(!isAttachingEnergy);
+                }}
+                className={`w-full p-1.5 rounded-xl border-2 flex flex-col items-center justify-center gap-0.5 transition-all ${
+                  isAttachingEnergy
+                    ? 'bg-yellow-400 text-stone-950 border-white ring-2 ring-yellow-300 scale-105 shadow-lg cursor-pointer'
+                    : canAttachEnergyNow
+                    ? 'bg-gradient-to-b from-amber-500/30 to-yellow-600/30 border-yellow-400 text-yellow-200 animate-pulse cursor-pointer shadow'
+                    : 'bg-slate-900/70 border-slate-800 text-slate-500 cursor-not-allowed'
+                }`}
+              >
+                <div className="flex items-center gap-0.5 font-black text-[10px]">
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  <span>エネルギー</span>
+                </div>
+                <span className="text-[8px] font-bold">
+                  {canAttachEnergyNow
+                    ? isAttachingEnergy
+                      ? '付与先タップ'
+                      : '残り 1個'
+                    : '付与済(0)'}
+                </span>
+              </button>
+            </div>
+
+            {/* My Active Card */}
+            <FieldSlot
+              card={me.activeCard}
+              slotRole="ACTIVE"
+              isFriendly={true}
+              canAct={canAttackNow}
+              isAttacker={attackingCardId === me.activeCard?.instanceId}
+              isTargetable={isAttachingEnergy && !!me.activeCard}
+              targetBadgeText={isAttachingEnergy ? '⚡エネ付与' : undefined}
+              canPlaceCard={!me.activeCard && selectedDef?.type === 'ATTACK' && isMyTurn}
+              damagePopup={
+                damagePopup?.targetCardId === me.activeCard?.instanceId
+                  ? damagePopup.damage
+                  : null
+              }
+              onClick={handleMyActiveClick}
+              onInspectCard={setInspectCard}
+            />
+
+            {/* Attack & Retreat Buttons */}
+            <div className="flex flex-col gap-1 w-24 sm:w-28 shrink-0">
+              <button
+                disabled={!canAttackNow}
+                onClick={() => {
+                  clearModes();
+                  onSendAction('ATTACK');
+                }}
+                className={`w-full py-1.5 px-2 rounded-xl border-2 font-black text-left transition-all flex flex-col justify-center ${
+                  canAttackNow
+                    ? 'bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 border-yellow-300 text-white shadow-md cursor-pointer active:scale-95'
+                    : 'bg-slate-900/80 border-slate-800 text-slate-500 cursor-not-allowed'
+                }`}
+              >
+                <div className="flex items-center justify-between text-[9px]">
+                  <span className="flex items-center gap-0.5">
+                    <Sword className="w-2.5 h-2.5" /> 攻撃
+                  </span>
+                  {me.activeCard && (
+                    <span className="font-black text-yellow-300">
+                      {me.activeCard.currentAtk}
+                    </span>
+                  )}
+                </div>
+                <div className="text-[8px] truncate font-bold opacity-90">
+                  {myActiveDef
+                    ? canAttackNow
+                      ? `${myActiveDef.attackName}`
+                      : `⚡${me.activeCard?.attachedEnergy}/${me.activeCard?.energyCost}`
+                    : 'なし'}
+                </div>
+              </button>
+
+              <button
+                disabled={!canRetreatNow}
+                onClick={() => {
+                  setSelectedHandCard(null);
+                  setIsAttachingEnergy(false);
+                  setIsRetreating(!isRetreating);
+                }}
+                className={`w-full py-1 px-1.5 rounded-lg border font-bold text-[9px] flex items-center justify-center gap-0.5 transition-all ${
+                  isRetreating
+                    ? 'bg-sky-400 text-stone-950 border-white font-black cursor-pointer'
+                    : canRetreatNow
+                    ? 'bg-slate-800 hover:bg-slate-700 border-sky-400/70 text-sky-200 cursor-pointer'
+                    : 'bg-slate-900/60 border-slate-800 text-slate-600 cursor-not-allowed'
+                }`}
+              >
+                <Footprints className="w-2.5 h-2.5" />
+                <span>にげる{me.activeCard ? `(⚡${me.activeCard.retreatCost})` : ''}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* C. PLAYER BENCH & STATUS AREA (shrink-0) */}
+        <div className="shrink-0 flex flex-col gap-1">
+          {/* My Bench (3 Slots) */}
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-[8px] font-bold text-slate-400">自分ベンチ</span>
+            {me.bench.map((card, idx) => {
+              const isAttachTarget = isAttachingEnergy && !!card;
+              const isRetreatTarget = isRetreating && !!card;
+              const isPromoteTarget = mustPromoteBench && !!card;
+              const canPlaceOnBench =
+                isMyTurn && selectedDef?.type === 'ATTACK' && card === null;
+
+              return (
+                <FieldSlot
+                  key={`my_bench_p_${idx}`}
+                  card={card}
+                  slotIndex={idx}
+                  slotRole="BENCH"
+                  isFriendly={true}
+                  isTargetable={isAttachTarget || isRetreatTarget || isPromoteTarget}
+                  targetBadgeText={
+                    isPromoteTarget
+                      ? 'バトル場へ'
+                      : isAttachTarget
+                      ? '⚡エネ付与'
+                      : isRetreatTarget
+                      ? '交代'
+                      : undefined
+                  }
+                  canPlaceCard={canPlaceOnBench}
+                  onClick={() => handleMyBenchClick(card, idx)}
+                  onInspectCard={setInspectCard}
+                />
+              );
+            })}
+          </div>
+
+          {/* Player Info + Points + Deck/Trash + Log */}
+          <div className="flex items-center justify-between gap-1.5 bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-0.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-black text-[11px] text-amber-200 truncate">{me.name}</span>
+              <div className="flex items-center gap-0.5 shrink-0">
+                <span className="text-[8px] text-stone-400 font-bold">獲得Pt:</span>
+                {Array.from({ length: me.maxScore }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`w-3 h-3 rounded-full border flex items-center justify-center ${
+                      idx < me.score
+                        ? 'bg-emerald-400 border-white shadow-xs shadow-emerald-400'
+                        : 'bg-slate-950 border-slate-700'
+                    }`}
+                  >
+                    {idx < me.score && <Trophy className="w-2 h-2 text-stone-950" />}
+                  </div>
+                ))}
+                <span className="text-[9px] font-black text-emerald-300 ml-0.5">
+                  {me.score}/{me.maxScore}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0 text-[9px] font-bold">
+              <div className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-stone-300 flex items-center gap-0.5">
+                <Layers className="w-2.5 h-2.5 text-amber-400" />
+                <span>山札</span>
+                <span className="text-amber-300 font-mono">{me.deckCount}</span>
+              </div>
+              <button
+                onClick={() => setViewingTrash('me')}
+                className="px-1.5 py-0.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-stone-300 flex items-center gap-0.5 cursor-pointer"
+              >
+                <Trash2 className="w-2.5 h-2.5 text-stone-400" />
+                <span>トラッシュ</span>
+                <span className="text-stone-400 font-mono">{me.trash.length}</span>
+              </button>
+            </div>
+          </div>
+
+          <LogDrawer logs={logs} myPlayerId={me.playerId} />
+        </div>
+
+        {/* D. HAND AREA (shrink-0: Reserved space at bottom so hand is NEVER clipped) */}
+        <div className="relative shrink-0 w-full bg-slate-900/50 border border-slate-800/80 rounded-xl mt-0.5">
+          {renderSelectedHandFloatingBar()}
+          {renderHandCards(false)}
         </div>
       </div>
 
-      {/* CENTER: BATTLEFIELD */}
-      <div className="relative z-10 flex-1 flex flex-col justify-center max-w-lg mx-auto w-full px-2 py-1">
-        {/* Opponent Field (5 slots) */}
-        <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-2">
-          {opponent.field.map((card, idx) => (
-            <FieldSlot
-              key={`opp_slot_${idx}`}
-              card={card}
-              slotIndex={idx}
-              isFriendly={false}
-              isTargetable={
-                (!!selectedFieldCard && isMyTurn) ||
-                (isSpellSelected && !!card) ||
-                (isAttachmentSelected && !!card)
-              }
-              onClick={() => handleOpponentFieldCardClick(card)}
-              onInspectCard={setInspectCard}
-            />
-          ))}
-        </div>
-
-        {/* Center River / Environment / Turn Status Bar */}
-        <div className="flex items-center justify-between py-1 px-3 my-1 rounded-xl bg-black/40 border border-stone-800/80 backdrop-blur-xs">
-          {/* Environment zone */}
-          <EnvironmentZone
-            environment={environment}
-            canPlace={isEnvironmentSelected && isMyTurn}
-            onPlaceEnvironment={handlePlaceEnvironment}
-            onInspect={() => {
-              if (environment) setInspectCard(environment.cardInstance);
-            }}
-          />
-
-          {/* Turn & Action status */}
-          <div className="flex flex-col items-center justify-center flex-1 px-2">
-            <div className={`px-3 py-1 rounded-full text-xs font-black tracking-wider shadow flex items-center gap-1.5 ${
-              isMyTurn
-                ? 'bg-amber-600 text-white animate-pulse'
-                : 'bg-stone-800 text-stone-400'
-            }`}>
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{isMyTurn ? 'あなたのターン' : '相手のターン'} (T{gameState.turnNumber})</span>
+      {/* ====================================================================
+         2. LANDSCAPE LAYOUT (.layout-landscape)
+         Dedicated wide horizontal layout for mobile landscape viewports
+         Row 1: Top Header (Opponent Info + Turn Guide + Environment + End Turn)
+         Row 2: Horizontal Battle Arena ([Opp Bench] [Opp Active] VS [My Active] [My Bench])
+         Row 3: Bottom Bar ([My Controls: Pt / Energy / Attack / Retreat] + [My Hand Horizontal])
+         ==================================================================== */}
+      <div className="layout-landscape relative z-10 w-full h-full px-2 py-1 gap-1">
+        {/* ROW 1: COMPACT TOP HEADER BAR */}
+        <div className="flex items-center justify-between gap-2 bg-slate-900/95 border border-slate-800 rounded-xl px-2.5 py-1">
+          {/* Opponent Info & Points */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="font-black text-xs text-stone-100">{opponent.name}</span>
+            <div className="flex items-center gap-0.5">
+              {Array.from({ length: opponent.maxScore }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className={`w-3 h-3 rounded-full border flex items-center justify-center ${
+                    idx < opponent.score
+                      ? 'bg-amber-400 border-yellow-200'
+                      : 'bg-slate-950 border-slate-700'
+                  }`}
+                >
+                  {idx < opponent.score && <Trophy className="w-2 h-2 text-stone-950" />}
+                </div>
+              ))}
+              <span className="text-[9px] font-black text-amber-300 ml-0.5">
+                {opponent.score}/{opponent.maxScore}
+              </span>
             </div>
-
-            {/* Hint message */}
-            <div className="mt-1 text-[10px] text-stone-400 text-center truncate max-w-xs">
-              {selectedHandCard && (
-                <span className="text-yellow-300 font-bold">
-                  {isAttackCardSelected ? '空きスロットをタップして配置' :
-                   isAttachmentSelected ? '付着させるカードをタップ' :
-                   isEnvironmentSelected ? '環境ゾーンをタップして展開' : '魔法を使用できます'}
-                </span>
-              )}
-              {selectedFieldCard && (
-                <span className="text-red-400 font-bold">
-                  攻撃対象の敵カードまたは相手プレイヤーをタップ！
-                </span>
-              )}
-              {!selectedHandCard && !selectedFieldCard && (
-                <span>カードを選択して操作してください</span>
-              )}
-            </div>
-
-            {/* Error toast if any */}
-            {actionError && (
-              <div className="mt-1 text-[10px] bg-red-950/90 border border-red-500 text-red-200 px-2 py-0.5 rounded flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                <span>{actionError}</span>
-              </div>
-            )}
+            <span className="text-[9px] text-slate-400">
+              手札:{opponent.handCount} 山札:{opponent.deckCount}
+            </span>
+            <button
+              onClick={() => setViewingTrash('opp')}
+              className="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-[9px] text-stone-300 cursor-pointer"
+            >
+              相手トラッシュ({opponent.trash.length})
+            </button>
           </div>
 
-          {/* End Turn / Actions Button */}
-          <div className="flex flex-col gap-1 items-end">
+          {/* Center Turn & Action Guide */}
+          <div className="flex items-center gap-2 min-w-0 flex-1 justify-center">
+            <span
+              className={`px-2 py-0.5 rounded-full text-[9px] font-black shrink-0 ${
+                mustPromoteBench
+                  ? 'bg-rose-600 text-white animate-bounce'
+                  : isMyTurn
+                  ? 'bg-amber-400 text-stone-950'
+                  : 'bg-slate-800 text-slate-400'
+              }`}
+            >
+              {mustPromoteBench
+                ? '控え選択'
+                : isMyTurn
+                ? `あなた (T${gameState.turnNumber})`
+                : `相手 (T${gameState.turnNumber})`}
+            </span>
+            <span className="text-[9px] text-amber-200 font-bold truncate">
+              {actionError || getActionGuideText()}
+            </span>
+          </div>
+
+          {/* Right: Turn End & Surrender */}
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               disabled={!isMyTurn}
-              onClick={() => onSendAction('END_TURN')}
-              className={`px-3 py-2 rounded-lg font-black text-xs shadow-lg transition-all ${
+              onClick={() => {
+                clearModes();
+                onSendAction('END_TURN');
+              }}
+              className={`px-2.5 py-1 rounded-lg font-black text-[10px] ${
                 isMyTurn
-                  ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-stone-950 hover:brightness-110 active:scale-95 cursor-pointer ring-2 ring-yellow-400'
-                  : 'bg-stone-800 text-stone-500 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white cursor-pointer'
+                  : 'bg-slate-800 text-slate-500 cursor-not-allowed'
               }`}
             >
               ターン終了
             </button>
             <button
-              onClick={() => {
-                if (window.confirm('降伏して対戦を終了しますか？')) {
-                  onSendAction('SURRENDER');
-                }
-              }}
-              className="text-[9px] text-stone-500 hover:text-stone-300 px-1 py-0.5"
+              onClick={() => onSendAction('SURRENDER')}
+              className="text-[9px] text-slate-500 hover:text-rose-400 px-1 cursor-pointer"
             >
-              降伏
+              降参
             </button>
           </div>
         </div>
 
-        {/* Battle Event Logs Ticker & Drawer (Center positioned for clear visibility) */}
-        <div className="w-full max-w-lg mx-auto my-0.5">
-          <LogDrawer logs={logs} myPlayerId={me.playerId} />
-        </div>
+        {/* ROW 2: HORIZONTAL BATTLE ARENA (minmax(0, 1fr)) */}
+        <div className="min-h-0 flex items-center justify-between gap-2 px-2 py-0.5 rounded-xl bg-slate-900/40 border border-slate-800/60 overflow-hidden">
+          {/* Left: Opponent Bench (3 Slots) */}
+          <div className="flex items-center gap-1.5">
+            <div className="text-[8px] font-bold text-slate-500 [writing-mode:vertical-rl]">
+              相手ベンチ
+            </div>
+            {opponent.bench.map((card, idx) => (
+              <FieldSlot
+                key={`opp_bench_l_${idx}`}
+                card={card}
+                slotIndex={idx}
+                slotRole="BENCH"
+                isFriendly={false}
+                onClick={() => card && setInspectCard(card)}
+                onInspectCard={setInspectCard}
+              />
+            ))}
+          </div>
 
-        {/* My Field (5 slots) */}
-        <div className="flex items-center justify-center gap-1.5 sm:gap-2 mt-1">
-          {me.field.map((card, idx) => (
+          {/* Center-Left: Opponent Active Spot */}
+          <div className="flex items-center gap-2">
             <FieldSlot
-              key={`my_slot_${idx}`}
-              card={card}
-              slotIndex={idx}
-              isFriendly={true}
-              isSelected={selectedFieldCard?.instanceId === card?.instanceId}
-              canAct={isMyTurn && !!card && card.canAttack && card.attacksThisTurn === 0}
-              isAttacker={selectedFieldCard?.instanceId === card?.instanceId}
-              canPlaceCard={isAttackCardSelected && card === null && isMyTurn}
-              isTargetable={isAttachmentSelected && !!card && isMyTurn}
-              onClick={() => handleFriendlyFieldCardClick(card, idx)}
+              card={opponent.activeCard}
+              slotRole="ACTIVE"
+              isFriendly={false}
+              isAttacker={attackingCardId === opponent.activeCard?.instanceId}
+              damagePopup={
+                damagePopup?.targetCardId === opponent.activeCard?.instanceId
+                  ? damagePopup.damage
+                  : null
+              }
+              onClick={() => opponent.activeCard && setInspectCard(opponent.activeCard)}
               onInspectCard={setInspectCard}
             />
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {/* BOTTOM: MY AREA (Elevated with safe area padding to prevent clipping by mobile system bar) */}
-      <div className="relative z-20 w-full flex flex-col px-3 pb-[max(2.5rem,env(safe-area-inset-bottom,36px))] pt-1">
-        {/* Hand Card Action Floating Toolbar */}
-        {selectedHandCard && isMyTurn && (
-          <div className="w-full max-w-sm mx-auto mb-1 p-2 rounded-lg bg-stone-900/95 border border-amber-500/80 shadow-xl flex items-center justify-between animate-slideUp">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="font-bold text-xs text-amber-300 truncate">
-                {selectedDef?.name}
-              </span>
-              <span className="text-[10px] text-stone-400">
-                ({selectedDef?.type === 'ATTACK' ? '攻撃' : selectedDef?.type === 'SPELL' ? '魔法' : '環境'})
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              {isSpellSelected && (
-                <button
-                  onClick={handleCastSpell}
-                  className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow cursor-pointer active:scale-95"
-                >
-                  発動する
-                </button>
-              )}
-              <button
-                onClick={() => setInspectCard(selectedHandCard)}
-                className="px-2 py-1 rounded bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-bold"
-              >
-                詳細
-              </button>
-              <button
-                onClick={clearSelection}
-                className="px-2 py-1 rounded bg-stone-800 hover:bg-stone-700 text-stone-400 text-xs"
-              >
-                取消
-              </button>
+          {/* Center: Environment Zone + VS Badge */}
+          <div className="flex flex-col items-center justify-center gap-1 shrink-0">
+            <EnvironmentZone
+              environment={environment}
+              canPlace={selectedDef?.type === 'ENVIRONMENT' && isMyTurn}
+              onPlaceEnvironment={() => handlePlaySelectedHandCard()}
+              onInspect={() => {
+                if (environment) setInspectCard(environment.cardInstance);
+              }}
+            />
+            <span className="text-[9px] font-black text-amber-400/80">VS</span>
+          </div>
+
+          {/* Center-Right: My Active Spot */}
+          <div className="flex items-center gap-2">
+            <FieldSlot
+              card={me.activeCard}
+              slotRole="ACTIVE"
+              isFriendly={true}
+              canAct={canAttackNow}
+              isAttacker={attackingCardId === me.activeCard?.instanceId}
+              isTargetable={isAttachingEnergy && !!me.activeCard}
+              targetBadgeText={isAttachingEnergy ? '⚡エネ付与' : undefined}
+              canPlaceCard={!me.activeCard && selectedDef?.type === 'ATTACK' && isMyTurn}
+              damagePopup={
+                damagePopup?.targetCardId === me.activeCard?.instanceId
+                  ? damagePopup.damage
+                  : null
+              }
+              onClick={handleMyActiveClick}
+              onInspectCard={setInspectCard}
+            />
+          </div>
+
+          {/* Right: My Bench (3 Slots) */}
+          <div className="flex items-center gap-1.5">
+            {me.bench.map((card, idx) => {
+              const isAttachTarget = isAttachingEnergy && !!card;
+              const isRetreatTarget = isRetreating && !!card;
+              const isPromoteTarget = mustPromoteBench && !!card;
+              const canPlaceOnBench =
+                isMyTurn && selectedDef?.type === 'ATTACK' && card === null;
+
+              return (
+                <FieldSlot
+                  key={`my_bench_l_${idx}`}
+                  card={card}
+                  slotIndex={idx}
+                  slotRole="BENCH"
+                  isFriendly={true}
+                  isTargetable={isAttachTarget || isRetreatTarget || isPromoteTarget}
+                  targetBadgeText={
+                    isPromoteTarget
+                      ? 'バトル場へ'
+                      : isAttachTarget
+                      ? '⚡エネ付与'
+                      : isRetreatTarget
+                      ? '交代'
+                      : undefined
+                  }
+                  canPlaceCard={canPlaceOnBench}
+                  onClick={() => handleMyBenchClick(card, idx)}
+                  onInspectCard={setInspectCard}
+                />
+              );
+            })}
+            <div className="text-[8px] font-bold text-slate-400 [writing-mode:vertical-rl]">
+              自分ベンチ
             </div>
           </div>
-        )}
+        </div>
 
-        {/* My Status & Decks Bar */}
-        <div className="flex items-center justify-between gap-2 max-w-lg mx-auto w-full mb-1">
-          {/* My Info */}
-          <div className="flex items-center gap-2 p-1.5 rounded-lg bg-stone-900/80 border border-stone-800">
-            <div className="w-8 h-8 rounded-full bg-amber-950 border border-amber-600 flex items-center justify-center text-sm font-bold shadow">
-              {me.avatarIcon === 'rocket' ? '🚀' : me.avatarIcon === 'ghost' ? '👻' : '😎'}
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-xs text-amber-200">{me.name} (あなた)</span>
-              </div>
-              {/* HP Bar */}
+        {/* ROW 3: BOTTOM CONTROL & HAND AREA (Side-by-Side for Full Hand Visibility) */}
+        <div className="relative flex items-center justify-between gap-2 bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-1">
+          {renderSelectedHandFloatingBar()}
+
+          {/* Left Controls: Player Points + Energy + Attack + Retreat */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex flex-col gap-0.5 pr-1 border-r border-slate-800">
               <div className="flex items-center gap-1">
-                <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500 shrink-0" />
-                <div className="w-24 h-3 bg-stone-950 rounded-full border border-stone-700 overflow-hidden relative">
-                  <div
-                    className="h-full bg-gradient-to-r from-emerald-500 to-green-400 transition-all duration-300"
-                    style={{ width: `${Math.max(0, Math.min(100, (me.hp / me.maxHp) * 100))}%` }}
-                  />
-                </div>
-                <span className="text-[10px] font-black text-emerald-300 ml-0.5">{me.hp}</span>
+                <span className="font-black text-[10px] text-amber-200">{me.name}</span>
+                <span className="text-[9px] font-black text-emerald-300">
+                  {me.score}/{me.maxScore}pt
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-[8px] text-slate-400">
+                <span>山札:{me.deckCount}</span>
+                <button
+                  onClick={() => setViewingTrash('me')}
+                  className="underline hover:text-white cursor-pointer"
+                >
+                  トラッシュ:{me.trash.length}
+                </button>
               </div>
             </div>
+
+            {/* Energy Button */}
+            <button
+              disabled={!canAttachEnergyNow}
+              onClick={() => {
+                setSelectedHandCard(null);
+                setIsRetreating(false);
+                setIsAttachingEnergy(!isAttachingEnergy);
+              }}
+              className={`px-2 py-1.5 rounded-lg border font-black text-[10px] flex flex-col items-center justify-center ${
+                isAttachingEnergy
+                  ? 'bg-yellow-400 text-stone-950 border-white cursor-pointer'
+                  : canAttachEnergyNow
+                  ? 'bg-amber-500/30 border-yellow-400 text-yellow-200 animate-pulse cursor-pointer'
+                  : 'bg-slate-950 border-slate-800 text-slate-600 cursor-not-allowed'
+              }`}
+            >
+              <span className="flex items-center gap-0.5">
+                <Zap className="w-3 h-3 fill-current" /> エネ付与
+              </span>
+              <span className="text-[8px]">{canAttachEnergyNow ? '残り1' : '済'}</span>
+            </button>
+
+            {/* Attack Button */}
+            <button
+              disabled={!canAttackNow}
+              onClick={() => {
+                clearModes();
+                onSendAction('ATTACK');
+              }}
+              className={`px-2.5 py-1.5 rounded-lg border font-black text-[10px] flex flex-col items-center justify-center ${
+                canAttackNow
+                  ? 'bg-gradient-to-r from-rose-600 to-amber-600 border-yellow-300 text-white cursor-pointer'
+                  : 'bg-slate-950 border-slate-800 text-slate-600 cursor-not-allowed'
+              }`}
+            >
+              <span className="flex items-center gap-0.5">
+                <Sword className="w-3 h-3" /> わざ攻撃
+              </span>
+              <span className="text-[8px]">
+                {me.activeCard ? `${me.activeCard.currentAtk} dmg` : '-'}
+              </span>
+            </button>
+
+            {/* Retreat Button */}
+            <button
+              disabled={!canRetreatNow}
+              onClick={() => {
+                setSelectedHandCard(null);
+                setIsAttachingEnergy(false);
+                setIsRetreating(!isRetreating);
+              }}
+              className={`px-2 py-1.5 rounded-lg border font-bold text-[9px] flex flex-col items-center justify-center ${
+                isRetreating
+                  ? 'bg-sky-400 text-stone-950 border-white cursor-pointer'
+                  : canRetreatNow
+                  ? 'bg-slate-800 border-sky-400/70 text-sky-200 cursor-pointer'
+                  : 'bg-slate-950 border-slate-800 text-slate-600 cursor-not-allowed'
+              }`}
+            >
+              <span className="flex items-center gap-0.5">
+                <Footprints className="w-2.5 h-2.5" /> にげる
+              </span>
+              <span className="text-[8px]">
+                ⚡{me.activeCard ? me.activeCard.retreatCost : 0}
+              </span>
+            </button>
           </div>
 
-          {/* My Deck Stack (3D) & Graveyard */}
-          <div className="flex items-center gap-3">
-            <DeckStack3D
-              cardCount={me.deckCount}
-              canDraw={isMyTurn && !me.hasDrawnThisTurn}
-              onDraw={() => onSendAction('DRAW_CARD')}
-              label="山札"
-            />
-            <GraveyardPile
-              cards={me.graveyard}
-              label="墓地"
-              onClick={() => setViewingGraveyard('me')}
-            />
+          {/* Right Hand Area: Horizontal Full-Visibility Hand */}
+          <div className="flex-1 min-w-0 flex items-center justify-center">
+            {renderHandCards(true)}
           </div>
-        </div>
-
-        {/* My Fanned Hand (ババ抜き風 扇状ファンアニメーション & アクティブ強調) */}
-        <div className="w-full relative h-36 sm:h-40 flex items-end justify-center select-none overflow-visible pb-2 pt-6">
-          {(!me.hand || me.hand.length === 0) ? (
-            <div className="h-24 flex items-center justify-center text-xs text-stone-500 italic">
-              手札がありません
-            </div>
-          ) : (
-            <div className={`flex items-end justify-center px-4 max-w-full ${
-              me.hand.length <= 3 ? '-space-x-2 sm:-space-x-1' :
-              me.hand.length <= 5 ? '-space-x-5 sm:-space-x-4' :
-              me.hand.length <= 7 ? '-space-x-7 sm:-space-x-5' :
-              '-space-x-9 sm:-space-x-6'
-            }`}>
-              {me.hand.map((card, idx) => {
-                const total = me.hand!.length;
-                const isSelected = selectedHandCard?.instanceId === card.instanceId;
-                const isHovered = hoveredHandCardId === card.instanceId;
-                const centerIndex = (total - 1) / 2;
-                const normalizedOffset = idx - centerIndex;
-
-                // Fan angle (ババ抜き風扇状回転)
-                const maxAngle = Math.min(28, total * 5.2);
-                const angleStep = total > 1 ? (maxAngle * 2) / (total - 1) : 0;
-                const baseRotDeg = normalizedOffset * angleStep;
-                const rotDeg = isSelected ? 0 : isHovered ? baseRotDeg * 0.3 : baseRotDeg;
-
-                // Arc translation (扇の円弧カーブ)
-                const arcY = Math.abs(normalizedOffset) * Math.min(10, total * 1.8);
-                // Active / Hover lift
-                const translateY = isSelected ? -56 : isHovered ? -32 : arcY - 20;
-                const scale = isSelected ? 1.16 : isHovered ? 1.08 : 1.0;
-                const zIndex = isSelected ? 60 : isHovered ? 45 : 10 + idx;
-
-                return (
-                  <div
-                    key={card.instanceId}
-                    style={{
-                      transform: `rotate(${rotDeg}deg) translateY(${translateY}px) scale(${scale})`,
-                      transformOrigin: 'bottom center',
-                      zIndex,
-                      transition: 'transform 0.24s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.2s ease, filter 0.2s ease'
-                    }}
-                    className={`relative shrink-0 cursor-pointer origin-bottom ${
-                      isSelected
-                        ? 'filter drop-shadow-[0_0_20px_rgba(250,204,21,0.95)]'
-                        : isHovered
-                        ? 'filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.7)]'
-                        : 'shadow-[-4px_2px_10px_rgba(0,0,0,0.5)]'
-                    }`}
-                    onClick={() => handleSelectHandCard(card)}
-                    onMouseEnter={() => setHoveredHandCardId(card.instanceId)}
-                    onMouseLeave={() => setHoveredHandCardId(null)}
-                    onTouchStart={() => setHoveredHandCardId(card.instanceId)}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      setInspectCard(card);
-                    }}
-                  >
-                    {/* Active Card Emphasis Badge */}
-                    {isSelected && (
-                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 to-yellow-300 text-stone-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-xl flex items-center gap-1 animate-bounce whitespace-nowrap z-50 border border-yellow-100">
-                        <Sparkles className="w-2.5 h-2.5" /> 選択中
-                      </div>
-                    )}
-
-                    <CardView
-                      card={card}
-                      size="hand"
-                      isSelected={isSelected}
-                      canAct={isMyTurn}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       </div>
 
       {/* Inspect Card Modal */}
       {inspectCard && (
-        <CardDetailModal
-          card={inspectCard}
-          onClose={() => setInspectCard(null)}
-        />
+        <CardDetailModal card={inspectCard} onClose={() => setInspectCard(null)} />
       )}
 
-      {/* Graveyard Inspector Modal */}
-      {viewingGraveyard && (
+      {/* Trash Modal */}
+      {viewingTrash && (
         <GraveyardModal
-          cards={viewingGraveyard === 'me' ? me.graveyard : opponent.graveyard}
-          ownerName={viewingGraveyard === 'me' ? me.name : opponent.name}
-          onClose={() => setViewingGraveyard(null)}
+          cards={viewingTrash === 'me' ? me.trash : opponent.trash}
+          ownerName={viewingTrash === 'me' ? me.name : opponent.name}
+          onClose={() => setViewingTrash(null)}
           onInspectCard={setInspectCard}
         />
       )}
 
-      {/* GAME OVER SCREEN MODAL */}
+      {/* Game Over Modal */}
       {isGameOver && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-sm rounded-2xl bg-gradient-to-b from-stone-900 via-stone-900 to-stone-950 border-2 border-amber-500 shadow-2xl p-6 text-center text-stone-100 flex flex-col items-center">
+          <div className="w-full max-w-sm rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-400 shadow-2xl p-6 text-center text-stone-100 flex flex-col items-center">
             {iWon ? (
               <div className="w-16 h-16 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-300 mb-3 shadow-lg animate-bounce">
                 <Trophy className="w-8 h-8" />
               </div>
             ) : (
-              <div className="w-16 h-16 rounded-full bg-stone-800 border-2 border-stone-700 flex items-center justify-center text-stone-400 mb-3 shadow-lg">
+              <div className="w-16 h-16 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center text-slate-400 mb-3 shadow-lg">
                 <Skull className="w-8 h-8" />
               </div>
             )}
 
-            <h2 className={`text-2xl font-black mb-1 tracking-wider ${
-              iWon ? 'text-amber-300' : 'text-stone-400'
-            }`}>
-              {iWon ? 'VICTORY' : 'DEFEAT'}
+            <h2
+              className={`text-2xl font-black mb-1 tracking-wider ${
+                iWon ? 'text-amber-300' : 'text-slate-400'
+              }`}
+            >
+              {iWon ? 'VICTORY!' : 'DEFEAT...'}
             </h2>
-            <p className="text-sm font-bold text-stone-300 mb-3">
-              {iWon ? 'あなたの完全勝利！' : '敗北……次回リベンジだ！'}
+            <p className="text-sm font-bold text-stone-200 mb-2">
+              {iWon ? 'あなたの勝利です！' : '敗北……次は勝とう！'}
             </p>
 
+            <div className="flex items-center justify-center gap-4 my-2 px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs font-black">
+              <span className="text-emerald-300">
+                {me.name}: {me.score} pt
+              </span>
+              <span className="text-slate-500">VS</span>
+              <span className="text-amber-300">
+                {opponent.name}: {opponent.score} pt
+              </span>
+            </div>
+
             {winReason && (
-              <div className="p-3 rounded-xl bg-stone-800/80 border border-stone-700 text-xs text-stone-300 mb-5 leading-relaxed">
+              <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-stone-300 mb-5 leading-relaxed">
                 {winReason}
               </div>
             )}
 
-            <div className="w-full space-y-2">
-              <button
-                onClick={onLeaveRoom}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-stone-950 font-black text-sm shadow-lg transition-transform active:scale-95 cursor-pointer"
-              >
-                ロビーへ戻る
-              </button>
-            </div>
+            <button
+              onClick={onLeaveRoom}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-stone-950 font-black text-sm shadow-lg transition-transform active:scale-95 cursor-pointer"
+            >
+              ロビーへ戻る
+            </button>
           </div>
         </div>
       )}

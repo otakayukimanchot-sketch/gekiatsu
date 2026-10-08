@@ -1,7 +1,7 @@
 import React from 'react';
 import { CardInstance } from '../../cards/types';
 import { getCardDefinition } from '../../cards/cardRegistry';
-import { X, Sword, Shield, Zap, Sparkles, Flame, Layers } from 'lucide-react';
+import { X, Sword, Shield, Zap, Sparkles, Footprints, Trophy, GitBranch } from 'lucide-react';
 
 interface CardDetailModalProps {
   card: CardInstance | null;
@@ -14,128 +14,168 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
   card,
   onClose,
   onAction,
-  actionLabel
+  actionLabel,
 }) => {
   if (!card) return null;
   const def = getCardDefinition(card.definitionId);
   if (!def) return null;
 
+  const theme = def.colorTheme;
+  const evolvesFromCard = def.evolution.evolvesFrom
+    ? getCardDefinition(def.evolution.evolvesFrom)
+    : undefined;
+  const evolvesToCard = def.evolution.evolvesTo
+    ? getCardDefinition(def.evolution.evolvesTo)
+    : undefined;
+  const triggerCard = def.evolution.triggerCardId
+    ? getCardDefinition(def.evolution.triggerCardId)
+    : undefined;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-sm rounded-xl overflow-hidden bg-stone-900 border-2 border-amber-600/80 shadow-2xl text-stone-100 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/75 backdrop-blur-sm animate-fadeIn">
+      <div
+        className={`relative w-full max-w-sm rounded-2xl overflow-hidden bg-stone-900 border-2 ${theme.borderClass} shadow-2xl text-stone-100 flex flex-col max-h-[88dvh]`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b border-stone-800 bg-stone-950">
-          <div className="flex items-center gap-2">
-            <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-              def.type === 'ATTACK' ? 'bg-amber-600 text-white' :
-              def.type === 'SPELL' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'
-            }`}>
-              {def.type === 'ATTACK' ? '攻撃カード' : def.type === 'SPELL' ? '魔法カード' : '環境カード'}
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className={`px-2 py-0.5 rounded-md text-xs font-black shrink-0 ${theme.badgeBg} ${theme.badgeText}`}
+            >
+              {theme.tierLabel}
             </span>
-            <span className="font-bold text-base text-amber-200">{def.name}</span>
+            <span className="font-black text-sm sm:text-base text-white truncate">{def.name}</span>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-300"
+            className="w-7 h-7 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-300 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content body */}
-        <div className="p-4 overflow-y-auto space-y-3 flex-1 text-xs">
-          {/* Card Hero artwork */}
-          <div className={`w-full h-32 rounded-lg bg-gradient-to-br ${def.artGradient} flex items-center justify-center relative shadow-inner border border-stone-700`}>
+        <div className="p-3.5 overflow-y-auto space-y-2.5 flex-1 text-xs">
+          {/* Card Hero Banner */}
+          <div
+            className={`w-full h-30 rounded-xl bg-gradient-to-br ${theme.artGradient} flex flex-col items-center justify-center relative shadow-inner border border-white/20 p-3`}
+          >
             <div className="text-white drop-shadow-lg flex flex-col items-center">
-              <Sparkles className="w-12 h-12 mb-1" />
-              <div className="text-xs font-bold tracking-wider">{def.name}</div>
+              <Sparkles className="w-9 h-9 mb-1" />
+              <div className="text-sm font-black tracking-wider text-center">{def.name}</div>
             </div>
+
             {def.type === 'ATTACK' && (
-              <div className="absolute bottom-2 inset-x-4 flex justify-between">
-                <div className="px-2.5 py-1 rounded bg-amber-950/90 border border-amber-500 text-amber-300 font-black flex items-center gap-1">
-                  <Sword className="w-3.5 h-3.5" /> ATK: {card.currentAtk}
+              <div className="absolute bottom-2 inset-x-3 flex justify-between items-center">
+                <div className="px-2 py-0.5 rounded-lg bg-black/80 border border-amber-400/80 text-amber-300 font-black flex items-center gap-1">
+                  <Sword className="w-3 h-3" /> 攻撃力: {card.currentAtk}
                 </div>
-                <div className="px-2.5 py-1 rounded bg-rose-950/90 border border-rose-500 text-rose-300 font-black flex items-center gap-1">
-                  <Shield className="w-3.5 h-3.5" /> HP: {card.currentHp} / {card.maxHp}
+                <div className="px-2 py-0.5 rounded-lg bg-black/80 border border-emerald-400/80 text-emerald-300 font-black flex items-center gap-1">
+                  <Shield className="w-3 h-3" /> HP: {card.currentHp} / {card.maxHp}
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Battle Stats Box for Attack Cards */}
+          {def.type === 'ATTACK' && (
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-1.5 rounded-xl bg-stone-800/90 border border-stone-700">
+                <div className="text-[10px] text-stone-400 mb-0.5 flex items-center justify-center gap-1">
+                  <Zap className="w-3 h-3 text-yellow-400" /> 必要エネ
+                </div>
+                <div className="font-black text-xs text-yellow-300">
+                  {card.attachedEnergy} / {def.stats.energyCost}
+                </div>
+              </div>
+              <div className="p-1.5 rounded-xl bg-stone-800/90 border border-stone-700">
+                <div className="text-[10px] text-stone-400 mb-0.5 flex items-center justify-center gap-1">
+                  <Footprints className="w-3 h-3 text-sky-400" /> にげる
+                </div>
+                <div className="font-black text-xs text-sky-300">
+                  エネ {def.stats.retreatCost}個
+                </div>
+              </div>
+              <div className="p-1.5 rounded-xl bg-stone-800/90 border border-stone-700">
+                <div className="text-[10px] text-stone-400 mb-0.5 flex items-center justify-center gap-1">
+                  <Trophy className="w-3 h-3 text-amber-400" /> 撃破Pt
+                </div>
+                <div className="font-black text-xs text-amber-300">{def.stats.pointValue} pt</div>
+              </div>
+            </div>
+          )}
+
+          {/* Evolution / Lineage Info Box */}
+          <div className="p-2.5 rounded-xl bg-stone-800/60 border border-stone-700/80 space-y-1 text-[11px]">
+            <div className="font-bold text-sky-300 flex items-center gap-1">
+              <GitBranch className="w-3.5 h-3.5" />
+              <span>系列: {def.evolution.family} (Stage {def.evolution.stage})</span>
+            </div>
+            {evolvesFromCard && (
+              <div className="text-stone-300">
+                進化元: <span className="font-bold text-white">{evolvesFromCard.name}</span>
+              </div>
+            )}
+            {evolvesToCard && (
+              <div className="text-stone-300">
+                進化先: <span className="font-bold text-amber-300">{evolvesToCard.name}</span>
+              </div>
+            )}
+            {triggerCard && (
+              <div className="text-stone-400 text-[10px]">
+                関連カード: {triggerCard.name}
+              </div>
+            )}
+          </div>
+
+          {/* Move / Effect Box */}
+          <div className="p-2.5 rounded-xl bg-stone-800/90 border border-stone-700 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="font-black text-amber-300 text-xs">
+                {def.type === 'ATTACK'
+                  ? `【わざ】${def.abilities.attackName}`
+                  : `【効果】${def.abilities.attackName}`}
+              </span>
+              {def.type === 'ATTACK' && (
+                <span className="font-black text-xs text-white">{card.currentAtk} ダメージ</span>
+              )}
+            </div>
+            <p className="text-stone-200 leading-relaxed">{def.abilities.description}</p>
           </div>
 
           {/* Tags */}
-          <div className="flex flex-wrap gap-1.5">
-            {def.tags.map((tag, i) => (
-              <span key={i} className="px-2 py-0.5 rounded-full bg-stone-800 border border-stone-700 text-stone-300 text-[10px]">
+          <div className="flex flex-wrap gap-1">
+            {def.ui.tags.map((tag, i) => (
+              <span
+                key={i}
+                className="px-2 py-0.5 rounded-full bg-stone-800 border border-stone-700 text-stone-300 text-[10px]"
+              >
                 #{tag}
               </span>
             ))}
-            {card.isTaunt && (
-              <span className="px-2 py-0.5 rounded-full bg-amber-950 border border-amber-600 text-amber-300 text-[10px] font-bold">
-                【守護】
-              </span>
-            )}
-            {card.hasCharge && (
-              <span className="px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-600 text-emerald-300 text-[10px] font-bold">
-                【突撃】
-              </span>
-            )}
           </div>
-
-          {/* Description */}
-          <div className="p-2.5 rounded bg-stone-800/80 border border-stone-700 text-stone-200 leading-relaxed">
-            <div className="text-stone-400 font-bold mb-1 text-[11px]">【効果テキスト】</div>
-            {def.description}
-          </div>
-
-          {/* Attached cards stack list */}
-          {card.attachedCards && card.attachedCards.length > 0 && (
-            <div className="p-2.5 rounded bg-indigo-950/60 border border-indigo-700/60 text-indigo-200">
-              <div className="font-bold flex items-center gap-1 mb-1 text-indigo-300">
-                <Layers className="w-3.5 h-3.5" /> 付着カード（スタック中: {card.attachedCards.length}枚）
-              </div>
-              <ul className="space-y-1">
-                {card.attachedCards.map((att, idx) => {
-                  const aDef = getCardDefinition(att.definitionId);
-                  return (
-                    <li key={idx} className="flex justify-between items-center text-[11px] bg-indigo-900/40 p-1 rounded">
-                      <span className="font-bold text-white">{aDef?.name}</span>
-                      <span className="text-indigo-300">{aDef?.description}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-
-          {/* Evolution info */}
-          {def.evolutionRule && (
-            <div className="p-2 rounded bg-amber-950/40 border border-amber-700/40 text-amber-200 text-[11px]">
-              <div className="font-bold text-amber-300 mb-0.5">【進化可能】</div>
-              <div>進化先: {getCardDefinition(def.evolutionRule.targetDefinitionId)?.name}</div>
-            </div>
-          )}
 
           {/* Flavor Text */}
-          {def.flavorText && (
-            <div className="italic text-stone-400 text-[11px] border-l-2 border-stone-600 pl-2 py-0.5">
-              {def.flavorText}
+          {def.ui.flavorText && (
+            <div className="italic text-stone-400 text-[11px] border-l-2 border-stone-600 pl-2.5 py-0.5">
+              {def.ui.flavorText}
             </div>
           )}
         </div>
 
         {/* Footer Actions */}
-        <div className="p-3 border-t border-stone-800 bg-stone-950 flex gap-2">
+        <div className="p-2.5 border-t border-stone-800 bg-stone-950 flex gap-2">
           {actionLabel && onAction && (
             <button
               onClick={() => onAction(actionLabel)}
-              className="flex-1 py-2 px-4 rounded-lg bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-xs shadow-md transition-all active:scale-95"
+              className="flex-1 py-2 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-stone-950 font-black text-xs shadow-md transition-all active:scale-95 cursor-pointer"
             >
               {actionLabel}
             </button>
           )}
           <button
             onClick={onClose}
-            className="py-2 px-4 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold text-xs"
+            className="py-2 px-4 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold text-xs cursor-pointer"
           >
             閉じる
           </button>

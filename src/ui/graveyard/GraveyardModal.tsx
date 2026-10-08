@@ -1,7 +1,7 @@
 import React from 'react';
 import { CardInstance } from '../../cards/types';
 import { CardView } from '../cards/CardView';
-import { X, Skull } from 'lucide-react';
+import { X, Trash2 } from 'lucide-react';
 
 interface GraveyardModalProps {
   cards: CardInstance[];
@@ -14,7 +14,7 @@ export const GraveyardModal: React.FC<GraveyardModalProps> = ({
   cards,
   ownerName,
   onClose,
-  onInspectCard
+  onInspectCard,
 }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
@@ -22,12 +22,14 @@ export const GraveyardModal: React.FC<GraveyardModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b border-stone-800 bg-stone-950">
           <div className="flex items-center gap-2 font-bold text-sm">
-            <Skull className="w-4 h-4 text-stone-400" />
-            <span>{ownerName} の墓地 ({cards.length}枚)</span>
+            <Trash2 className="w-4 h-4 text-stone-400" />
+            <span>
+              {ownerName} のトラッシュ ({cards.length}枚)
+            </span>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-300"
+            className="w-7 h-7 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-300 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -37,7 +39,7 @@ export const GraveyardModal: React.FC<GraveyardModalProps> = ({
         <div className="p-4 overflow-y-auto flex-1">
           {cards.length === 0 ? (
             <div className="py-12 text-center text-stone-500 text-xs italic">
-              墓地にはまだカードがありません。
+              トラッシュにはまだカードがありません。
             </div>
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 justify-items-center">
@@ -58,7 +60,7 @@ export const GraveyardModal: React.FC<GraveyardModalProps> = ({
         <div className="p-3 border-t border-stone-800 bg-stone-950 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-bold"
+            className="px-4 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-bold cursor-pointer"
           >
             閉じる
           </button>

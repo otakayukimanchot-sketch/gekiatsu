@@ -1,7 +1,7 @@
 import { GameState, GameActionPayload } from '../game/types';
 import { initializeGame, handleGameAction } from '../game/engine/gameEngine';
+import { decideNextBotAction } from '../game/cpu/cpuLogic';
 import { sanitizeGameStateForPlayer } from './sanitizer';
-import { getCardDefinition } from '../cards/cardRegistry';
 import { Server, Socket } from 'socket.io';
 
 export interface RoomParticipant {
@@ -10,6 +10,7 @@ export interface RoomParticipant {
   playerId: string;
   name: string;
   avatarIcon: string;
+  customDeckIds?: string[];
   isBot?: boolean;
 }
 
@@ -31,20 +32,24 @@ export class CardRoomManager {
     this.io = io;
   }
 
-  public handleQuickMatch(socket: Socket, player: { id: string; name: string; avatarIcon?: string }) {
-    // Remove if already in queue
-    this.quickMatchQueue = this.quickMatchQueue.filter(p => p.playerId !== player.id && p.socketId !== socket.id);
+  public handleQuickMatch(
+    socket: Socket,
+    player: { id: string; name: string; avatarIcon?: string; customDeckIds?: string[] }
+  ) {
+    this.quickMatchQueue = this.quickMatchQueue.filter(
+      (p) => p.playerId !== player.id && p.socketId !== socket.id
+    );
 
     const participant: RoomParticipant = {
       socketId: socket.id,
       id: player.id,
       playerId: player.id,
       name: player.name,
-      avatarIcon: player.avatarIcon || 'smile'
+      avatarIcon: player.avatarIcon || 'smile',
+      customDeckIds: player.customDeckIds,
     };
 
     if (this.quickMatchQueue.length > 0) {
-      // Pair up with waiting player
       const opponent = this.quickMatchQueue.shift()!;
       const roomId = 'room_' + Math.random().toString(36).substring(2, 9);
 
@@ -52,14 +57,20 @@ export class CardRoomManager {
         roomId,
         type: 'random',
         participants: [opponent, participant],
-        createdAt: Date.now()
+        createdAt: Date.now(),
       };
 
       const gameId = 'game_' + roomId;
-      room.gameState = initializeGame(gameId, roomId, opponent, participant);
+      room.gameState = initializeGame(
+        gameId,
+        roomId,
+        opponent,
+        participant,
+        opponent.customDeckIds,
+        participant.customDeckIds
+      );
       this.rooms.set(roomId, room);
 
-      // Join sockets to room
       const oppSocket = this.io.sockets.sockets.get(opponent.socketId);
       if (oppSocket) oppSocket.join(roomId);
       socket.join(roomId);
@@ -72,10 +83,13 @@ export class CardRoomManager {
   }
 
   public cancelMatch(socketId: string) {
-    this.quickMatchQueue = this.quickMatchQueue.filter(p => p.socketId !== socketId);
+    this.quickMatchQueue = this.quickMatchQueue.filter((p) => p.socketId !== socketId);
   }
 
-  public createFriendRoom(socket: Socket, player: { id: string; name: string; avatarIcon?: string }): string {
+  public createFriendRoom(
+    socket: Socket,
+    player: { id: string; name: string; avatarIcon?: string; customDeckIds?: string[] }
+  ): string {
     const inviteCode = Math.random().toString(36).substring(2, 6).toUpperCase();
     const roomId = 'friend_' + inviteCode;
 
@@ -84,7 +98,8 @@ export class CardRoomManager {
       id: player.id,
       playerId: player.id,
       name: player.name,
-      avatarIcon: player.avatarIcon || 'smile'
+      avatarIcon: player.avatarIcon || 'smile',
+      customDeckIds: player.customDeckIds,
     };
 
     const room: CardRoom = {
@@ -92,7 +107,7 @@ export class CardRoomManager {
       type: 'friend',
       inviteCode,
       participants: [participant],
-      createdAt: Date.now()
+      createdAt: Date.now(),
     };
 
     this.rooms.set(roomId, room);
@@ -102,19 +117,24 @@ export class CardRoomManager {
     return roomId;
   }
 
-  public joinFriendRoom(socket: Socket, inviteCode: string, player: { id: string; name: string; avatarIcon?: string }) {
+  public joinFriendRoom(
+    socket: Socket,
+    inviteCode: string,
+    player: { id: string; name: string; avatarIcon?: string; customDeckIds?: string[] }
+  ) {
     const cleanCode = inviteCode.trim().toUpperCase();
     const roomId = 'friend_' + cleanCode;
     const room = this.rooms.get(roomId);
 
     if (!room) {
-      socket.emit('card_error', { message: 'ルームが見つかりません。合言葉を確認してください。' });
+      socket.emit('card_error', {
+        message: 'ルームが見つかりません。合言葉を確認してください。',
+      });
       return;
     }
 
     if (room.participants.length >= 2) {
-      // Check if rejoining
-      const existing = room.participants.find(p => p.playerId === player.id);
+      const existing = room.participants.find((p) => p.playerId === player.id);
       if (existing) {
         existing.socketId = socket.id;
         socket.join(roomId);
@@ -132,20 +152,30 @@ export class CardRoomManager {
       id: player.id,
       playerId: player.id,
       name: player.name,
-      avatarIcon: player.avatarIcon || 'rocket'
+      avatarIcon: player.avatarIcon || 'rocket',
+      customDeckIds: player.customDeckIds,
     };
 
     room.participants.push(participant);
     socket.join(roomId);
 
-    // Initialize game with 2 players
     const gameId = 'game_' + roomId;
-    room.gameState = initializeGame(gameId, roomId, room.participants[0], participant);
+    room.gameState = initializeGame(
+      gameId,
+      roomId,
+      room.participants[0],
+      participant,
+      room.participants[0].customDeckIds,
+      participant.customDeckIds
+    );
 
     this.broadcastGameState(roomId);
   }
 
-  public startSoloBotMatch(socket: Socket, player: { id: string; name: string; avatarIcon?: string }) {
+  public startSoloBotMatch(
+    socket: Socket,
+    player: { id: string; name: string; avatarIcon?: string; customDeckIds?: string[] }
+  ) {
     const roomId = 'solo_' + Math.random().toString(36).substring(2, 9);
     const botId = 'bot_cpu_master';
 
@@ -154,39 +184,42 @@ export class CardRoomManager {
       id: player.id,
       playerId: player.id,
       name: player.name,
-      avatarIcon: player.avatarIcon || 'smile'
+      avatarIcon: player.avatarIcon || 'smile',
+      customDeckIds: player.customDeckIds,
     };
 
     const bot: RoomParticipant = {
       socketId: 'socket_bot',
       id: botId,
       playerId: botId,
-      name: 'CPU 師範',
+      name: 'CPU マスター',
       avatarIcon: 'ghost',
-      isBot: true
+      isBot: true,
     };
 
     const room: CardRoom = {
       roomId,
       type: 'solo',
       participants: [human, bot],
-      createdAt: Date.now()
+      createdAt: Date.now(),
     };
 
     const gameId = 'game_' + roomId;
-    room.gameState = initializeGame(gameId, roomId, human, bot);
+    room.gameState = initializeGame(gameId, roomId, human, bot, human.customDeckIds);
     this.rooms.set(roomId, room);
 
     socket.join(roomId);
     this.broadcastGameState(roomId);
 
-    // If bot goes first, schedule bot turn
-    if (room.gameState.activePlayerKey === 'playerB') {
-      setTimeout(() => this.processBotTurn(roomId), 1500);
-    }
+    this.scheduleBotIfNeeded(roomId);
   }
 
-  public handleCardAction(socket: Socket, roomId: string, playerId: string, payload: GameActionPayload) {
+  public handleCardAction(
+    socket: Socket,
+    roomId: string,
+    playerId: string,
+    payload: GameActionPayload
+  ) {
     const room = this.rooms.get(roomId);
     if (!room || !room.gameState) {
       socket.emit('card_error', { message: '対戦が見つかりません。' });
@@ -200,22 +233,14 @@ export class CardRoomManager {
     }
 
     this.broadcastGameState(roomId);
-
-    // If opponent is bot and it is now bot's turn, trigger bot decision
-    if (
-      room.type === 'solo' &&
-      room.gameState.phase !== 'GAME_OVER' &&
-      room.gameState.activePlayerKey === 'playerB'
-    ) {
-      setTimeout(() => this.processBotTurn(roomId), 1200);
-    }
+    this.scheduleBotIfNeeded(roomId);
   }
 
   public rejoinMatch(socket: Socket, roomId: string, playerId: string) {
     const room = this.rooms.get(roomId);
     if (!room || !room.gameState) return;
 
-    const p = room.participants.find(part => part.playerId === playerId);
+    const p = room.participants.find((part) => part.playerId === playerId);
     if (p) {
       p.socketId = socket.id;
       socket.join(roomId);
@@ -235,7 +260,7 @@ export class CardRoomManager {
     this.cancelMatch(socketId);
 
     for (const [roomId, room] of this.rooms.entries()) {
-      const p = room.participants.find(part => part.socketId === socketId);
+      const p = room.participants.find((part) => part.socketId === socketId);
       if (p && room.gameState && room.gameState.phase !== 'GAME_OVER') {
         if (room.gameState.playerA.playerId === p.playerId) {
           room.gameState.playerA.isConnected = false;
@@ -266,73 +291,33 @@ export class CardRoomManager {
     socket.emit('card_game_state', sanitized);
   }
 
-  private processBotTurn(roomId: string) {
+  private scheduleBotIfNeeded(roomId: string) {
+    const room = this.rooms.get(roomId);
+    if (!room || room.type !== 'solo' || !room.gameState || room.gameState.phase === 'GAME_OVER') {
+      return;
+    }
+
+    const state = room.gameState;
+    const isBotPromotion =
+      state.phase === 'WAITING_FOR_PROMOTION' && state.promotionRequiredPlayerKey === 'playerB';
+    const isBotMainTurn = state.phase === 'MAIN' && state.activePlayerKey === 'playerB';
+
+    if (isBotPromotion || isBotMainTurn) {
+      setTimeout(() => this.executeBotStep(roomId), 750);
+    }
+  }
+
+  private executeBotStep(roomId: string) {
     const room = this.rooms.get(roomId);
     if (!room || !room.gameState || room.gameState.phase === 'GAME_OVER') return;
-    const bot = room.gameState.playerB;
-    if (room.gameState.activePlayerKey !== 'playerB') return;
 
-    // 1. Play attack cards or environment cards if possible
-    const attackInHand = bot.hand.find(c => {
-      const def = getCardDefinition(c.definitionId);
-      return def && def.type === 'ATTACK' && !def.isEvolutionOnly;
-    });
+    const botAction = decideNextBotAction(room.gameState, 'playerB');
+    if (!botAction) return;
 
-    const emptySlot = bot.field.findIndex(s => s === null);
-    if (attackInHand && emptySlot !== -1) {
-      handleGameAction(room.gameState, bot.playerId, {
-        actionType: 'PLAY_ATTACK_CARD',
-        cardInstanceId: attackInHand.instanceId,
-        targetSlotIndex: emptySlot
-      });
+    const res = handleGameAction(room.gameState, room.gameState.playerB.playerId, botAction);
+    if (res.success) {
       this.broadcastGameState(roomId);
+      this.scheduleBotIfNeeded(roomId);
     }
-
-    // 2. Play spell card or attachment if possible
-    const spellInHand = bot.hand.find(c => {
-      const def = getCardDefinition(c.definitionId);
-      return def && def.type === 'SPELL' && def.subType === 'NORMAL';
-    });
-    if (spellInHand) {
-      handleGameAction(room.gameState, bot.playerId, {
-        actionType: 'USE_SPELL_CARD',
-        cardInstanceId: spellInHand.instanceId
-      });
-      this.broadcastGameState(roomId);
-    }
-
-    // 3. Attack with all ready field cards
-    setTimeout(() => {
-      if (!room.gameState || room.gameState.phase === 'GAME_OVER') return;
-      const playerA = room.gameState.playerA;
-
-      bot.field.forEach(c => {
-        if (c && c.canAttack && c.attacksThisTurn === 0) {
-          // Check if playerA has Taunt
-          const tauntCard = playerA.field.find(fc => fc && fc.isTaunt);
-          if (tauntCard) {
-            handleGameAction(room.gameState!, bot.playerId, {
-              actionType: 'ATTACK_CARD',
-              cardInstanceId: c.instanceId,
-              targetCardInstanceId: tauntCard.instanceId
-            });
-          } else {
-            // Direct attack player
-            handleGameAction(room.gameState!, bot.playerId, {
-              actionType: 'ATTACK_PLAYER',
-              cardInstanceId: c.instanceId
-            });
-          }
-        }
-      });
-      this.broadcastGameState(roomId);
-
-      // 4. End turn
-      setTimeout(() => {
-        if (!room.gameState || room.gameState.phase === 'GAME_OVER') return;
-        handleGameAction(room.gameState, bot.playerId, { actionType: 'END_TURN' });
-        this.broadcastGameState(roomId);
-      }, 800);
-    }, 800);
   }
 }

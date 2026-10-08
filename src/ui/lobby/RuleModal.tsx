@@ -1,23 +1,27 @@
 import React from 'react';
-import { X, BookOpen, Shield, Sword, Sparkles, Layers, ArrowRight, Flame } from 'lucide-react';
+import { X, BookOpen, Sword, Zap, Trophy, Layers } from 'lucide-react';
+import { LEVEL_STATS_TABLE } from '../../cards/levelSystem';
+import { CardLevel } from '../../cards/types';
 
 interface RuleModalProps {
   onClose: () => void;
 }
 
 export const RuleModal: React.FC<RuleModalProps> = ({ onClose }) => {
+  const levels: CardLevel[] = [1, 2, 3, 4, 5];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-lg rounded-2xl bg-stone-900 border-2 border-amber-600/80 shadow-2xl flex flex-col max-h-[90vh] text-stone-100 font-sans">
+      <div className="relative w-full max-w-lg rounded-2xl bg-slate-900 border-2 border-amber-500/80 shadow-2xl flex flex-col max-h-[90vh] text-stone-100 font-sans">
         {/* Header */}
-        <div className="flex items-center justify-between p-3.5 border-b border-stone-800 bg-stone-950">
-          <div className="flex items-center gap-2 font-bold text-sm text-amber-300">
+        <div className="flex items-center justify-between p-3.5 border-b border-slate-800 bg-slate-950">
+          <div className="flex items-center gap-2 font-black text-sm text-amber-300">
             <BookOpen className="w-4 h-4 text-amber-400" />
-            <span>「本物カードバトル」正式ルールブック</span>
+            <span>「ホンモノカードバトル」公式ルールブック</span>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-full bg-stone-800 hover:bg-stone-700 flex items-center justify-center text-stone-300 cursor-pointer"
+            className="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-stone-300 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -25,70 +29,128 @@ export const RuleModal: React.FC<RuleModalProps> = ({ onClose }) => {
 
         {/* Rules Content */}
         <div className="p-4 overflow-y-auto space-y-4 text-xs leading-relaxed flex-1">
-          {/* Section 1: Objective & HP */}
-          <div className="p-3 rounded-xl bg-stone-800/80 border border-stone-700">
-            <h3 className="font-bold text-amber-300 mb-1 flex items-center gap-1.5 text-sm">
-              <Sword className="w-4 h-4" /> 勝利条件と基本システム
+          {/* Section 1: Victory Condition */}
+          <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+            <h3 className="font-black text-amber-300 mb-1.5 flex items-center gap-1.5 text-sm">
+              <Trophy className="w-4 h-4" /> 勝利条件（3ポイント先取）
             </h3>
-            <ul className="list-disc list-inside space-y-1 text-stone-300">
-              <li>各プレイヤーは<strong className="text-rose-400 font-bold">HP 5000</strong>で対戦を開始します。</li>
-              <li>相手のHPを0以下に減らしたプレイヤーの勝利となります。</li>
-              <li>ゲーム開始時、先攻プレイヤーをサーバーがランダムに決定し、山札から各5枚引きます。</li>
-              <li>自分のターン開始時に山札から1枚ドロー。山札が0枚の時にドローすると敗北となります。</li>
+            <ul className="list-disc list-inside space-y-1 text-stone-200">
+              <li>
+                相手のバトル場のカードのHPを0にして「きぜつ」させると<strong>ポイントを獲得</strong>します。
+              </li>
+              <li>
+                通常カード（Lv.1〜4）を倒すと<strong>1ポイント</strong>、最上位EXカード（Lv.5）を倒すと<strong>2ポイント</strong>獲得！
+              </li>
+              <li>
+                先に<strong className="text-emerald-300">3ポイント</strong>を獲得するか、相手のベンチに控えカードがいなくなった時点で即勝利となります。
+              </li>
             </ul>
           </div>
 
-          {/* Section 2: Evolution Trees */}
-          <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-800/80">
-            <h3 className="font-bold text-amber-300 mb-2 flex items-center gap-1.5 text-sm">
-              <Sparkles className="w-4 h-4" /> 正式進化システム
+          {/* Section 2: Turn & Energy System */}
+          <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+            <h3 className="font-black text-yellow-300 mb-1.5 flex items-center gap-1.5 text-sm">
+              <Zap className="w-4 h-4" /> ターン進行とエネルギー・ベンチシステム
             </h3>
-            <p className="text-stone-300 mb-2">
-              進化はカードを単純に交換するのではなく、<strong>「特定カードに別カードを付属／重ねる」</strong>ことで発生します。
+            <ul className="list-disc list-inside space-y-1 text-stone-200">
+              <li>
+                <strong>バトル場（1体）</strong>と<strong>ベンチ（最大3体）</strong>に攻撃カードを配置して戦います。
+              </li>
+              <li>
+                自分のターン開始時、自動的に<strong>山札から1枚ドロー</strong>し、<strong>エネルギーゾーンにエネルギーが1個発生</strong>します。
+              </li>
+              <li>
+                1ターンに1回、自分のバトル場またはベンチのカードに<strong>エネルギーを1個付与</strong>できます。
+              </li>
+              <li>
+                必要なエネルギーが貯まったら<strong>「わざ攻撃」ボタン</strong>で相手を攻撃！攻撃を行うと自分のターンが終了します。
+              </li>
+              <li>
+                バトル場のカードは、逃げるコスト分のエネルギーを消費してベンチのカードと<strong>「にげる（入れ替え）」</strong>ことができます（1ターン1回）。
+              </li>
+            </ul>
+          </div>
+
+          {/* Section 3: 5-Level Uniform Stats Table */}
+          <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+            <h3 className="font-black text-sky-300 mb-2 flex items-center gap-1.5 text-sm">
+              <Sword className="w-4 h-4" /> 攻撃カード 5段階レベル別 統一能力値＆カラー
+            </h3>
+            <p className="text-stone-300 mb-2 text-[11px]">
+              すべての攻撃カードはLv.1〜Lv.5に振り分けられ、レベルごとにHP・攻撃力・必要エネルギー・カード色が統一されています。
             </p>
-            <div className="space-y-1.5 font-mono text-[11px] bg-stone-950/80 p-2.5 rounded-lg border border-amber-900/60 text-stone-200">
-              <div>綺麗なよしえ → [数珠カード付属] → 塩よしえ</div>
-              <div>塩よしえ → [うんこかーど付属(ATK+50)] → 「普通に話すだけならいいよー（嘘）」嘉慧</div>
-              <div>嘉慧 → [ユキやカード付属(ATK+100/HP+50)] → よしえEX</div>
-              <div className="pt-1 border-t border-stone-800">吉田りゅうく → [ふともも使用] → リューク・スカイウォーカー</div>
-              <div>まゆサブレ → [顎カード付属] → 顎・キャノン</div>
-              <div>ヘッドフォンニキ ＋ ヘッドフォンニキ → [重ねる] → オンフードヘッドフォンニキ</div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-center border-collapse text-[11px]">
+                <thead>
+                  <tr className="bg-slate-950 text-stone-300 border-b border-slate-700">
+                    <th className="p-1.5">レベル (色)</th>
+                    <th className="p-1.5">HP</th>
+                    <th className="p-1.5">攻撃力</th>
+                    <th className="p-1.5">必要エネ</th>
+                    <th className="p-1.5">にげる</th>
+                    <th className="p-1.5">撃破Pt</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700/60">
+                  {levels.map((lv) => {
+                    const st = LEVEL_STATS_TABLE[lv];
+                    const badgeStyles: Record<CardLevel, string> = {
+                      1: 'bg-slate-300 text-slate-950',
+                      2: 'bg-cyan-300 text-cyan-950',
+                      3: 'bg-purple-300 text-purple-950',
+                      4: 'bg-rose-300 text-rose-950',
+                      5: 'bg-yellow-300 text-amber-950',
+                    };
+                    const colorNames: Record<CardLevel, string> = {
+                      1: 'シルバー',
+                      2: 'シアン',
+                      3: 'パープル',
+                      4: 'クリムゾン',
+                      5: 'ゴールド',
+                    };
+                    return (
+                      <tr key={lv} className="bg-slate-900/60">
+                        <td className="p-1.5">
+                          <span className={`px-1.5 py-0.5 rounded font-black ${badgeStyles[lv]}`}>
+                            Lv.{lv} ({colorNames[lv]})
+                          </span>
+                        </td>
+                        <td className="p-1.5 font-bold text-emerald-300">{st.hp}</td>
+                        <td className="p-1.5 font-bold text-amber-300">{st.attack}</td>
+                        <td className="p-1.5 font-bold text-yellow-300">⚡{st.energyCost}</td>
+                        <td className="p-1.5 text-stone-300">⚡{st.retreatCost}</td>
+                        <td className="p-1.5 font-bold text-white">{st.pointValue}pt</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          {/* Section 3: Tsudanumazu & Buff Stacking */}
-          <div className="p-3 rounded-xl bg-stone-800/80 border border-stone-700">
-            <h3 className="font-bold text-amber-300 mb-2 flex items-center gap-1.5 text-sm">
-              <Flame className="w-4 h-4 text-orange-400" /> 特殊効果「つだぬまず」と攻撃力重複計算
+          {/* Section 4: Spell & Environment Cards */}
+          <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+            <h3 className="font-black text-emerald-300 mb-1.5 flex items-center gap-1.5 text-sm">
+              <Layers className="w-4 h-4" /> 魔法カード（ブルー）＆ 環境カード（エメラルド）
             </h3>
-            <p className="text-stone-300 mb-1.5">
-              <strong>【つだぬまず】</strong>はカードではなく特殊効果です。場に<strong className="text-yellow-400">「ムエ」「しょーちゃん」「おりちゃん」</strong>の3体がすべて存在している場合に自動発動し、3体すべての攻撃力を＋1000します！
-            </p>
-            <div className="p-2 rounded bg-stone-950/70 text-[11px] text-stone-300 border border-stone-700">
-              <span className="font-bold text-amber-400">【重複計算例】</span>
-              <div>ムエ(基礎1000) ＋ 浅草寺(1000) ＋ 隅田川(500) ＋ つだぬまず(1000) ＝ <strong className="text-emerald-400 font-bold">攻撃力 3500！</strong></div>
-              <div className="text-[10px] text-stone-400 mt-0.5">※各種効果・環境・付属による攻撃力増減は重複して適用されます。</div>
-            </div>
-          </div>
-
-          {/* Section 4: Card Categories */}
-          <div className="p-3 rounded-xl bg-stone-800/80 border border-stone-700">
-            <h3 className="font-bold text-amber-300 mb-1.5 flex items-center gap-1.5 text-sm">
-              <Layers className="w-4 h-4" /> 3種類のカードカテゴリ
-            </h3>
-            <div className="space-y-1 text-stone-300">
-              <div><strong className="text-amber-400">攻撃カード:</strong> 場に出して戦うカード（「キャラクターカード」名称は不使用）。</div>
-              <div><strong className="text-blue-400">魔法カード:</strong> 特殊効果を発動するカード（通常魔法、付属カード、進化魔法）。</div>
-              <div><strong className="text-emerald-400">環境カード:</strong> 場全体のルールや特定カードを変更するカード（盤面に1枚のみ有効）。</div>
+            <div className="space-y-1 text-stone-200">
+              <div>
+                <strong className="text-blue-300">魔法カード (Lv.1 / ブルー):</strong>{' '}
+                エネルギー消費0で1ターンに1枚使用可能。「Superfly」（1枚ドロー）や火力強化・回復など即座に効果を発揮します。
+              </div>
+              <div>
+                <strong className="text-emerald-300">環境カード (Lv.1 / エメラルド):</strong>{' '}
+                フィールドの環境ゾーンに展開。「グロラン」（傷ついた自分の場のカードのHPを全回復）など戦局を有利にします。
+              </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t border-stone-800 bg-stone-950 flex justify-end">
+        <div className="p-3 border-t border-slate-800 bg-slate-950 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-bold cursor-pointer"
+            className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-stone-200 text-xs font-bold cursor-pointer"
           >
             閉じる
           </button>

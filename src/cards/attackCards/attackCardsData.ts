@@ -1,356 +1,515 @@
-import { CardDefinition } from '../types';
+import { CardDefinition, RawCardSeed } from '../types';
+import { buildCardDefinition } from '../levelSystem';
 
-export const ATTACK_CARDS: CardDefinition[] = [
-  // 1. 綺麗なよしえ
+/**
+ * 攻撃カード定義一覧 (全19種)
+ *
+ * 【記載順序】
+ * 1. よしえ進化系列: 綺麗なよしえ (Lv.2) → 塩よしえ (Lv.3) → 「普通に話すだけならいいよー（嘘）」嘉慧 (Lv.4) → よしえEX (Lv.5)
+ * 2. りゅうく進化系列: 吉田りゅうく (Lv.3) → リューク・スカイウォーカー (Lv.5)
+ * 3. サブレ・キャノン進化系列: まゆサブレ (Lv.3) → 顎・キャノン (Lv.4)
+ * 4. ヘッドフォンニキ進化系列: ヘッドフォンニキ (Lv.2) → オンフードヘッドフォンニキ (Lv.4)
+ * 5. つだぬまず連携系列: しょーちゃん (Lv.3) / おりちゃん (Lv.3) / ムエ (Lv.4)
+ * 6. 単体・速攻／標準カード: 情報処理基礎のおばぁ (Lv.1) / りゅーのすけ (Lv.1) / 顎 (Lv.1) / 井上教授（壁） (Lv.1) / ヨートン (Lv.2) / バニラなそうくん (Lv.2)
+ */
+const ATTACK_CARD_SEEDS: RawCardSeed[] = [
+  // ============================================================================
+  // 1. よしえ進化系列
+  //    綺麗なよしえ (Lv.2) → 塩よしえ (Lv.3) → 嘉慧 (Lv.4) → よしえEX (Lv.5)
+  // ============================================================================
+
+  // [Stage 1] 綺麗なよしえ (よしえ系列の起点 -> 塩よしえへ繋がる)
   {
     id: 'atk_yoshie_clean',
     name: '綺麗なよしえ',
     type: 'ATTACK',
-    cost: 2,
-    baseAtk: 500,
-    baseHp: 70,
-    tags: ['よしえ系', '進化前'],
-    description: '基本の攻撃カード。「数珠カード」を付属させることで「塩よしえ」へ進化する。',
-    flavorText: '「清らかで美しいよしえ。まだ塩分は控えめ。」',
-    artColor: '#ec4899',
-    artGradient: 'from-pink-500 to-rose-700',
-    artSymbol: 'Sparkles',
-    effects: [],
-    evolutionRule: {
-      targetDefinitionId: 'evo_yoshie_salt'
-    }
+    evolution: {
+      family: 'よしえ系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: 'evo_yoshie_salt',
+      triggerCardId: 'spl_juzu_card',
+    },
+    level: 2,
+    abilities: {
+      attackName: 'ピュアストライク',
+      activeEffect: '2エネルギーで50ダメージを与える安定攻撃',
+      description: '攻守のバランスに優れたLv.2標準カード。逃げるコストも1と軽快。',
+    },
+    ui: {
+      tags: ['よしえ系', 'Lv.2'],
+      flavorText: '「清らかで美しいよしえ。まだ塩分は控えめ。」',
+      artSymbol: 'Sparkles',
+    },
   },
 
-  // 2. 塩よしえ (進化カード)
+  // [Stage 2] 塩よしえ (綺麗なよしえ から進化 -> 嘉慧へ繋がる)
   {
     id: 'evo_yoshie_salt',
     name: '塩よしえ',
     type: 'ATTACK',
-    cost: 3,
-    baseAtk: 700,
-    baseHp: 100,
-    tags: ['よしえ系', '進化体'],
-    description: '「綺麗なよしえ」に「数珠カード」を付属させて進化。「うんこかーど」を付属させることで「普通に話すだけならいいよー（嘘）」嘉慧へ進化する。',
-    flavorText: '「塩対応が冴え渡るよしえ。近づく者には容赦ない。」',
-    artColor: '#a855f7',
-    artGradient: 'from-purple-600 to-indigo-900',
-    artSymbol: 'Zap',
-    isEvolutionOnly: true,
-    effects: [],
-    evolutionRule: {
-      targetDefinitionId: 'evo_yoshie_kakei'
-    }
+    evolution: {
+      family: 'よしえ系列',
+      stage: 2,
+      evolvesFrom: 'atk_yoshie_clean',
+      evolvesTo: 'evo_yoshie_kakei',
+      triggerCardId: 'spl_unko_card',
+    },
+    level: 3,
+    abilities: {
+      attackName: '塩対応スラッシュ',
+      activeEffect: '2エネルギーで70ダメージを与える主力攻撃',
+      description: '2エネルギーで70ダメージを叩き出す主力アタッカー。HP100で耐久力も十分。',
+    },
+    ui: {
+      tags: ['よしえ系', 'Lv.3'],
+      flavorText: '「塩対応が冴え渡るよしえ。近づく者には容赦ない。」',
+      artSymbol: 'Zap',
+    },
   },
 
-  // 3. 「普通に話すだけならいいよー（嘘）」嘉慧 (進化カード)
+  // [Stage 3] 「普通に話すだけならいいよー（嘘）」嘉慧 (塩よしえ から進化 -> よしえEXへ繋がる)
   {
     id: 'evo_yoshie_kakei',
     name: '「普通に話すだけならいいよー（嘘）」嘉慧',
     type: 'ATTACK',
-    cost: 4,
-    baseAtk: 800,
-    baseHp: 150,
-    tags: ['よしえ系', '進化体', '嘉慧'],
-    description: '「塩よしえ」に「うんこかーど」を付属させて進化。「ユキやカード」を付属させることで「よしえEX」へ進化する。',
-    flavorText: '「普通に話すだけならいいよー（絶対に嘘）。」',
-    artColor: '#3b82f6',
-    artGradient: 'from-blue-600 via-indigo-700 to-slate-900',
-    artSymbol: 'HelpCircle',
-    isEvolutionOnly: true,
-    effects: [],
-    evolutionRule: {
-      targetDefinitionId: 'evo_yoshie_ex'
-    }
+    evolution: {
+      family: 'よしえ系列',
+      stage: 3,
+      evolvesFrom: 'evo_yoshie_salt',
+      evolvesTo: 'evo_yoshie_ex',
+      triggerCardId: 'spl_yukiya_card',
+    },
+    level: 4,
+    abilities: {
+      attackName: '嘘つきオーバーキル',
+      activeEffect: '3エネルギーで100ダメージを与える強襲攻撃',
+      description: '3エネルギーで100ダメージを放つ重量級アタッカー。Lv.3以下のカードを一撃で葬る。',
+    },
+    ui: {
+      tags: ['よしえ系', '嘉慧', 'Lv.4'],
+      flavorText: '「普通に話すだけならいいよー（絶対に嘘）。」',
+      artSymbol: 'HelpCircle',
+    },
   },
 
-  // 4. よしえEX (最終進化カード)
+  // [Stage 4 / 最終EX] よしえEX (嘉慧 から進化する最終形態)
   {
     id: 'evo_yoshie_ex',
     name: 'よしえEX',
     type: 'ATTACK',
-    cost: 5,
-    baseAtk: 1000,
-    baseHp: 500,
-    tags: ['よしえ系', 'EX', '最終進化'],
-    description: '「嘉慧」に「ユキやカード」を付属させて進化。圧倒的な耐久力と攻撃力を誇る至高のよしえ。',
-    flavorText: '「すべてを超越したEXの輝き。誰も逆らえない。」',
-    artColor: '#f59e0b',
-    artGradient: 'from-yellow-400 via-amber-600 to-orange-950',
-    artSymbol: 'Crown',
-    isEvolutionOnly: true,
-    effects: []
+    evolution: {
+      family: 'よしえ系列',
+      stage: 4,
+      evolvesFrom: 'evo_yoshie_kakei',
+      evolvesTo: null,
+    },
+    level: 5,
+    abilities: {
+      attackName: 'EXアルティメット輝き',
+      activeEffect: '4エネルギーで130ダメージを与えるEX必殺技',
+      passiveEffect: 'EXルール：きぜつした際、相手は2ポイントを獲得する',
+      description:
+        '【EX級】HP160・攻撃力130の最高峰カード！4エネルギー必要で育成に時間がかかり、気絶すると相手に2ポイントを与える。',
+    },
+    ui: {
+      tags: ['よしえ系', 'EX', 'Lv.5'],
+      flavorText: '「すべてを超越したEXの輝き。誰も逆らえない。」',
+      artSymbol: 'Crown',
+    },
   },
 
-  // 5. ヨートン
-  {
-    id: 'atk_yoton',
-    name: 'ヨートン',
-    type: 'ATTACK',
-    cost: 2,
-    baseAtk: 250,
-    baseHp: 200,
-    tags: ['戦士'],
-    description: '堅実な性能を持つ攻撃カード。',
-    flavorText: '「ヨートン参上！」',
-    artColor: '#10b981',
-    artGradient: 'from-emerald-600 to-teal-900',
-    artSymbol: 'Sword',
-    effects: []
-  },
+  // ============================================================================
+  // 2. りゅうく進化系列
+  //    吉田りゅうく (Lv.3) → リューク・スカイウォーカー (Lv.5)
+  // ============================================================================
 
-  // 6. 吉田りゅうく
+  // [Stage 1] 吉田りゅうく (りゅうく系列の起点 -> リューク・スカイウォーカーへ繋がる)
   {
     id: 'atk_yoshida_ryuku',
     name: '吉田りゅうく',
     type: 'ATTACK',
-    cost: 3,
-    baseAtk: 300,
-    baseHp: 700,
-    tags: ['りゅうく系', '進化前'],
-    description: '高い体力を誇る。「ふともも」を使用することで「リューク・スカイウォーカー」に進化する。',
-    flavorText: '「鍛え上げられたタフネス。秘めたるフォースが眠る。」',
-    artColor: '#6366f1',
-    artGradient: 'from-indigo-600 to-slate-900',
-    artSymbol: 'Shield',
-    effects: [],
-    evolutionRule: {
-      targetDefinitionId: 'evo_ryuku_skywalker'
-    }
+    evolution: {
+      family: 'りゅうく系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: 'evo_ryuku_skywalker',
+      triggerCardId: 'spl_futomomo',
+    },
+    level: 3,
+    abilities: {
+      attackName: 'フォースタックル',
+      activeEffect: '2エネルギーで70ダメージを与える主力攻撃',
+      description: '鍛え上げられたタフネスで戦線を維持するLv.3主力カード。',
+    },
+    ui: {
+      tags: ['りゅうく系', 'Lv.3'],
+      flavorText: '「鍛え上げられたタフネス。秘めたるフォースが眠る。」',
+      artSymbol: 'Shield',
+    },
   },
 
-  // 7. リューク・スカイウォーカー (進化カード)
+  // [Stage 2 / 最終EX] リューク・スカイウォーカー (吉田りゅうく から進化する最終形態)
   {
     id: 'evo_ryuku_skywalker',
     name: 'リューク・スカイウォーカー',
     type: 'ATTACK',
-    cost: 5,
-    baseAtk: 1000,
-    baseHp: 1000,
-    tags: ['りゅうく系', '進化体', 'ジェダイ'],
-    description: '「吉田りゅうく」に「ふともも」を使用して進化。【効果】「リュークと共にあらんことを」',
-    flavorText: '「リュークと共にあらんことを。」銀河を揺るがす圧倒的フォース。',
-    artColor: '#0ea5e9',
-    artGradient: 'from-cyan-400 via-blue-600 to-slate-950',
-    artSymbol: 'Zap',
-    isEvolutionOnly: true,
-    effects: []
+    evolution: {
+      family: 'りゅうく系列',
+      stage: 2,
+      evolvesFrom: 'atk_yoshida_ryuku',
+      evolvesTo: null,
+    },
+    level: 5,
+    abilities: {
+      attackName: 'ギャラクシーフォース',
+      activeEffect: '4エネルギーで130ダメージを与えるEX必殺技',
+      passiveEffect: 'EXルール：きぜつした際、相手は2ポイントを獲得する',
+      description:
+        '【EX級】HP160・攻撃力130の超大型フィニッシャー！4エネルギー必要で気絶時は2ポイント失うが、完成すれば無双の強さ。',
+    },
+    ui: {
+      tags: ['りゅうく系', 'EX', 'Lv.5'],
+      flavorText: '「リュークと共にあらんことを。」銀河を揺るがす圧倒的フォース。',
+      artSymbol: 'Zap',
+    },
   },
 
-  // 8. 情報処理基礎のおばぁ
-  {
-    id: 'atk_info_grandma',
-    name: '情報処理基礎のおばぁ',
-    type: 'ATTACK',
-    cost: 2,
-    baseAtk: 100,
-    baseHp: 100,
-    tags: ['情報処理', '教官'],
-    description: '【効果】「普通に厳しい」。単位取得への道は険しい。',
-    flavorText: '「普通に厳しいからね。課題出した？」',
-    artColor: '#78716c',
-    artGradient: 'from-stone-600 to-stone-900',
-    artSymbol: 'BookOpen',
-    effects: []
-  },
+  // ============================================================================
+  // 3. サブレ・キャノン進化系列
+  //    まゆサブレ (Lv.3) → 顎・キャノン (Lv.4)
+  // ============================================================================
 
-  // 9. まゆサブレ
+  // [Stage 1] まゆサブレ (サブレ系列の起点 -> 顎・キャノンへ繋がる)
   {
     id: 'atk_mayu_sable',
     name: 'まゆサブレ',
     type: 'ATTACK',
-    cost: 3,
-    baseAtk: 300,
-    baseHp: 450,
-    tags: ['サブレ', '進化前'],
-    description: '攻撃力300（「ムエ」に対しては特攻で攻撃力700！）。「顎カード」を付属させることで「顎・キャノン」に進化する。',
-    flavorText: '「サクサクの香ばしいサブレ。ムエにはめっぽう強い。」',
-    artColor: '#d97706',
-    artGradient: 'from-amber-500 to-yellow-800',
-    artSymbol: 'Crosshair',
-    effects: []
+    evolution: {
+      family: 'サブレ・キャノン系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: 'evo_ago_cannon',
+      triggerCardId: 'spl_ago_card',
+    },
+    level: 3,
+    abilities: {
+      attackName: 'サブレクラッシュ',
+      activeEffect: '2エネルギーで70ダメージを与える主力攻撃',
+      description: '2エネルギー70ダメージの優秀な中堅アタッカー。どんな場面でも頼りになる。',
+    },
+    ui: {
+      tags: ['サブレ', 'Lv.3'],
+      flavorText: '「サクサクの香ばしいサブレ。実戦でもめっぽう強い。」',
+      artSymbol: 'Crosshair',
+    },
   },
 
-  // 10. 顎・キャノン (進化カード)
+  // [Stage 2] 顎・キャノン (まゆサブレ から進化)
   {
     id: 'evo_ago_cannon',
     name: '顎・キャノン',
     type: 'ATTACK',
-    cost: 4,
-    baseAtk: 700,
-    baseHp: 300,
-    tags: ['キャノン', '進化体'],
-    description: '「まゆサブレ」に「顎カード」を付属させて進化。攻撃力700（「ムエ」に対しては攻撃力1000！）。',
-    flavorText: '「突き出た顎から放たれる超高出力キャノン砲！」',
-    artColor: '#dc2626',
-    artGradient: 'from-red-600 to-amber-900',
-    artSymbol: 'Flame',
-    isEvolutionOnly: true,
-    effects: []
+    evolution: {
+      family: 'サブレ・キャノン系列',
+      stage: 2,
+      evolvesFrom: 'atk_mayu_sable',
+      evolvesTo: null,
+    },
+    level: 4,
+    abilities: {
+      attackName: '超高出力顎キャノン',
+      activeEffect: '3エネルギーで100ダメージを与える重砲撃',
+      description: '3エネルギーを溜めて100ダメージの主砲を放つ高火力エースカード。',
+    },
+    ui: {
+      tags: ['キャノン', '顎', 'Lv.4'],
+      flavorText: '「突き出た顎から放たれる超高出力キャノン砲！」',
+      artSymbol: 'Flame',
+    },
   },
 
-  // 11. バニラなそうくん
-  {
-    id: 'atk_vanilla_sokun',
-    name: 'バニラなそうくん',
-    type: 'ATTACK',
-    cost: 2,
-    baseAtk: 30,
-    baseHp: 900,
-    tags: ['そうくん系', '高耐久'],
-    description: '【効果】「バニラじゃなくていいじゃぁん」。超高体力で場に居座る。',
-    flavorText: '「バニラじゃなくていいじゃぁん！」',
-    artColor: '#fef08a',
-    artGradient: 'from-yellow-200 via-amber-300 to-yellow-600',
-    artSymbol: 'Heart',
-    effects: []
-  },
+  // ============================================================================
+  // 4. ヘッドフォンニキ進化系列
+  //    ヘッドフォンニキ (Lv.2) → オンフードヘッドフォンニキ (Lv.4)
+  // ============================================================================
 
-  // 12. ムエ
-  {
-    id: 'atk_mue',
-    name: 'ムエ',
-    type: 'ATTACK',
-    cost: 4,
-    baseAtk: 1000,
-    baseHp: 600,
-    tags: ['つだぬまず', '高火力'],
-    description: '攻撃力1000の強豪。しょーちゃん・おりちゃんと共に「つだぬまず」を形成する。',
-    flavorText: '「圧倒的パワーを誇るエースアタッカー。」',
-    artColor: '#ef4444',
-    artGradient: 'from-red-600 via-rose-700 to-stone-900',
-    artSymbol: 'Sword',
-    effects: []
-  },
-
-  // 13. しょーちゃん
-  {
-    id: 'atk_shochan',
-    name: 'しょーちゃん',
-    type: 'ATTACK',
-    cost: 3,
-    baseAtk: 600,
-    baseHp: 500,
-    tags: ['つだぬまず'],
-    description: 'バランスの良いアタッカー。ムエ・おりちゃんと揃うと「つだぬまず」が発動。',
-    flavorText: '「つだぬまずの頼れる中核。」',
-    artColor: '#3b82f6',
-    artGradient: 'from-blue-600 to-cyan-900',
-    artSymbol: 'Zap',
-    effects: []
-  },
-
-  // 14. おりちゃん
-  {
-    id: 'atk_orichan',
-    name: 'おりちゃん',
-    type: 'ATTACK',
-    cost: 3,
-    baseAtk: 500,
-    baseHp: 700,
-    tags: ['つだぬまず', '高耐久'],
-    description: '高耐久アタッカー。ムエ・しょーちゃんと揃うと「つだぬまず」が発動。',
-    flavorText: '「堅実な立ち回りで戦線を支える。」',
-    artColor: '#10b981',
-    artGradient: 'from-emerald-500 to-teal-900',
-    artSymbol: 'Shield',
-    effects: []
-  },
-
-  // 15. 顎
-  {
-    id: 'atk_ago',
-    name: '顎',
-    type: 'ATTACK',
-    cost: 2,
-    baseAtk: 400,
-    baseHp: 100,
-    tags: ['顎'],
-    description: '鋭利な突起物。低コスト高火力。',
-    flavorText: '「見事な鋭角を描く顎。」',
-    artColor: '#f97316',
-    artGradient: 'from-orange-500 to-stone-900',
-    artSymbol: 'Crosshair',
-    effects: []
-  },
-
-  // 16. りゅーのすけ
-  {
-    id: 'atk_ryunosuke',
-    name: 'りゅーのすけ',
-    type: 'ATTACK',
-    cost: 1,
-    baseAtk: 500,
-    baseHp: 2,
-    tags: ['紙装甲'],
-    description: '攻撃力500・体力わずか2の超攻撃型カード。かすり傷でも倒れる。',
-    flavorText: '「当たれば痛いが、触れられたら即終了！」',
-    artColor: '#e11d48',
-    artGradient: 'from-rose-500 to-red-950',
-    artSymbol: 'Zap',
-    effects: []
-  },
-
-  // 17. ヘッドフォンニキ
+  // [Stage 1] ヘッドフォンニキ (ニキ系列の起点 -> オンフードヘッドフォンニキへ繋がる)
   {
     id: 'atk_headphone_niki',
     name: 'ヘッドフォンニキ',
     type: 'ATTACK',
-    cost: 2,
-    baseAtk: 300,
-    baseHp: 300,
-    tags: ['ニキ系', '進化前'],
-    description: '「ヘッドフォンニキ」同士を重ね合わせることで「オンフードヘッドフォンニキ」へと進化する！',
-    flavorText: '「お気に入りのヘッドフォンで音楽に没頭中。」',
-    artColor: '#8b5cf6',
-    artGradient: 'from-purple-500 to-indigo-950',
-    artSymbol: 'Sparkles',
-    effects: [],
-    evolutionRule: {
-      targetDefinitionId: 'evo_onhood_headphone_niki'
-    }
+    evolution: {
+      family: 'ヘッドフォンニキ系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: 'evo_onhood_headphone_niki',
+    },
+    level: 2,
+    abilities: {
+      attackName: '重低音ビート',
+      activeEffect: '2エネルギーで50ダメージを与える安定攻撃',
+      description: 'リズムに乗って2エネルギー50ダメージを放つ扱いやすい標準アタッカー。',
+    },
+    ui: {
+      tags: ['ニキ系', 'Lv.2'],
+      flavorText: '「お気に入りのヘッドフォンで音楽に没頭中。」',
+      artSymbol: 'Sparkles',
+    },
   },
 
-  // 18. オンフードヘッドフォンニキ (進化カード)
+  // [Stage 2] オンフードヘッドフォンニキ (ヘッドフォンニキ から進化)
   {
     id: 'evo_onhood_headphone_niki',
     name: 'オンフードヘッドフォンニキ',
     type: 'ATTACK',
-    cost: 4,
-    baseAtk: 700,
-    baseHp: 700,
-    tags: ['ニキ系', '進化体'],
-    description: 'ヘッドフォンニキにヘッドフォンニキを重ねて合体進化！フードの上からヘッドフォンを装着した究極形態。',
-    flavorText: '「フードの上から装着することで更なる密閉感と力を手に入れた。」',
-    artColor: '#c026d3',
-    artGradient: 'from-fuchsia-600 to-purple-950',
-    artSymbol: 'Crown',
-    isEvolutionOnly: true,
-    effects: []
+    evolution: {
+      family: 'ヘッドフォンニキ系列',
+      stage: 2,
+      evolvesFrom: 'atk_headphone_niki',
+      evolvesTo: null,
+    },
+    level: 4,
+    abilities: {
+      attackName: '密閉フルボリューム',
+      activeEffect: '3エネルギーで100ダメージを与える強襲攻撃',
+      description: 'HP130・攻撃力100を誇る重装アタッカー。ベンチでエネルギーを育てて投入しよう。',
+    },
+    ui: {
+      tags: ['ニキ系', 'Lv.4'],
+      flavorText: '「フードの上から装着することで更なる密閉感と力を手に入れた。」',
+      artSymbol: 'Crown',
+    },
   },
 
-  // 19. 井上教授（壁） (環境カード「フェニックスホール」の特殊生成カード)
+  // ============================================================================
+  // 5. つだぬまず連携系列
+  //    しょーちゃん (Lv.3) / おりちゃん (Lv.3) / ムエ (Lv.4)
+  //    ※環境カード「浅草寺」でさらに攻撃ボーナスを得る連携グループ
+  // ============================================================================
+
+  {
+    id: 'atk_shochan',
+    name: 'しょーちゃん',
+    type: 'ATTACK',
+    evolution: {
+      family: 'つだぬまず系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+      triggerCardId: 'env_sensoji',
+    },
+    level: 3,
+    abilities: {
+      attackName: 'つだぬまドライブ',
+      activeEffect: '2エネルギーで70ダメージを与える主力攻撃',
+      passiveEffect: '環境「浅草寺」展開時、攻撃ダメージが合計＋20される',
+      description: 'HP100・攻撃力70の主力カード。2エネルギーで安定した高打点を出す。',
+    },
+    ui: {
+      tags: ['つだぬまず', 'Lv.3'],
+      flavorText: '「つだぬまずの頼れる中核。」',
+      artSymbol: 'Zap',
+    },
+  },
+
+  {
+    id: 'atk_orichan',
+    name: 'おりちゃん',
+    type: 'ATTACK',
+    evolution: {
+      family: 'つだぬまず系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+      triggerCardId: 'env_sensoji',
+    },
+    level: 3,
+    abilities: {
+      attackName: '堅実ガードインパクト',
+      activeEffect: '2エネルギーで70ダメージを与える主力攻撃',
+      passiveEffect: '環境「浅草寺」展開時、攻撃ダメージが合計＋20される',
+      description: '安定したHP100と70ダメージで中盤の盤面を制圧する主力カード。',
+    },
+    ui: {
+      tags: ['つだぬまず', 'Lv.3'],
+      flavorText: '「堅実な立ち回りで戦線を支える。」',
+      artSymbol: 'Shield',
+    },
+  },
+
+  {
+    id: 'atk_mue',
+    name: 'ムエ',
+    type: 'ATTACK',
+    evolution: {
+      family: 'つだぬまず系列',
+      stage: 2,
+      evolvesFrom: null,
+      evolvesTo: null,
+      triggerCardId: 'env_sensoji',
+    },
+    level: 4,
+    abilities: {
+      attackName: 'エースバースト',
+      activeEffect: '3エネルギーで100ダメージを与える強襲攻撃',
+      passiveEffect: '環境「浅草寺」展開時、攻撃ダメージが合計＋20される',
+      description: '3エネルギー100ダメージ・HP130の主力エース。戦況を一変させるパワーを持つ。',
+    },
+    ui: {
+      tags: ['つだぬまず', 'Lv.4'],
+      flavorText: '「圧倒的パワーを誇るエースアタッカー。」',
+      artSymbol: 'Sword',
+    },
+  },
+
+  // ============================================================================
+  // 6. 単体・速攻／標準カード (Lv.1 〜 Lv.2)
+  // ============================================================================
+
+  {
+    id: 'atk_info_grandma',
+    name: '情報処理基礎のおばぁ',
+    type: 'ATTACK',
+    evolution: {
+      family: '単体',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '課題チェック',
+      activeEffect: '1エネルギーで30ダメージを与える速攻攻撃',
+      description:
+        '1エネルギーで素早く攻撃できる速攻カード。「普通に厳しい」指導で序盤からプレッシャーを与える。',
+    },
+    ui: {
+      tags: ['情報処理', '教官', 'Lv.1'],
+      flavorText: '「普通に厳しいからね。課題出した？」',
+      artSymbol: 'BookOpen',
+    },
+  },
+
+  {
+    id: 'atk_ryunosuke',
+    name: 'りゅーのすけ',
+    type: 'ATTACK',
+    evolution: {
+      family: 'りゅーのすけ系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+      triggerCardId: 'spl_fluorescent_ryunosuke',
+    },
+    level: 1,
+    abilities: {
+      attackName: 'ハイスピード突撃',
+      activeEffect: '1エネルギーで30ダメージを与える速攻攻撃',
+      description: '1エネルギーで即座に動ける軽量アタッカー。序盤の主導権を握るのに最適。',
+    },
+    ui: {
+      tags: ['速攻', 'Lv.1'],
+      flavorText: '「先手必勝！一瞬の隙を突く電光石火の一撃！」',
+      artSymbol: 'Zap',
+    },
+  },
+
+  {
+    id: 'atk_ago',
+    name: '顎',
+    type: 'ATTACK',
+    evolution: {
+      family: '顎系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: 'evo_ago_cannon',
+      triggerCardId: 'spl_ago_card',
+    },
+    level: 1,
+    abilities: {
+      attackName: '鋭角突き',
+      activeEffect: '1エネルギーで30ダメージを与える速攻攻撃',
+      description: '鋭利な角度から1エネルギーで30ダメージを繰り出す速攻カード。',
+    },
+    ui: {
+      tags: ['顎', 'Lv.1'],
+      flavorText: '「見事な鋭角を描く顎。」',
+      artSymbol: 'Crosshair',
+    },
+  },
+
   {
     id: 'token_inoue_professor',
     name: '井上教授（壁）',
     type: 'ATTACK',
-    cost: 1,
-    baseAtk: 0,
-    baseHp: 100,
-    tags: ['特殊生成', '壁', '守護'],
-    description: '【特殊生成・守護】フェニックスホールの効果で生成される壁。相手の攻撃を受け止める。',
-    flavorText: '「立ちはだかる学術の壁。」',
-    artColor: '#64748b',
-    artGradient: 'from-slate-600 to-stone-900',
-    artSymbol: 'Shield',
-    isEvolutionOnly: true,
-    effects: [
-      {
-        id: 'eff_inoue_wall',
-        trigger: 'ON_PLAY',
-        targetType: 'NONE',
-        description: '【守護】壁として敵の攻撃を引き受ける',
-        specialAction: 'TAUNT'
-      }
-    ]
-  }
+    evolution: {
+      family: 'フェニックスホール系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+      triggerCardId: 'env_phoenix_hall',
+    },
+    level: 1,
+    abilities: {
+      attackName: '学術の壁ドン',
+      activeEffect: '1エネルギーで30ダメージを与える速攻攻撃',
+      passiveEffect: '環境「フェニックスホール」の効果でも手札に生成される',
+      description: 'フェニックスホールに立ちはだかる教授。1エネルギーで堅実に戦線を支える。',
+    },
+    ui: {
+      tags: ['井上教授', '壁', 'Lv.1'],
+      flavorText: '「立ちはだかる学術の壁。」',
+      artSymbol: 'Shield',
+    },
+  },
+
+  {
+    id: 'atk_yoton',
+    name: 'ヨートン',
+    type: 'ATTACK',
+    evolution: {
+      family: '単体',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 2,
+    abilities: {
+      attackName: 'ヨートンスラッシュ',
+      activeEffect: '2エネルギーで50ダメージを与える安定攻撃',
+      description: '安定したHP80と2エネルギー50ダメージを兼ね備えた堅実なファイター。',
+    },
+    ui: {
+      tags: ['戦士', 'Lv.2'],
+      flavorText: '「ヨートン参上！」',
+      artSymbol: 'Sword',
+    },
+  },
+
+  {
+    id: 'atk_vanilla_sokun',
+    name: 'バニラなそうくん',
+    type: 'ATTACK',
+    evolution: {
+      family: 'そうくん系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+      triggerCardId: 'spl_matenai_sokun',
+    },
+    level: 2,
+    abilities: {
+      attackName: 'バニラアタック',
+      activeEffect: '2エネルギーで50ダメージを与える安定攻撃',
+      description: 'クセがなく扱いやすいLv.2標準カード。序盤から中盤の繋ぎとして活躍。',
+    },
+    ui: {
+      tags: ['そうくん系', 'Lv.2'],
+      flavorText: '「バニラじゃなくていいじゃぁん！」',
+      artSymbol: 'Heart',
+    },
+  },
 ];
+
+export const ATTACK_CARDS: CardDefinition[] = ATTACK_CARD_SEEDS.map(buildCardDefinition);

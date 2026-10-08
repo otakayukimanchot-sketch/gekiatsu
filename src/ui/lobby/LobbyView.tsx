@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
-import { 
-  Sword, Users, Bot, BookOpen, Layers, Sparkles, 
-  Wifi, WifiOff, Copy, Check, ArrowRight, Shield 
+import {
+  Users,
+  BookOpen,
+  Layers,
+  Sparkles,
+  Wifi,
+  WifiOff,
+  Copy,
+  Check,
+  ArrowRight,
 } from 'lucide-react';
 import { RuleModal } from './RuleModal';
 import { DeckInspectModal } from './DeckInspectModal';
@@ -43,7 +50,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   matchingMessage,
   createdInviteCode,
   isConnected,
-  errorMessage
+  errorMessage,
 }) => {
   const [nameInput, setNameInput] = useState(playerName);
   const [joinCodeInput, setJoinCodeInput] = useState('');
@@ -67,29 +74,29 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   };
 
   return (
-    <div className="relative min-h-[100dvh] w-full bg-stone-950 text-stone-100 flex flex-col justify-between overflow-x-hidden font-sans select-none">
+    <div className="relative min-h-[100dvh] w-full bg-slate-950 text-stone-100 flex flex-col justify-between overflow-x-hidden font-sans select-none">
       {/* Background Ambience */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-80"
+        className="absolute inset-0 pointer-events-none opacity-90"
         style={{
-          background: 'radial-gradient(ellipse at 50% 30%, #1c3629 0%, #0d1e16 60%, #060d09 100%)'
+          background:
+            'radial-gradient(ellipse at 50% 25%, #1e293b 0%, #0f172a 60%, #020617 100%)',
         }}
       />
-      <div className="absolute inset-0 border-8 border-amber-950/70 pointer-events-none" />
 
       {/* Main Container */}
-      <div className="relative z-10 max-w-md mx-auto w-full px-4 py-6 flex flex-col gap-5 flex-1 justify-center">
+      <div className="relative z-10 max-w-md mx-auto w-full px-4 py-6 flex flex-col gap-4 flex-1 justify-center">
         {/* Game Title & Header */}
         <div className="text-center space-y-1">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold mb-1 shadow-sm">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>2人専用オンライン卓上カードバトル</span>
+            <span>3ポイント先取・ハイテンポ1対1カードバトル</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 tracking-wider drop-shadow-md">
-            本物カードバトル
+            ホンモノカードバトル
           </h1>
-          <p className="text-stone-400 text-xs">
-            サーバー権威型本格2人対戦カードゲーム
+          <p className="text-slate-400 text-xs">
+            エネルギーを付けてわざを放て！シンプル＆戦略的ポケポケ型バトル
           </p>
         </div>
 
@@ -114,29 +121,26 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         )}
 
         {/* Player Profile Setup Box */}
-        <div className="p-4 rounded-2xl bg-stone-900/90 border border-stone-800 shadow-xl space-y-3">
+        <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-3">
           <div className="text-xs font-bold text-amber-300 flex items-center justify-between">
             <span>プレイヤー設定</span>
-            <span className="text-[10px] text-stone-400 font-normal">タップして変更</span>
+            <span className="text-[10px] text-slate-400 font-normal">アイコン＆名前</span>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Avatar Picker */}
-            <div className="flex gap-1.5 overflow-x-auto pb-1">
-              {AVATARS.map(av => (
-                <button
-                  key={av.id}
-                  onClick={() => onUpdatePlayer(nameInput, av.id)}
-                  className={`w-10 h-10 rounded-xl text-lg flex items-center justify-center transition-all ${
-                    playerAvatar === av.id
-                      ? 'bg-amber-600 border-2 border-amber-300 scale-105 shadow-md'
-                      : 'bg-stone-800 border border-stone-700 hover:bg-stone-700'
-                  }`}
-                >
-                  {av.icon}
-                </button>
-              ))}
-            </div>
+          <div className="flex items-center gap-2">
+            {AVATARS.map((av) => (
+              <button
+                key={av.id}
+                onClick={() => onUpdatePlayer(nameInput, av.id)}
+                className={`w-10 h-10 rounded-xl text-lg flex items-center justify-center transition-all cursor-pointer ${
+                  playerAvatar === av.id
+                    ? 'bg-amber-500 border-2 border-yellow-200 scale-105 shadow-md'
+                    : 'bg-slate-800 border border-slate-700 hover:bg-slate-700'
+                }`}
+              >
+                {av.icon}
+              </button>
+            ))}
           </div>
 
           <div>
@@ -147,53 +151,49 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               onBlur={handleNameBlur}
               maxLength={12}
               placeholder="プレイヤー名"
-              className="w-full px-3 py-2 rounded-xl bg-stone-950 border border-stone-700 text-stone-100 font-bold text-sm focus:outline-none focus:border-amber-500"
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-stone-100 font-bold text-sm focus:outline-none focus:border-amber-500"
             />
           </div>
         </div>
 
-        {/* MATCHMAKING / ROOM STATE MODAL */}
+        {/* MATCHMAKING / ROOM STATE */}
         {isMatching ? (
-          <div className="p-6 rounded-2xl bg-stone-900/95 border-2 border-amber-500 shadow-2xl text-center space-y-4 animate-pulse">
+          <div className="p-6 rounded-2xl bg-slate-900/95 border-2 border-amber-500 shadow-2xl text-center space-y-4 animate-pulse">
             <div className="w-12 h-12 rounded-full border-3 border-amber-400 border-t-transparent animate-spin mx-auto" />
             <h3 className="font-bold text-base text-amber-200">
               {matchingMessage || '対戦相手を検索中…'}
             </h3>
-            <p className="text-xs text-stone-400">
-              他のプレイヤーの接続を待機しています。
-            </p>
+            <p className="text-xs text-slate-400">他のプレイヤーの接続を待機しています。</p>
             <button
               onClick={onCancelMatch}
-              className="px-6 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold text-xs"
+              className="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-stone-300 font-bold text-xs cursor-pointer"
             >
               マッチング中止
             </button>
           </div>
         ) : createdInviteCode ? (
-          <div className="p-6 rounded-2xl bg-stone-900/95 border-2 border-amber-500 shadow-2xl text-center space-y-4">
+          <div className="p-6 rounded-2xl bg-slate-900/95 border-2 border-amber-500 shadow-2xl text-center space-y-4">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">
               <Users className="w-3.5 h-3.5" /> フレンド待機中
             </div>
-            <p className="text-xs text-stone-300">
-              以下の合言葉を対戦相手に伝えてください：
-            </p>
+            <p className="text-xs text-stone-300">以下の合言葉を対戦相手に伝えてください：</p>
             <div className="flex items-center justify-center gap-2">
-              <span className="font-mono text-3xl font-black text-amber-400 tracking-widest px-4 py-2 rounded-xl bg-stone-950 border border-amber-500/50">
+              <span className="font-mono text-3xl font-black text-amber-400 tracking-widest px-4 py-2 rounded-xl bg-slate-950 border border-amber-500/50">
                 {createdInviteCode}
               </span>
               <button
                 onClick={handleCopyCode}
-                className="p-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold shadow flex items-center justify-center"
+                className="p-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold shadow flex items-center justify-center cursor-pointer"
               >
-                {copied ? <Check className="w-5 h-5 text-white" /> : <Copy className="w-5 h-5" />}
+                {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
               </button>
             </div>
-            <div className="text-[11px] text-stone-400">
+            <div className="text-[11px] text-slate-400">
               相手が合言葉を入力すると自動的に対戦が開始されます。
             </div>
             <button
               onClick={onCancelMatch}
-              className="px-6 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold text-xs"
+              className="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-stone-300 font-bold text-xs cursor-pointer"
             >
               待機を中止する
             </button>
@@ -201,36 +201,66 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         ) : (
           /* BATTLE MODE BUTTONS */
           <div className="space-y-3">
-            {/* Quick Match */}
+            {/* Solo CPU Battle (Highlighted for instant play & testing) */}
             <button
               disabled={!isConnected}
-              onClick={onQuickMatch}
-              className="w-full p-4 rounded-2xl bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-600 text-stone-950 font-black text-base shadow-xl flex items-center justify-between hover:brightness-110 active:scale-98 transition-all cursor-pointer border border-amber-300"
+              onClick={onSoloBotMatch}
+              className="w-full p-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-stone-950 font-black text-base shadow-xl flex items-center justify-between hover:brightness-110 active:scale-98 transition-all cursor-pointer border border-yellow-200"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-stone-950/20 flex items-center justify-center text-xl">
-                  ⚔️
+                  🤖
                 </div>
                 <div className="text-left">
-                  <div className="text-stone-950 font-black">ランダム対戦</div>
-                  <div className="text-[11px] font-bold text-stone-900/80">全国のプレイヤーとリアルタイム対戦</div>
+                  <div className="text-stone-950 font-black">CPU対戦 (1人ですぐ遊ぶ)</div>
+                  <div className="text-[11px] font-bold text-stone-900/80">
+                    コンピュータと1対1ポケポケ型バトル！
+                  </div>
                 </div>
               </div>
               <ArrowRight className="w-5 h-5" />
             </button>
 
+            {/* Quick Match */}
+            <button
+              disabled={!isConnected}
+              onClick={onQuickMatch}
+              className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-700 text-white font-black text-sm shadow-lg flex items-center justify-between hover:brightness-110 active:scale-98 transition-all cursor-pointer border border-sky-400/60"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-black/20 flex items-center justify-center text-lg">
+                  ⚔️
+                </div>
+                <div className="text-left">
+                  <div className="font-black">ランダムオンライン対戦</div>
+                  <div className="text-[10px] text-sky-100/80">
+                    全国のプレイヤーとリアルタイム1対1バトル
+                  </div>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+
             {/* Friend Match */}
-            <div className="p-3 rounded-2xl bg-stone-900/90 border border-stone-800 shadow-md space-y-2.5">
-              <div className="flex border-b border-stone-800 pb-1.5 text-xs font-bold gap-3">
+            <div className="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-md space-y-2.5">
+              <div className="flex border-b border-slate-800 pb-1.5 text-xs font-bold gap-3">
                 <button
                   onClick={() => setFriendModeTab('create')}
-                  className={`pb-1 ${friendModeTab === 'create' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-stone-400'}`}
+                  className={`pb-1 cursor-pointer ${
+                    friendModeTab === 'create'
+                      ? 'text-amber-400 border-b-2 border-amber-400'
+                      : 'text-slate-400'
+                  }`}
                 >
                   合言葉で部屋を作る
                 </button>
                 <button
                   onClick={() => setFriendModeTab('join')}
-                  className={`pb-1 ${friendModeTab === 'join' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-stone-400'}`}
+                  className={`pb-1 cursor-pointer ${
+                    friendModeTab === 'join'
+                      ? 'text-amber-400 border-b-2 border-amber-400'
+                      : 'text-slate-400'
+                  }`}
                 >
                   合言葉で部屋に入る
                 </button>
@@ -240,7 +270,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                 <button
                   disabled={!isConnected}
                   onClick={onCreateFriendRoom}
-                  className="w-full py-2.5 px-3 rounded-xl bg-stone-800 hover:bg-stone-700 text-amber-300 font-bold text-xs flex items-center justify-center gap-2 border border-stone-700 cursor-pointer"
+                  className="w-full py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 cursor-pointer"
                 >
                   <Users className="w-4 h-4" /> 部屋を作成して合言葉を発行
                 </button>
@@ -252,61 +282,43 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                     onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
                     maxLength={6}
                     placeholder="合言葉を入力"
-                    className="flex-1 px-3 py-2 rounded-xl bg-stone-950 border border-stone-700 text-stone-100 font-mono font-bold text-sm text-center uppercase tracking-widest focus:outline-none focus:border-amber-500"
+                    className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-stone-100 font-mono font-bold text-sm text-center uppercase tracking-widest focus:outline-none focus:border-amber-500"
                   />
                   <button
                     disabled={!isConnected || !joinCodeInput.trim()}
                     onClick={() => onJoinFriendRoom(joinCodeInput)}
-                    className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-stone-950 font-bold text-xs cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-stone-950 font-black text-xs cursor-pointer"
                   >
                     参加
                   </button>
                 </div>
               )}
             </div>
-
-            {/* Solo CPU Battle */}
-            <button
-              disabled={!isConnected}
-              onClick={onSoloBotMatch}
-              className="w-full p-3.5 rounded-2xl bg-stone-900 hover:bg-stone-800/90 border border-stone-700 text-stone-200 font-bold text-sm shadow-md flex items-center justify-between cursor-pointer active:scale-98 transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-stone-800 flex items-center justify-center text-lg">
-                  🤖
-                </div>
-                <div className="text-left">
-                  <div className="text-stone-100 font-bold text-xs">CPU練習試合 (ソロプレイ)</div>
-                  <div className="text-[10px] text-stone-400">サーバーAIを相手に即座に対戦テスト</div>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-stone-500" />
-            </button>
           </div>
         )}
 
-        {/* Sub Navigation: Deck list & Rule book */}
-        <div className="flex items-center justify-center gap-3 pt-2">
+        {/* Sub Navigation: Card List & Rule book */}
+        <div className="flex items-center justify-center gap-3 pt-1">
           <button
             onClick={() => setShowRules(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-stone-300 text-xs font-bold border border-stone-800 cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-stone-200 text-xs font-bold border border-slate-800 cursor-pointer"
           >
             <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-            <span>ルール確認</span>
+            <span>ルール・レベル表</span>
           </button>
           <button
             onClick={() => setShowDeck(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-stone-300 text-xs font-bold border border-stone-800 cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-stone-200 text-xs font-bold border border-slate-800 cursor-pointer"
           >
             <Layers className="w-3.5 h-3.5 text-amber-400" />
-            <span>デッキカード一覧 (40枚)</span>
+            <span>全カード図鑑＆デッキ (全38種)</span>
           </button>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="relative z-10 py-3 text-center text-[10px] text-stone-600">
-        本物カードバトル © 2026 Authentic Card Battle Online
+      <div className="relative z-10 py-3 text-center text-[10px] text-slate-600">
+        ホンモノカードバトル © 2026 Honmono Card Battle Pocket
       </div>
 
       {/* Modals */}

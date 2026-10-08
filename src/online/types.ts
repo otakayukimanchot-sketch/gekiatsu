@@ -1,22 +1,23 @@
 import { CardInstance, MaskedCardInstance } from '../cards/types';
-import { ActiveEnvironment, GameEventLog, GamePhase, PlayerKey } from '../game/types';
+import { ActiveEnvironment, GameAnimationEvent, GameEventLog, GamePhase, PlayerKey } from '../game/types';
 
 export interface SanitizedPlayerState {
   playerId: string;
   name: string;
   avatarIcon: string;
-  hp: number;
-  maxHp: number;
+  score: number;
+  maxScore: number;
+  activeCard: CardInstance | null;
+  bench: (CardInstance | null)[]; // 3 slots
   deckCount: number;
   handCount: number;
-  // If this is the client player, `hand` contains full CardInstances.
-  // If opponent, `maskedHand` contains face-down cards with instanceIds only.
   hand?: CardInstance[];
   maskedHand?: MaskedCardInstance[];
-  field: (CardInstance | null)[];
-  graveyard: CardInstance[];
-  attacksCountThisTurn: number;
-  hasDrawnThisTurn: boolean;
+  trash: CardInstance[];
+  energyAvailable: number;
+  hasAttachedEnergyThisTurn: boolean;
+  hasRetreatedThisTurn: boolean;
+  hasUsedSpellThisTurn: boolean;
   isConnected: boolean;
 }
 
@@ -27,7 +28,9 @@ export interface SanitizedGameState {
   turnNumber: number;
   activePlayerKey: PlayerKey;
   firstPlayerKey: PlayerKey;
+  promotionRequiredPlayerKey?: PlayerKey;
   isMyTurn: boolean;
+  mustPromoteBench: boolean;
   myPlayerKey: PlayerKey;
   me: SanitizedPlayerState;
   opponent: SanitizedPlayerState;
@@ -36,4 +39,5 @@ export interface SanitizedGameState {
   winnerPlayerId?: string;
   winReason?: string;
   logs: GameEventLog[];
+  lastAnimation?: GameAnimationEvent;
 }
