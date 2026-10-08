@@ -209,7 +209,7 @@ export function startTurn(state: GameState, nextPlayerKey: PlayerKey) {
   activePlayer.hasRetreatedThisTurn = false;
   activePlayer.hasUsedSpellThisTurn = false;
 
-  // 最初のターン(T1)は初期手札（標準:5枚[魔法2+他3] / 大乱闘:10枚[魔法4+他6]）が既に配られているため追加ドローせずスタート
+  // 最初のターン(T1)は初期手札（標準:5枚[魔法2+他3] / 大乱闘:10枚[魔法3+他7]）が既に配られているため追加ドローせずスタート
   const skipInitialTurn1Draw = state.turnNumber === 1;
 
   if (!skipInitialTurn1Draw && activePlayer.deck.length > 0) {

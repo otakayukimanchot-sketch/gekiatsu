@@ -114,9 +114,9 @@ export function buildInitialDeckAndSetup(
 
   // 初期手札の配分:
   // - standard (標準デッキ対戦): 初期手札5枚（魔法カード2枚 ＋ 攻撃カード3枚［うちLv.1〜2を必ず1枚以上含む］）
-  // - allstar (全員参加大乱闘対戦): 初期手札10枚（魔法カード4枚 ＋ 攻撃カード6枚［うちLv.1〜2を必ず2枚以上含む］）
-  const targetSpellCount = battleFormat === 'allstar' ? 4 : 2;
-  const targetOtherCount = battleFormat === 'allstar' ? 6 : 3;
+  // - allstar (全員参加大乱闘対戦): 初期手札10枚（魔法カード3枚 ＋ 攻撃カード7枚［うちLv.1〜2を必ず2枚以上含む］）
+  const targetSpellCount = battleFormat === 'allstar' ? 3 : 2;
+  const targetOtherCount = battleFormat === 'allstar' ? 7 : 3;
   const requiredLowLevelAtkCount = battleFormat === 'allstar' ? 2 : 1;
   const targetTotalHand = targetSpellCount + targetOtherCount;
 
@@ -139,7 +139,7 @@ export function buildInitialDeckAndSetup(
     }
   }
 
-  // Step 2: 残りの攻撃カード枠（標準:あと2枚 / 大乱闘:あと4枚）と魔法カード枠（標準:2枚 / 大乱闘:4枚）を確保
+  // Step 2: 残りの攻撃カード枠（標準:あと2枚 / 大乱闘:あと5枚）と魔法カード枠（標準:2枚 / 大乱闘:3枚）を確保
   const remainingDeck: CardInstance[] = [];
   let spellPicked = 0;
 
