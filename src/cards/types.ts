@@ -115,7 +115,8 @@ export type SpellEffectKind =
   | 'SWAP_OPPONENT_BENCH'
   | 'PEEK_AND_DRAW'
   | 'HAND_RELOAD_3'
-  | 'PHOENIX_WALL_TOKEN';
+  | 'PHOENIX_WALL_TOKEN'
+  | 'FREE_RETREAT_THIS_TURN';
 
 export interface EvolutionInfo {
   family: string;

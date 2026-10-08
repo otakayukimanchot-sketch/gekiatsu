@@ -1,5 +1,12 @@
 import { CardInstance, MaskedCardInstance } from '../cards/types';
-import { GameAnimationEvent, GameEventLog, GamePhase, PlayerKey, WinScoreOption } from '../game/types';
+import {
+  BattleFormatOption,
+  GameAnimationEvent,
+  GameEventLog,
+  GamePhase,
+  PlayerKey,
+  WinScoreOption,
+} from '../game/types';
 
 export interface SanitizedPlayerState {
   playerId: string;
@@ -30,6 +37,7 @@ export interface SanitizedGameState {
   firstPlayerKey: PlayerKey;
   promotionRequiredPlayerKey?: PlayerKey;
   winScore: WinScoreOption;
+  battleFormat: BattleFormatOption;
   isMyTurn: boolean;
   mustPromoteBench: boolean;
   myPlayerKey: PlayerKey;

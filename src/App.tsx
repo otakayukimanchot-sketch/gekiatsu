@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { SanitizedGameState } from './online/types';
-import { WinScoreOption } from './game/types';
+import { BattleFormatOption, WinScoreOption } from './game/types';
 import { TabletopBoard } from './ui/battlefield/TabletopBoard';
 import { LobbyView } from './ui/lobby/LobbyView';
 
@@ -10,6 +10,7 @@ interface LocalPlayerProfile {
   name: string;
   avatarIcon: string;
   winScore?: WinScoreOption;
+  battleFormat?: BattleFormatOption;
 }
 
 export default function App() {
@@ -21,7 +22,8 @@ export default function App() {
         const parsed = JSON.parse(saved);
         return {
           ...parsed,
-          winScore: parsed.winScore === 5 ? 5 : 3,
+          winScore: parsed.winScore === 7 ? 7 : parsed.winScore === 5 ? 5 : 3,
+          battleFormat: parsed.battleFormat === 'allstar' ? 'allstar' : 'standard',
         };
       } catch (e) {}
     }
@@ -31,12 +33,18 @@ export default function App() {
       name: 'デュエリスト',
       avatarIcon: 'smile',
       winScore: 3,
+      battleFormat: 'standard',
     };
     localStorage.setItem('honmono_card_player', JSON.stringify(newProfile));
     return newProfile;
   });
 
-  const [winScore, setWinScore] = useState<WinScoreOption>(player.winScore === 5 ? 5 : 3);
+  const [winScore, setWinScore] = useState<WinScoreOption>(
+    player.winScore === 7 ? 7 : player.winScore === 5 ? 5 : 3
+  );
+  const [battleFormat, setBattleFormat] = useState<BattleFormatOption>(
+    player.battleFormat === 'allstar' ? 'allstar' : 'standard'
+  );
 
   const [gameState, setGameState] = useState<SanitizedGameState | null>(null);
   const [isMatching, setIsMatching] = useState(false);
@@ -117,41 +125,60 @@ export default function App() {
   }, []);
 
   const handleUpdatePlayer = (name: string, avatarIcon: string) => {
-    const updated = { ...player, name, avatarIcon, winScore };
+    const updated = { ...player, name, avatarIcon, winScore, battleFormat };
     setPlayer(updated);
     localStorage.setItem('honmono_card_player', JSON.stringify(updated));
   };
 
   const handleChangeWinScore = (newWinScore: WinScoreOption) => {
     setWinScore(newWinScore);
-    const updated = { ...player, winScore: newWinScore };
+    const updated = { ...player, winScore: newWinScore, battleFormat };
     setPlayer(updated);
     localStorage.setItem('honmono_card_player', JSON.stringify(updated));
   };
 
-  const handleQuickMatch = () => {
+  const handleChangeBattleFormat = (newFormat: BattleFormatOption) => {
+    setBattleFormat(newFormat);
+    const updated = { ...player, winScore, battleFormat: newFormat };
+    setPlayer(updated);
+    localStorage.setItem('honmono_card_player', JSON.stringify(updated));
+  };
+
+  const handleQuickMatch = (overrideFormat?: BattleFormatOption) => {
     if (!socketRef.current) return;
+    const fmt = overrideFormat || battleFormat;
+    const fmtLabel = fmt === 'allstar' ? '全員参加大乱闘' : '標準デッキ';
     setIsMatching(true);
-    setMatchingMessage(`対戦相手を探しています（${winScore}点先取モード）…`);
-    socketRef.current.emit('card_quick_match', { player: { ...player, winScore } });
+    setMatchingMessage(`対戦相手を探しています（${fmtLabel} / ${winScore}点先取）…`);
+    socketRef.current.emit('card_quick_match', {
+      player: { ...player, winScore, battleFormat: fmt },
+    });
   };
 
   const handleCreateFriendRoom = () => {
     if (!socketRef.current) return;
-    socketRef.current.emit('card_create_friend_room', { player: { ...player, winScore } });
+    socketRef.current.emit('card_create_friend_room', {
+      player: { ...player, winScore, battleFormat },
+    });
   };
 
   const handleJoinFriendRoom = (code: string) => {
     if (!socketRef.current || !code.trim()) return;
     socketRef.current.emit('card_join_friend_room', {
       inviteCode: code,
-      player: { ...player, winScore },
+      player: { ...player, winScore, battleFormat },
     });
   };
 
-  const handleSoloBotMatch = () => {
+  const handleSoloBotMatch = (overrideFormat?: BattleFormatOption) => {
     if (!socketRef.current) return;
-    socketRef.current.emit('card_solo_match', { player: { ...player, winScore } });
+    const fmt = overrideFormat || battleFormat;
+    if (overrideFormat && overrideFormat !== battleFormat) {
+      handleChangeBattleFormat(overrideFormat);
+    }
+    socketRef.current.emit('card_solo_match', {
+      player: { ...player, winScore, battleFormat: fmt },
+    });
   };
 
   const handleCancelMatch = () => {
@@ -184,9 +211,12 @@ export default function App() {
 
   const handlePlayAgain = () => {
     const isSoloRoom = gameState?.roomId?.startsWith('solo_');
+    const prevFormat = gameState?.battleFormat || battleFormat;
     handleLeaveRoom();
     if (isSoloRoom && socketRef.current) {
-      socketRef.current.emit('card_solo_match', { player: { ...player, winScore } });
+      socketRef.current.emit('card_solo_match', {
+        player: { ...player, winScore, battleFormat: prevFormat },
+      });
     }
   };
 
@@ -208,7 +238,9 @@ export default function App() {
       playerName={player.name}
       playerAvatar={player.avatarIcon}
       winScore={winScore}
+      battleFormat={battleFormat}
       onChangeWinScore={handleChangeWinScore}
+      onChangeBattleFormat={handleChangeBattleFormat}
       onUpdatePlayer={handleUpdatePlayer}
       onQuickMatch={handleQuickMatch}
       onCreateFriendRoom={handleCreateFriendRoom}

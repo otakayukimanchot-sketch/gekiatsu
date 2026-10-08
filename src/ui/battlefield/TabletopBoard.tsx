@@ -94,6 +94,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
   const [inspectCard, setInspectCard] = useState<CardInstance | null>(null);
   const [viewingTrash, setViewingTrash] = useState<'me' | 'opp' | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [confirmSurrender, setConfirmSurrender] = useState(false);
 
   // Animation states
   const [animBanner, setAnimBanner] = useState<string | null>(null);
@@ -697,6 +698,33 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             </div>
 
             <div className="flex items-center gap-1 shrink-0 text-[10px] font-bold">
+              {/* 降参ボタン（ターン終了ボタンから離れた上部に配置＆2段階確認付きで誤タップを完全防止） */}
+              {confirmSurrender ? (
+                <div className="flex items-center gap-0.5 bg-rose-950 border border-rose-500 rounded px-1 py-0.5">
+                  <button
+                    onClick={() => {
+                      setConfirmSurrender(false);
+                      onSendAction('SURRENDER');
+                    }}
+                    className="text-[9px] font-black text-rose-200 hover:text-white px-1 cursor-pointer"
+                  >
+                    本当に降参
+                  </button>
+                  <button
+                    onClick={() => setConfirmSurrender(false)}
+                    className="text-[9px] text-slate-400 hover:text-white px-0.5 cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmSurrender(true)}
+                  className="px-1.5 py-0.5 rounded bg-slate-950 hover:bg-rose-950/70 border border-slate-800 hover:border-rose-700 text-slate-400 hover:text-rose-300 text-[9px] cursor-pointer"
+                >
+                  降参
+                </button>
+              )}
               <div className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-stone-300">
                 手札 <span className="text-sky-300 font-mono">{opponent.handCount}</span>
               </div>
@@ -818,19 +846,13 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   clearModes();
                   onSendAction('END_TURN');
                 }}
-                className={`px-2.5 py-1 rounded-lg font-black text-[10px] shadow transition-all ${
+                className={`px-3 py-1.5 rounded-lg font-black text-[10px] shadow transition-all ${
                   isMyTurn
                     ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white hover:brightness-110 active:scale-95 cursor-pointer ring-1 ring-sky-300'
                     : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                 }`}
               >
                 ターン終了
-              </button>
-              <button
-                onClick={() => onSendAction('SURRENDER')}
-                className="text-[8px] text-slate-500 hover:text-rose-400 px-1 cursor-pointer"
-              >
-                降参
               </button>
             </div>
           </div>
@@ -1065,6 +1087,32 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
         <div className="flex items-center justify-between gap-2 bg-slate-900/95 border border-slate-800 rounded-xl px-2.5 py-1">
           {/* Opponent Info & Points */}
           <div className="flex items-center gap-2 shrink-0">
+            {confirmSurrender ? (
+              <div className="flex items-center gap-1 bg-rose-950 border border-rose-500 rounded px-1.5 py-0.5">
+                <button
+                  onClick={() => {
+                    setConfirmSurrender(false);
+                    onSendAction('SURRENDER');
+                  }}
+                  className="text-[9px] font-black text-rose-200 hover:text-white cursor-pointer"
+                >
+                  本当に降参
+                </button>
+                <button
+                  onClick={() => setConfirmSurrender(false)}
+                  className="text-[9px] text-slate-400 hover:text-white cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmSurrender(true)}
+                className="px-1.5 py-0.5 rounded bg-slate-950 hover:bg-rose-950/70 border border-slate-800 text-[9px] text-slate-400 hover:text-rose-300 cursor-pointer"
+              >
+                🏳️降参
+              </button>
+            )}
             <span className="font-black text-xs text-stone-100">{opponent.name}</span>
             <div className="flex items-center gap-0.5">
               {Array.from({ length: winScore }).map((_, idx) => (
@@ -1116,7 +1164,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             </span>
           </div>
 
-          {/* Right: Turn End & Surrender */}
+          {/* Right: Turn End Only (Separated from Surrender) */}
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               disabled={!isMyTurn}
@@ -1124,19 +1172,13 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                 clearModes();
                 onSendAction('END_TURN');
               }}
-              className={`px-2.5 py-1 rounded-lg font-black text-[10px] ${
+              className={`px-3 py-1 rounded-lg font-black text-[10px] ${
                 isMyTurn
                   ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white cursor-pointer'
                   : 'bg-slate-800 text-slate-500 cursor-not-allowed'
               }`}
             >
               ターン終了
-            </button>
-            <button
-              onClick={() => onSendAction('SURRENDER')}
-              className="text-[9px] text-slate-500 hover:text-rose-400 px-1 cursor-pointer"
-            >
-              降参
             </button>
           </div>
         </div>

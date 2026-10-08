@@ -1,5 +1,11 @@
 import { CardInstance } from '../../cards/types';
-import { createStandardDeckDefinitionIds, DECK_SIZE, getCardDefinition } from '../../cards/cardRegistry';
+import { BattleFormatOption } from '../types';
+import {
+  createAllStarBrawlDeckDefinitionIds,
+  createStandardDeckDefinitionIds,
+  DECK_SIZE,
+  getCardDefinition,
+} from '../../cards/cardRegistry';
 
 let instanceCounter = 1;
 
@@ -56,19 +62,25 @@ export function isDeckEvolutionValid(deckIds: string[]): boolean {
 }
 
 /**
- * 20枚デッキを生成し、ポケポケ仕様として「初期バトル場には必ず基礎カード（進化元を持たない攻撃カード）が配置される」ように調整する
+ * デッキを生成し、ポケポケ仕様として「初期バトル場には必ず基礎カード（進化元を持たない攻撃カード）が配置される」ように調整する
+ * - standard: 20枚標準バランス構築（またはカスタム20枚デッキ）
+ * - allstar: 全員参加大乱闘モード（全収録カード総参戦デッキ）
  */
 export function buildInitialDeckAndSetup(
   ownerId: string,
-  customDeckIds?: string[]
+  customDeckIds?: string[],
+  battleFormat: BattleFormatOption = 'standard'
 ): {
   activeCard: CardInstance;
   hand: CardInstance[];
   deck: CardInstance[];
 } {
-  let deckIds = createStandardDeckDefinitionIds();
+  let deckIds =
+    battleFormat === 'allstar'
+      ? createAllStarBrawlDeckDefinitionIds()
+      : createStandardDeckDefinitionIds();
 
-  if (customDeckIds && customDeckIds.length === DECK_SIZE) {
+  if (battleFormat === 'standard' && customDeckIds && customDeckIds.length === DECK_SIZE) {
     const valid = customDeckIds.every((id) => !!getCardDefinition(id));
     const hasBasicAttack = customDeckIds.some((id) => {
       const def = getCardDefinition(id);

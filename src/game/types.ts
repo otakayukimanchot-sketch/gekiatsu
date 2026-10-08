@@ -8,7 +8,9 @@ export type GamePhase =
 
 export type PlayerKey = 'playerA' | 'playerB';
 
-export type WinScoreOption = 3 | 5;
+export type WinScoreOption = 3 | 5 | 7;
+
+export type BattleFormatOption = 'standard' | 'allstar';
 
 export interface PlayerBattleState {
   playerId: string;
@@ -79,6 +81,7 @@ export interface GameState {
   firstPlayerKey: PlayerKey;
   promotionRequiredPlayerKey?: PlayerKey;
   winScore: WinScoreOption;
+  battleFormat: BattleFormatOption;
   processedKnockoutIds: string[];
   playerA: PlayerBattleState;
   playerB: PlayerBattleState;

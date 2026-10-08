@@ -123,41 +123,77 @@ export function getCardDefinition(id: string): CardDefinition | undefined {
 export const DECK_SIZE = 20;
 
 /**
- * ポケポケ型 コンパクト20枚デッキ（進化系列＆新カード完備バランス構築）
- * 攻撃カード15枚 ＋ 魔法カード5枚（環境カード廃止済み）
+ * 標準デッキ生成（20枚・バランス構築＆ローテーション）
+ * 特定カードだけが出続ける偏りを解消し、全進化系列・単体カード（メンヘラな泰松・大谷翔平・特効など）・魔法カード（安松・トレード・離れるそうくん・trio・酒・ポカリ・ブラックコーヒー等）がバランス良く登場する
  */
 export function createStandardDeckDefinitionIds(): string[] {
-  return [
-    // りゅーのすけ進化ライン (3枚: Lv.1 → Lv.3 → Lv.5)
-    'atk_ryunosuke',
-    'evo_juryunosuke',
-    'evo_ryunosuke_ex',
-
-    // ゆきや進化ライン (3枚: Lv.2 → Lv.4 → Lv.5)
-    'atk_yukiya',
-    'evo_uragiri_yukiya',
-    'evo_yukiya_ex',
-
-    // うーたん進化ライン (2枚: Lv.1 → Lv.3)
-    'atk_utan',
-    'evo_kyobo_utan',
-
-    // サブレ・キャノン進化ライン (2枚: Lv.3 → Lv.4)
-    'atk_mayu_sable',
-    'evo_ago_cannon',
-
-    // 特効＆主力カード (5枚: もえきゅん / りょち / しょーちゃん / ムエ / 情報処理基礎のおばぁ)
-    'atk_moekyun',
-    'atk_ryochi',
-    'atk_shochan',
-    'atk_mue',
-    'atk_info_grandma',
-
-    // 魔法カード (5枚: Lv.1)
-    'spl_monster_energy',
-    'spl_global_lounge',
-    'spl_sensoji',
-    'spl_fc_barcelona',
-    'spl_morisia',
+  const evolutionChains: string[][] = [
+    ['atk_yoshie_clean', 'evo_yoshie_salt', 'evo_yoshie_kakei', 'evo_yoshie_ex'],
+    ['atk_yoshida_ryuku', 'evo_ryuku_skywalker'],
+    ['atk_mayu_sable', 'evo_ago_cannon'],
+    ['atk_headphone_niki', 'evo_onhood_headphone_niki'],
+    ['atk_yukiya', 'evo_uragiri_yukiya', 'evo_yukiya_ex'],
+    ['atk_hiroko', 'evo_piroko', 'evo_hiroko_ex'],
+    ['atk_ryunosuke', 'evo_juryunosuke', 'evo_ryunosuke_ex'],
+    ['atk_nakamura_sensei', 'evo_superfly_unit', 'evo_nakamura_ex'],
+    ['atk_utan', 'evo_kyobo_utan'],
+    ['atk_wanwan', 'evo_kyobo_wanwan'],
+    ['atk_masuo', 'evo_ee_masuo', 'evo_masuo_ex'],
+    ['atk_agasa', 'evo_fo_agasa', 'evo_agasa_ex'],
+    ['atk_gabon', 'evo_maid_gabon', 'evo_gabon_ex'],
+    ['atk_zukky', 'evo_chuya_zukky', 'evo_composer_zukky', 'evo_zukky_ex'],
+    ['atk_nisei', 'evo_hashagu_nisei', 'evo_nisei_ex'],
   ];
+
+  const singleAttackIds: string[] = ATTACK_CARDS.filter(
+    (c) => c.evolution.evolvesFrom === null && c.evolution.evolvesTo === null
+  ).map((c) => c.id);
+
+  const allSpellIds: string[] = SPELL_CARDS.map((c) => c.id);
+
+  const shuffle = <T>(arr: T[]): T[] => {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  };
+
+  const deck: string[] = [];
+
+  // 1. ランダムに3〜4系統の進化ラインを丸ごと採用（進化元〜最終形態までセットで入れることで進化事故を防ぐ）
+  const shuffledChains = shuffle(evolutionChains);
+  for (const chain of shuffledChains) {
+    if (deck.length + chain.length <= 10) {
+      deck.push(...chain);
+    }
+  }
+
+  // 2. 残りの攻撃カード枠（計14枚まで）に単体アタッカー（泰松・しょーちゃん・ムエ・もえきゅん・りょち・大谷翔平など）を均等抽選で編成
+  const shuffledSingles = shuffle(singleAttackIds);
+  for (const singleId of shuffledSingles) {
+    if (deck.length >= 14) break;
+    if (!deck.includes(singleId)) {
+      deck.push(singleId);
+    }
+  }
+
+  // 3. 魔法カード6枚を全魔法プール（トレード・安松・離れるそうくん・trio・ブラックコーヒー・酒・ポカリ等）から均等抽選で編成
+  const shuffledSpells = shuffle(allSpellIds);
+  for (const spellId of shuffledSpells) {
+    if (deck.length >= DECK_SIZE) break;
+    deck.push(spellId);
+  }
+
+  return deck.slice(0, DECK_SIZE);
+}
+
+/**
+ * 全員参加大乱闘（オールスター）デッキ生成
+ * 収録されている全カード（全進化系列・全単体アタッカー・全魔法カード）が総出で参戦するスペシャル大乱闘山札！
+ * 進化カードが含まれる場合は必ず進化元も同じ山札に入るため、すべての進化ルートが成立する。
+ */
+export function createAllStarBrawlDeckDefinitionIds(): string[] {
+  return ALL_CARD_DEFINITIONS.map((c) => c.id);
 }

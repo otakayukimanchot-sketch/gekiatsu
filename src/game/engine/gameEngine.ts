@@ -1,5 +1,6 @@
 import {
   AnimationEventType,
+  BattleFormatOption,
   GameActionPayload,
   GameState,
   PlayerBattleState,
@@ -113,11 +114,13 @@ export function initializeGame(
   pB: { playerId: string; name: string; socketId: string; avatarIcon: string },
   customDeckA?: string[],
   customDeckB?: string[],
-  winScore: WinScoreOption = 3
+  winScore: WinScoreOption = 3,
+  battleFormat: BattleFormatOption = 'standard'
 ): GameState {
-  const validWinScore: WinScoreOption = winScore === 5 ? 5 : 3;
-  const setupA = buildInitialDeckAndSetup(pA.playerId, customDeckA);
-  const setupB = buildInitialDeckAndSetup(pB.playerId, customDeckB);
+  const validWinScore: WinScoreOption = winScore === 7 ? 7 : winScore === 5 ? 5 : 3;
+  const validFormat: BattleFormatOption = battleFormat === 'allstar' ? 'allstar' : 'standard';
+  const setupA = buildInitialDeckAndSetup(pA.playerId, customDeckA, validFormat);
+  const setupB = buildInitialDeckAndSetup(pB.playerId, customDeckB, validFormat);
 
   const firstPlayerKey: PlayerKey = Math.random() < 0.5 ? 'playerA' : 'playerB';
 
@@ -167,6 +170,7 @@ export function initializeGame(
     activePlayerKey: firstPlayerKey,
     firstPlayerKey,
     winScore: validWinScore,
+    battleFormat: validFormat,
     processedKnockoutIds: [],
     playerA,
     playerB,
@@ -176,12 +180,13 @@ export function initializeGame(
   };
 
   const firstPlayer = state[firstPlayerKey];
+  const formatLabel = validFormat === 'allstar' ? '全員参加大乱闘モード' : '標準デッキ対戦';
   addLog(
     state,
     firstPlayer.playerId,
     firstPlayer.name,
     'GAME_START',
-    `バトル開始！先攻は ${firstPlayer.name} です。（${validWinScore}ポイント先取で勝利）`
+    `バトル開始！【${formatLabel} / ${validWinScore}ポイント先取】先攻は ${firstPlayer.name} です。`
   );
 
   startTurn(state, firstPlayerKey);
@@ -1004,6 +1009,29 @@ function activateSpellCard(
       }】！さらに1枚ドロー！`;
       break;
     }
+    case 'FREE_RETREAT_THIS_TURN': {
+      const friendly = [player.activeCard, ...player.bench].filter(Boolean);
+      friendly.forEach((c) => {
+        if (c) c.retreatCost = 0;
+      });
+      effectSummary = `${player.name} が「${def.name}」を発動！自分の場のすべてのカードの「にげる」コストが 0 になった！`;
+      break;
+    }
+  }
+
+  // カード固有の追加ボーナス処理（trio / ブラックコーヒー / 酒 / ポカリ）
+  if (def.id === 'spl_trio_akihabara' && player.activeCard) {
+    player.activeCard.tempAtkBuff += 10;
+    effectSummary += '（さらにバトル場の攻撃力＋10！）';
+  } else if (def.id === 'spl_black_coffee' && player.activeCard) {
+    player.activeCard.tempAtkBuff += 10;
+    effectSummary += '（さらにバトル場の攻撃力＋10！）';
+  } else if (def.id === 'spl_sake' && player.activeCard) {
+    player.activeCard.tempAtkBuff += 20;
+    effectSummary += '（さらに酔拳効果でバトル場の攻撃力＋20！）';
+  } else if (def.id === 'spl_pocari' && player.activeCard) {
+    player.activeCard.damageReductionNextTurn += 10;
+    effectSummary += '（さらに次ターンの被ダメージ−10！）';
   }
 
   recalculateDynamicStats(state);

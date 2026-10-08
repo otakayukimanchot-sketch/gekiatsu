@@ -2,13 +2,13 @@ import { CardDefinition, RawCardSeed } from '../types';
 import { buildCardDefinition } from '../levelSystem';
 
 /**
- * 魔法（サポート）カード定義一覧 (全38種・Lv.1統一)
+ * 魔法（サポート）カード定義一覧 (全43種・Lv.1統一)
  *
  * 【記載順序】
- * 1. ドロー・サーチ系: Superfly / 数珠カード / さびしがりやのゆきや / のぞきのそうくん / モリシア（今は亡きショッピングセンター） / 秋葉原 / バキバキ童貞 / 受験パルキアニキ
- * 2. エネルギー加速系: ふともも / 待てないそうくん / モンスターエナジー / ZONE / アル中カラカラ / 松岡修造
+ * 1. ドロー・サーチ系: Superfly / 数珠カード / さびしがりやのゆきや / のぞきのそうくん / モリシア（今は亡きショッピングセンター） / 秋葉原 / バキバキ童貞 / 受験パルキアニキ / trio（秋葉原のアイドルグッズ専門店） / ブラックコーヒー
+ * 2. エネルギー加速系: ふともも / 待てないそうくん / モンスターエナジー / ZONE / アル中カラカラ / 松岡修造 / 酒
  * 3. 火力強化系: 顎カード / 安松 / ユキやカード / 浅草寺 / FCバルセロナ / 21歳 拳で / ﾄﾞｩﾜｧ!!ｾﾝﾅﾅﾋｬｸ!! / 10人ニキ
- * 4. 防御・回復・展開系: 見えてます / 三者面談 / グローバルラウンジ / イタリアン♡ / カラオケ / フェニックスホール（講堂） / 隅田川 / マクドナルド / 自己防衛おじさん
+ * 4. 防御・回復・展開・機動力系: 見えてます / 三者面談 / グローバルラウンジ / イタリアン♡ / カラオケ / フェニックスホール（講堂） / 隅田川 / マクドナルド / 自己防衛おじさん / 離れるそうくん / ポカリ
  * 5. 直接ダメージ・妨害・入れ替え系: うんこかーど / 蛍光マーカーのりゅーのすけ / トレード / 五郎丸のキック / インフル / 朝のラッシュ / おでんツンツン男
  */
 const SPELL_CARD_SEEDS: RawCardSeed[] = [
@@ -922,6 +922,126 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
       tags: ['魔法', '熱血回復', '強化'],
       flavorText: '「君ならできる！今日から君は富士山だ！！」',
       artSymbol: 'Flame',
+    },
+  },
+  {
+    id: 'spl_hanareru_sokun',
+    name: '離れるそうくん',
+    type: 'SPELL',
+    evolution: {
+      family: 'そうくん系列サポート',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: 'サッと距離をとる',
+      activeEffect: '自分の場のカードの「にげる」に必要なエネルギーコストを0にする',
+      description:
+        '【魔法】「じゃあ俺ちょっと離れるね！」自分の場（バトル場・ベンチ）のカードの「にげる」コストを0にする（エネルギー消費なしでベンチと交代できる）。',
+      spellEffect: 'FREE_RETREAT_THIS_TURN',
+    },
+    ui: {
+      tags: ['魔法', '逃げるコスト0', 'そうくん系'],
+      flavorText: '「察しが良すぎるそうくん、気配を消してスーッと距離を置く。」',
+      artSymbol: 'Wind',
+    },
+  },
+  {
+    id: 'spl_trio_akihabara',
+    name: 'trio（秋葉原のアイドルグッズ専門店）',
+    type: 'SPELL',
+    evolution: {
+      family: 'サーチ魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '推しグッズ発掘サーチ',
+      activeEffect: '山札から攻撃カード1枚を手札に加え、バトル場の攻撃ダメージ＋10',
+      description:
+        '【魔法】秋葉原の聖地trioでお宝グッズを発掘！山札から攻撃カード1枚を手札に加え、さらにこのターン自分のバトル場の攻撃ダメージを＋10する。',
+      spellEffect: 'SEARCH_ATTACK_CARD',
+    },
+    ui: {
+      tags: ['魔法', 'サーチ', '秋葉原', 'アイドル'],
+      flavorText: '「レアな生写真もチェキも掘り出し物もtrioなら全部揃う！」',
+      artSymbol: 'Sparkles',
+    },
+  },
+  {
+    id: 'spl_black_coffee',
+    name: 'ブラックコーヒー',
+    type: 'SPELL',
+    evolution: {
+      family: 'ドロー魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '眠気覚ましの苦味',
+      activeEffect: '山札からカードを1枚引き、自分のバトル場の攻撃ダメージ＋10',
+      description:
+        '【魔法】キリッとした苦味で頭が冴え渡る！山札からカードを1枚引き、このターン自分のバトル場の攻撃ダメージを＋10する。',
+      spellEffect: 'DRAW_1',
+    },
+    ui: {
+      tags: ['魔法', 'ドロー', 'カフェイン'],
+      flavorText: '「砂糖もミルクもいらない。この苦味が勝負勘を研ぎ澄ます。」',
+      artSymbol: 'Sparkles',
+    },
+  },
+  {
+    id: 'spl_sake',
+    name: '酒',
+    type: 'SPELL',
+    evolution: {
+      family: 'エナジー魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '酔拳テンション全開',
+      activeEffect: '自分のバトル場のカードにボーナスエネルギー＋1個＆このターンの攻撃ダメージ＋20',
+      description:
+        '【魔法】一杯引っ掛けてリミッター解除！自分のバトル場のカードにボーナスエネルギーを＋1個付与し、さらにこのターンの攻撃ダメージを＋20する！',
+      spellEffect: 'BONUS_ENERGY_ACTIVE',
+    },
+    ui: {
+      tags: ['魔法', 'エネルギー加速', '火力強化', '酒'],
+      flavorText: '「酒は百薬の長！テンション最高潮で拳が唸る！」',
+      artSymbol: 'Flame',
+    },
+  },
+  {
+    id: 'spl_pocari',
+    name: 'ポカリ',
+    type: 'SPELL',
+    evolution: {
+      family: '回復魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '急速イオン水分補給',
+      activeEffect: '自分の場（バトル場・ベンチ）すべてのカードのHPを25回復し、バトル場の被ダメージ−10',
+      description:
+        '【魔法】乾いた身体に染み渡るイオンサプライ！自分の場すべてのカードのHPを25回復し、次の相手ターンにバトル場が受けるダメージを−10する。',
+      spellEffect: 'HEAL_ALL_25',
+    },
+    ui: {
+      tags: ['魔法', '全体回復', '水分補給'],
+      flavorText: '「乾いた戦場に潤いを。飲む点滴で仲間全員が蘇る！」',
+      artSymbol: 'Heart',
     },
   },
 ];

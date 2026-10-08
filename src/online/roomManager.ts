@@ -1,4 +1,9 @@
-import { GameState, GameActionPayload, WinScoreOption } from '../game/types';
+import {
+  BattleFormatOption,
+  GameActionPayload,
+  GameState,
+  WinScoreOption,
+} from '../game/types';
 import { initializeGame, handleGameAction } from '../game/engine/gameEngine';
 import { decideNextBotAction } from '../game/cpu/cpuLogic';
 import { sanitizeGameStateForPlayer } from './sanitizer';
@@ -12,6 +17,7 @@ export interface RoomParticipant {
   avatarIcon: string;
   customDeckIds?: string[];
   winScore?: WinScoreOption;
+  battleFormat?: BattleFormatOption;
   isBot?: boolean;
 }
 
@@ -20,6 +26,7 @@ export interface CardRoom {
   type: 'random' | 'friend' | 'solo';
   inviteCode?: string;
   winScore: WinScoreOption;
+  battleFormat: BattleFormatOption;
   participants: RoomParticipant[];
   gameState?: GameState;
   createdAt: number;
@@ -42,13 +49,17 @@ export class CardRoomManager {
       avatarIcon?: string;
       customDeckIds?: string[];
       winScore?: WinScoreOption;
+      battleFormat?: BattleFormatOption;
     }
   ) {
     this.quickMatchQueue = this.quickMatchQueue.filter(
       (p) => p.playerId !== player.id && p.socketId !== socket.id
     );
 
-    const requestedWinScore: WinScoreOption = player.winScore === 5 ? 5 : 3;
+    const requestedWinScore: WinScoreOption =
+      player.winScore === 7 ? 7 : player.winScore === 5 ? 5 : 3;
+    const requestedFormat: BattleFormatOption =
+      player.battleFormat === 'allstar' ? 'allstar' : 'standard';
 
     const participant: RoomParticipant = {
       socketId: socket.id,
@@ -58,10 +69,13 @@ export class CardRoomManager {
       avatarIcon: player.avatarIcon || 'smile',
       customDeckIds: player.customDeckIds,
       winScore: requestedWinScore,
+      battleFormat: requestedFormat,
     };
 
     const matchIdx = this.quickMatchQueue.findIndex(
-      (p) => (p.winScore || 3) === requestedWinScore
+      (p) =>
+        (p.winScore || 3) === requestedWinScore &&
+        (p.battleFormat || 'standard') === requestedFormat
     );
 
     if (matchIdx !== -1) {
@@ -72,6 +86,7 @@ export class CardRoomManager {
         roomId,
         type: 'random',
         winScore: requestedWinScore,
+        battleFormat: requestedFormat,
         participants: [opponent, participant],
         createdAt: Date.now(),
       };
@@ -84,7 +99,8 @@ export class CardRoomManager {
         participant,
         opponent.customDeckIds,
         participant.customDeckIds,
-        requestedWinScore
+        requestedWinScore,
+        requestedFormat
       );
       this.rooms.set(roomId, room);
 
@@ -95,8 +111,9 @@ export class CardRoomManager {
       this.broadcastGameState(roomId);
     } else {
       this.quickMatchQueue.push(participant);
+      const formatLabel = requestedFormat === 'allstar' ? '全員参加大乱闘' : '標準デッキ';
       socket.emit('match_waiting', {
-        message: `対戦相手を探しています（${requestedWinScore}点先取モード）…`,
+        message: `対戦相手を探しています（${formatLabel} / ${requestedWinScore}点先取）…`,
       });
     }
   }
@@ -113,11 +130,15 @@ export class CardRoomManager {
       avatarIcon?: string;
       customDeckIds?: string[];
       winScore?: WinScoreOption;
+      battleFormat?: BattleFormatOption;
     }
   ): string {
     const inviteCode = Math.random().toString(36).substring(2, 6).toUpperCase();
     const roomId = 'friend_' + inviteCode;
-    const requestedWinScore: WinScoreOption = player.winScore === 5 ? 5 : 3;
+    const requestedWinScore: WinScoreOption =
+      player.winScore === 7 ? 7 : player.winScore === 5 ? 5 : 3;
+    const requestedFormat: BattleFormatOption =
+      player.battleFormat === 'allstar' ? 'allstar' : 'standard';
 
     const participant: RoomParticipant = {
       socketId: socket.id,
@@ -127,6 +148,7 @@ export class CardRoomManager {
       avatarIcon: player.avatarIcon || 'smile',
       customDeckIds: player.customDeckIds,
       winScore: requestedWinScore,
+      battleFormat: requestedFormat,
     };
 
     const room: CardRoom = {
@@ -134,6 +156,7 @@ export class CardRoomManager {
       type: 'friend',
       inviteCode,
       winScore: requestedWinScore,
+      battleFormat: requestedFormat,
       participants: [participant],
       createdAt: Date.now(),
     };
@@ -154,6 +177,7 @@ export class CardRoomManager {
       avatarIcon?: string;
       customDeckIds?: string[];
       winScore?: WinScoreOption;
+      battleFormat?: BattleFormatOption;
     }
   ) {
     const cleanCode = inviteCode.trim().toUpperCase();
@@ -189,6 +213,7 @@ export class CardRoomManager {
       avatarIcon: player.avatarIcon || 'rocket',
       customDeckIds: player.customDeckIds,
       winScore: room.winScore,
+      battleFormat: room.battleFormat,
     };
 
     room.participants.push(participant);
@@ -202,7 +227,8 @@ export class CardRoomManager {
       participant,
       room.participants[0].customDeckIds,
       participant.customDeckIds,
-      room.winScore
+      room.winScore,
+      room.battleFormat
     );
 
     this.broadcastGameState(roomId);
@@ -216,11 +242,15 @@ export class CardRoomManager {
       avatarIcon?: string;
       customDeckIds?: string[];
       winScore?: WinScoreOption;
+      battleFormat?: BattleFormatOption;
     }
   ) {
     const roomId = 'solo_' + Math.random().toString(36).substring(2, 9);
     const botId = 'bot_cpu_master';
-    const requestedWinScore: WinScoreOption = player.winScore === 5 ? 5 : 3;
+    const requestedWinScore: WinScoreOption =
+      player.winScore === 7 ? 7 : player.winScore === 5 ? 5 : 3;
+    const requestedFormat: BattleFormatOption =
+      player.battleFormat === 'allstar' ? 'allstar' : 'standard';
 
     const human: RoomParticipant = {
       socketId: socket.id,
@@ -230,15 +260,17 @@ export class CardRoomManager {
       avatarIcon: player.avatarIcon || 'smile',
       customDeckIds: player.customDeckIds,
       winScore: requestedWinScore,
+      battleFormat: requestedFormat,
     };
 
     const bot: RoomParticipant = {
       socketId: 'socket_bot',
       id: botId,
       playerId: botId,
-      name: 'CPU マスター',
+      name: requestedFormat === 'allstar' ? 'CPU オールスター王' : 'CPU マスター',
       avatarIcon: 'ghost',
       winScore: requestedWinScore,
+      battleFormat: requestedFormat,
       isBot: true,
     };
 
@@ -246,6 +278,7 @@ export class CardRoomManager {
       roomId,
       type: 'solo',
       winScore: requestedWinScore,
+      battleFormat: requestedFormat,
       participants: [human, bot],
       createdAt: Date.now(),
     };
@@ -258,7 +291,8 @@ export class CardRoomManager {
       bot,
       human.customDeckIds,
       undefined,
-      requestedWinScore
+      requestedWinScore,
+      requestedFormat
     );
     this.rooms.set(roomId, room);
 

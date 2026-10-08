@@ -13,18 +13,20 @@ import {
 import { RuleModal } from './RuleModal';
 import { DeckInspectModal } from './DeckInspectModal';
 import { ALL_CARD_DEFINITIONS } from '../../cards/cardRegistry';
-import { WinScoreOption } from '../../game/types';
+import { BattleFormatOption, WinScoreOption } from '../../game/types';
 
 interface LobbyViewProps {
   playerName: string;
   playerAvatar: string;
   winScore: WinScoreOption;
+  battleFormat: BattleFormatOption;
   onChangeWinScore: (winScore: WinScoreOption) => void;
+  onChangeBattleFormat: (format: BattleFormatOption) => void;
   onUpdatePlayer: (name: string, avatar: string) => void;
-  onQuickMatch: () => void;
+  onQuickMatch: (overrideFormat?: BattleFormatOption) => void;
   onCreateFriendRoom: () => void;
   onJoinFriendRoom: (code: string) => void;
-  onSoloBotMatch: () => void;
+  onSoloBotMatch: (overrideFormat?: BattleFormatOption) => void;
   onCancelMatch: () => void;
   isMatching: boolean;
   matchingMessage?: string;
@@ -45,7 +47,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   playerName,
   playerAvatar,
   winScore,
+  battleFormat,
   onChangeWinScore,
+  onChangeBattleFormat,
   onUpdatePlayer,
   onQuickMatch,
   onCreateFriendRoom,
@@ -161,7 +165,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             />
           </div>
 
-          {/* Win Condition Selector: 3 POINTS vs 5 POINTS */}
+          {/* Win Condition Selector: 3 POINTS / 5 POINTS / 7 POINTS */}
           <div className="pt-2 border-t border-slate-800 space-y-1.5">
             <div className="flex items-center justify-between text-xs font-bold text-amber-300">
               <span>勝利条件 (WIN CONDITION)</span>
@@ -169,30 +173,59 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                 先に目標ポイント到達で即勝利
               </span>
             </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {([3, 5, 7] as WinScoreOption[]).map((pts) => (
+                <button
+                  key={pts}
+                  type="button"
+                  onClick={() => onChangeWinScore(pts)}
+                  className={`py-2 px-2 rounded-xl font-black text-xs border transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                    winScore === pts
+                      ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-stone-950 border-yellow-200 shadow-md scale-[1.02]'
+                      : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800'
+                  }`}
+                >
+                  <span>{winScore === pts ? '●' : '○'}</span>
+                  <span>{pts}点先取</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Battle Format Selector: 標準デッキ対戦 vs 全員参加大乱闘対戦 */}
+          <div className="pt-2 border-t border-slate-800 space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-bold text-amber-300">
+              <span>デッキ形式 (BATTLE FORMAT)</span>
+              <span className="text-[10px] text-slate-400 font-normal">
+                オンライン・合言葉・CPU共通設定
+              </span>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => onChangeWinScore(3)}
-                className={`py-2 px-3 rounded-xl font-black text-xs border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  winScore === 3
-                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-stone-950 border-yellow-200 shadow-md scale-[1.02]'
+                onClick={() => onChangeBattleFormat('standard')}
+                className={`py-2 px-2.5 rounded-xl font-black text-xs border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                  battleFormat === 'standard'
+                    ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white border-sky-200 shadow-md scale-[1.02]'
                     : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800'
                 }`}
               >
-                <span>{winScore === 3 ? '●' : '○'}</span>
-                <span>3点先取 (3 POINTS)</span>
+                <span>⚔️ 標準デッキ対戦</span>
+                <span className="text-[9px] font-normal opacity-85">20枚バランス構築</span>
               </button>
               <button
                 type="button"
-                onClick={() => onChangeWinScore(5)}
-                className={`py-2 px-3 rounded-xl font-black text-xs border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                  winScore === 5
-                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-stone-950 border-yellow-200 shadow-md scale-[1.02]'
+                onClick={() => onChangeBattleFormat('allstar')}
+                className={`py-2 px-2.5 rounded-xl font-black text-xs border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                  battleFormat === 'allstar'
+                    ? 'bg-gradient-to-r from-rose-500 via-fuchsia-600 to-amber-500 text-white border-yellow-200 shadow-md scale-[1.02]'
                     : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800'
                 }`}
               >
-                <span>{winScore === 5 ? '●' : '○'}</span>
-                <span>5点先取 (5 POINTS)</span>
+                <span>🔥 全員参加大乱闘</span>
+                <span className="text-[9px] font-normal opacity-90">
+                  全{ALL_CARD_DEFINITIONS.length}種総出バトル
+                </span>
               </button>
             </div>
           </div>
@@ -216,7 +249,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         ) : createdInviteCode ? (
           <div className="p-6 rounded-2xl bg-slate-900/95 border-2 border-amber-500 shadow-2xl text-center space-y-4">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">
-              <Users className="w-3.5 h-3.5" /> フレンド待機中
+              <Users className="w-3.5 h-3.5" /> フレンド待機中（
+              {battleFormat === 'allstar' ? '全員参加大乱闘' : '標準デッキ'} / {winScore}点先取）
             </div>
             <p className="text-xs text-stone-300">以下の合言葉を対戦相手に伝えてください：</p>
             <div className="flex items-center justify-center gap-2">
@@ -242,31 +276,55 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           </div>
         ) : (
           /* BATTLE MODE BUTTONS */
-          <div className="space-y-3">
-            {/* Solo CPU Battle (Highlighted for instant play & testing) */}
+          <div className="space-y-2.5">
+            {/* 1. 標準デッキ対戦 (CPU戦) */}
             <button
               disabled={!isConnected}
-              onClick={onSoloBotMatch}
-              className="w-full p-4 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-stone-950 font-black text-base shadow-xl flex items-center justify-between hover:brightness-110 active:scale-98 transition-all cursor-pointer border border-yellow-200"
+              onClick={() => onSoloBotMatch('standard')}
+              className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-stone-950 font-black text-sm shadow-xl flex items-center justify-between hover:brightness-110 active:scale-98 transition-all cursor-pointer border border-yellow-200"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-stone-950/20 flex items-center justify-center text-xl">
                   🤖
                 </div>
                 <div className="text-left">
-                  <div className="text-stone-950 font-black">CPU対戦 (1人ですぐ遊ぶ)</div>
+                  <div className="text-stone-950 font-black">
+                    標準デッキ対戦 (CPUとすぐ遊ぶ・{winScore}点先取)
+                  </div>
                   <div className="text-[11px] font-bold text-stone-900/80">
-                    コンピュータと1対1ポケポケ型バトル！
+                    20枚バランス構築デッキで1対1ポケポケ型バトル！
                   </div>
                 </div>
               </div>
               <ArrowRight className="w-5 h-5" />
             </button>
 
-            {/* Quick Match */}
+            {/* 2. 全員参加大乱闘対戦 (CPU戦) */}
             <button
               disabled={!isConnected}
-              onClick={onQuickMatch}
+              onClick={() => onSoloBotMatch('allstar')}
+              className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-rose-600 via-fuchsia-600 to-amber-500 text-white font-black text-sm shadow-xl flex items-center justify-between hover:brightness-110 active:scale-98 transition-all cursor-pointer border border-yellow-300"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-black/25 flex items-center justify-center text-xl">
+                  🔥
+                </div>
+                <div className="text-left">
+                  <div className="text-white font-black">
+                    全員参加大乱闘対戦 (全{ALL_CARD_DEFINITIONS.length}種総出・{winScore}点先取)
+                  </div>
+                  <div className="text-[11px] font-bold text-amber-100">
+                    全キャラ＆全魔法が山札に総集結するお祭りカオス大乱闘！
+                  </div>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5" />
+            </button>
+
+            {/* 3. Quick Match */}
+            <button
+              disabled={!isConnected}
+              onClick={() => onQuickMatch()}
               className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-700 text-white font-black text-sm shadow-lg flex items-center justify-between hover:brightness-110 active:scale-98 transition-all cursor-pointer border border-sky-400/60"
             >
               <div className="flex items-center gap-3">
@@ -274,7 +332,11 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   ⚔️
                 </div>
                 <div className="text-left">
-                  <div className="font-black">ランダムオンライン対戦</div>
+                  <div className="font-black">
+                    ランダムオンライン対戦（
+                    {battleFormat === 'allstar' ? '全員参加大乱闘' : '標準デッキ'}・{winScore}
+                    点先取）
+                  </div>
                   <div className="text-[10px] text-sky-100/80">
                     全国のプレイヤーとリアルタイム1対1バトル
                   </div>
