@@ -13,10 +13,13 @@ import {
 import { RuleModal } from './RuleModal';
 import { DeckInspectModal } from './DeckInspectModal';
 import { ALL_CARD_DEFINITIONS } from '../../cards/cardRegistry';
+import { WinScoreOption } from '../../game/types';
 
 interface LobbyViewProps {
   playerName: string;
   playerAvatar: string;
+  winScore: WinScoreOption;
+  onChangeWinScore: (winScore: WinScoreOption) => void;
   onUpdatePlayer: (name: string, avatar: string) => void;
   onQuickMatch: () => void;
   onCreateFriendRoom: () => void;
@@ -41,6 +44,8 @@ const AVATARS = [
 export const LobbyView: React.FC<LobbyViewProps> = ({
   playerName,
   playerAvatar,
+  winScore,
+  onChangeWinScore,
   onUpdatePlayer,
   onQuickMatch,
   onCreateFriendRoom,
@@ -91,7 +96,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
         <div className="text-center space-y-1">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold mb-1 shadow-sm">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>3ポイント先取・ハイテンポ1対1カードバトル</span>
+            <span>{winScore}ポイント先取・ハイテンポ1対1カードバトル</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 tracking-wider drop-shadow-md">
             ホンモノカードバトル
@@ -121,7 +126,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           </div>
         )}
 
-        {/* Player Profile Setup Box */}
+        {/* Player Profile & Win Condition Setup Box */}
         <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-3">
           <div className="text-xs font-bold text-amber-300 flex items-center justify-between">
             <span>プレイヤー設定</span>
@@ -154,6 +159,42 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               placeholder="プレイヤー名"
               className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-stone-100 font-bold text-sm focus:outline-none focus:border-amber-500"
             />
+          </div>
+
+          {/* Win Condition Selector: 3 POINTS vs 5 POINTS */}
+          <div className="pt-2 border-t border-slate-800 space-y-1.5">
+            <div className="flex items-center justify-between text-xs font-bold text-amber-300">
+              <span>勝利条件 (WIN CONDITION)</span>
+              <span className="text-[10px] text-slate-400 font-normal">
+                先に目標ポイント到達で即勝利
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => onChangeWinScore(3)}
+                className={`py-2 px-3 rounded-xl font-black text-xs border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  winScore === 3
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-stone-950 border-yellow-200 shadow-md scale-[1.02]'
+                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800'
+                }`}
+              >
+                <span>{winScore === 3 ? '●' : '○'}</span>
+                <span>3点先取 (3 POINTS)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onChangeWinScore(5)}
+                className={`py-2 px-3 rounded-xl font-black text-xs border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  winScore === 5
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-stone-950 border-yellow-200 shadow-md scale-[1.02]'
+                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800'
+                }`}
+              >
+                <span>{winScore === 5 ? '●' : '○'}</span>
+                <span>5点先取 (5 POINTS)</span>
+              </button>
+            </div>
           </div>
         </div>
 

@@ -8,13 +8,15 @@ export type GamePhase =
 
 export type PlayerKey = 'playerA' | 'playerB';
 
+export type WinScoreOption = 3 | 5;
+
 export interface PlayerBattleState {
   playerId: string;
   name: string;
   socketId: string;
   avatarIcon: string;
   score: number;
-  maxScore: number;
+  maxScore: WinScoreOption;
   activeCard: CardInstance | null;
   bench: (CardInstance | null)[]; // 3 Bench slots (0, 1, 2)
   hand: CardInstance[];
@@ -76,6 +78,8 @@ export interface GameState {
   activePlayerKey: PlayerKey;
   firstPlayerKey: PlayerKey;
   promotionRequiredPlayerKey?: PlayerKey;
+  winScore: WinScoreOption;
+  processedKnockoutIds: string[];
   playerA: PlayerBattleState;
   playerB: PlayerBattleState;
   stateVersion: number;

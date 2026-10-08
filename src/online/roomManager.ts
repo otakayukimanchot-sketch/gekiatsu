@@ -1,4 +1,4 @@
-import { GameState, GameActionPayload } from '../game/types';
+import { GameState, GameActionPayload, WinScoreOption } from '../game/types';
 import { initializeGame, handleGameAction } from '../game/engine/gameEngine';
 import { decideNextBotAction } from '../game/cpu/cpuLogic';
 import { sanitizeGameStateForPlayer } from './sanitizer';
@@ -11,6 +11,7 @@ export interface RoomParticipant {
   name: string;
   avatarIcon: string;
   customDeckIds?: string[];
+  winScore?: WinScoreOption;
   isBot?: boolean;
 }
 
@@ -18,6 +19,7 @@ export interface CardRoom {
   roomId: string;
   type: 'random' | 'friend' | 'solo';
   inviteCode?: string;
+  winScore: WinScoreOption;
   participants: RoomParticipant[];
   gameState?: GameState;
   createdAt: number;
@@ -34,11 +36,19 @@ export class CardRoomManager {
 
   public handleQuickMatch(
     socket: Socket,
-    player: { id: string; name: string; avatarIcon?: string; customDeckIds?: string[] }
+    player: {
+      id: string;
+      name: string;
+      avatarIcon?: string;
+      customDeckIds?: string[];
+      winScore?: WinScoreOption;
+    }
   ) {
     this.quickMatchQueue = this.quickMatchQueue.filter(
       (p) => p.playerId !== player.id && p.socketId !== socket.id
     );
+
+    const requestedWinScore: WinScoreOption = player.winScore === 5 ? 5 : 3;
 
     const participant: RoomParticipant = {
       socketId: socket.id,
@@ -47,15 +57,21 @@ export class CardRoomManager {
       name: player.name,
       avatarIcon: player.avatarIcon || 'smile',
       customDeckIds: player.customDeckIds,
+      winScore: requestedWinScore,
     };
 
-    if (this.quickMatchQueue.length > 0) {
-      const opponent = this.quickMatchQueue.shift()!;
+    const matchIdx = this.quickMatchQueue.findIndex(
+      (p) => (p.winScore || 3) === requestedWinScore
+    );
+
+    if (matchIdx !== -1) {
+      const opponent = this.quickMatchQueue.splice(matchIdx, 1)[0];
       const roomId = 'room_' + Math.random().toString(36).substring(2, 9);
 
       const room: CardRoom = {
         roomId,
         type: 'random',
+        winScore: requestedWinScore,
         participants: [opponent, participant],
         createdAt: Date.now(),
       };
@@ -67,7 +83,8 @@ export class CardRoomManager {
         opponent,
         participant,
         opponent.customDeckIds,
-        participant.customDeckIds
+        participant.customDeckIds,
+        requestedWinScore
       );
       this.rooms.set(roomId, room);
 
@@ -78,7 +95,9 @@ export class CardRoomManager {
       this.broadcastGameState(roomId);
     } else {
       this.quickMatchQueue.push(participant);
-      socket.emit('match_waiting', { message: '対戦相手を探しています…' });
+      socket.emit('match_waiting', {
+        message: `対戦相手を探しています（${requestedWinScore}点先取モード）…`,
+      });
     }
   }
 
@@ -88,10 +107,17 @@ export class CardRoomManager {
 
   public createFriendRoom(
     socket: Socket,
-    player: { id: string; name: string; avatarIcon?: string; customDeckIds?: string[] }
+    player: {
+      id: string;
+      name: string;
+      avatarIcon?: string;
+      customDeckIds?: string[];
+      winScore?: WinScoreOption;
+    }
   ): string {
     const inviteCode = Math.random().toString(36).substring(2, 6).toUpperCase();
     const roomId = 'friend_' + inviteCode;
+    const requestedWinScore: WinScoreOption = player.winScore === 5 ? 5 : 3;
 
     const participant: RoomParticipant = {
       socketId: socket.id,
@@ -100,12 +126,14 @@ export class CardRoomManager {
       name: player.name,
       avatarIcon: player.avatarIcon || 'smile',
       customDeckIds: player.customDeckIds,
+      winScore: requestedWinScore,
     };
 
     const room: CardRoom = {
       roomId,
       type: 'friend',
       inviteCode,
+      winScore: requestedWinScore,
       participants: [participant],
       createdAt: Date.now(),
     };
@@ -120,7 +148,13 @@ export class CardRoomManager {
   public joinFriendRoom(
     socket: Socket,
     inviteCode: string,
-    player: { id: string; name: string; avatarIcon?: string; customDeckIds?: string[] }
+    player: {
+      id: string;
+      name: string;
+      avatarIcon?: string;
+      customDeckIds?: string[];
+      winScore?: WinScoreOption;
+    }
   ) {
     const cleanCode = inviteCode.trim().toUpperCase();
     const roomId = 'friend_' + cleanCode;
@@ -154,6 +188,7 @@ export class CardRoomManager {
       name: player.name,
       avatarIcon: player.avatarIcon || 'rocket',
       customDeckIds: player.customDeckIds,
+      winScore: room.winScore,
     };
 
     room.participants.push(participant);
@@ -166,7 +201,8 @@ export class CardRoomManager {
       room.participants[0],
       participant,
       room.participants[0].customDeckIds,
-      participant.customDeckIds
+      participant.customDeckIds,
+      room.winScore
     );
 
     this.broadcastGameState(roomId);
@@ -174,10 +210,17 @@ export class CardRoomManager {
 
   public startSoloBotMatch(
     socket: Socket,
-    player: { id: string; name: string; avatarIcon?: string; customDeckIds?: string[] }
+    player: {
+      id: string;
+      name: string;
+      avatarIcon?: string;
+      customDeckIds?: string[];
+      winScore?: WinScoreOption;
+    }
   ) {
     const roomId = 'solo_' + Math.random().toString(36).substring(2, 9);
     const botId = 'bot_cpu_master';
+    const requestedWinScore: WinScoreOption = player.winScore === 5 ? 5 : 3;
 
     const human: RoomParticipant = {
       socketId: socket.id,
@@ -186,6 +229,7 @@ export class CardRoomManager {
       name: player.name,
       avatarIcon: player.avatarIcon || 'smile',
       customDeckIds: player.customDeckIds,
+      winScore: requestedWinScore,
     };
 
     const bot: RoomParticipant = {
@@ -194,18 +238,28 @@ export class CardRoomManager {
       playerId: botId,
       name: 'CPU マスター',
       avatarIcon: 'ghost',
+      winScore: requestedWinScore,
       isBot: true,
     };
 
     const room: CardRoom = {
       roomId,
       type: 'solo',
+      winScore: requestedWinScore,
       participants: [human, bot],
       createdAt: Date.now(),
     };
 
     const gameId = 'game_' + roomId;
-    room.gameState = initializeGame(gameId, roomId, human, bot, human.customDeckIds);
+    room.gameState = initializeGame(
+      gameId,
+      roomId,
+      human,
+      bot,
+      human.customDeckIds,
+      undefined,
+      requestedWinScore
+    );
     this.rooms.set(roomId, room);
 
     socket.join(roomId);

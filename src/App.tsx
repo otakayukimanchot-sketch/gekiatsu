@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { SanitizedGameState } from './online/types';
+import { WinScoreOption } from './game/types';
 import { TabletopBoard } from './ui/battlefield/TabletopBoard';
 import { LobbyView } from './ui/lobby/LobbyView';
 
@@ -8,6 +9,7 @@ interface LocalPlayerProfile {
   id: string;
   name: string;
   avatarIcon: string;
+  winScore?: WinScoreOption;
 }
 
 export default function App() {
@@ -16,18 +18,25 @@ export default function App() {
     const saved = localStorage.getItem('honmono_card_player');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return {
+          ...parsed,
+          winScore: parsed.winScore === 5 ? 5 : 3,
+        };
       } catch (e) {}
     }
     const newId = 'p_' + Math.random().toString(36).substring(2, 9);
     const newProfile: LocalPlayerProfile = {
       id: newId,
       name: 'デュエリスト',
-      avatarIcon: 'smile'
+      avatarIcon: 'smile',
+      winScore: 3,
     };
     localStorage.setItem('honmono_card_player', JSON.stringify(newProfile));
     return newProfile;
   });
+
+  const [winScore, setWinScore] = useState<WinScoreOption>(player.winScore === 5 ? 5 : 3);
 
   const [gameState, setGameState] = useState<SanitizedGameState | null>(null);
   const [isMatching, setIsMatching] = useState(false);
@@ -108,7 +117,14 @@ export default function App() {
   }, []);
 
   const handleUpdatePlayer = (name: string, avatarIcon: string) => {
-    const updated = { ...player, name, avatarIcon };
+    const updated = { ...player, name, avatarIcon, winScore };
+    setPlayer(updated);
+    localStorage.setItem('honmono_card_player', JSON.stringify(updated));
+  };
+
+  const handleChangeWinScore = (newWinScore: WinScoreOption) => {
+    setWinScore(newWinScore);
+    const updated = { ...player, winScore: newWinScore };
     setPlayer(updated);
     localStorage.setItem('honmono_card_player', JSON.stringify(updated));
   };
@@ -116,23 +132,26 @@ export default function App() {
   const handleQuickMatch = () => {
     if (!socketRef.current) return;
     setIsMatching(true);
-    setMatchingMessage('対戦相手を探しています…');
-    socketRef.current.emit('card_quick_match', { player });
+    setMatchingMessage(`対戦相手を探しています（${winScore}点先取モード）…`);
+    socketRef.current.emit('card_quick_match', { player: { ...player, winScore } });
   };
 
   const handleCreateFriendRoom = () => {
     if (!socketRef.current) return;
-    socketRef.current.emit('card_create_friend_room', { player });
+    socketRef.current.emit('card_create_friend_room', { player: { ...player, winScore } });
   };
 
   const handleJoinFriendRoom = (code: string) => {
     if (!socketRef.current || !code.trim()) return;
-    socketRef.current.emit('card_join_friend_room', { inviteCode: code, player });
+    socketRef.current.emit('card_join_friend_room', {
+      inviteCode: code,
+      player: { ...player, winScore },
+    });
   };
 
   const handleSoloBotMatch = () => {
     if (!socketRef.current) return;
-    socketRef.current.emit('card_solo_match', { player });
+    socketRef.current.emit('card_solo_match', { player: { ...player, winScore } });
   };
 
   const handleCancelMatch = () => {
@@ -163,6 +182,14 @@ export default function App() {
     sessionStorage.removeItem('honmono_active_room');
   };
 
+  const handlePlayAgain = () => {
+    const isSoloRoom = gameState?.roomId?.startsWith('solo_');
+    handleLeaveRoom();
+    if (isSoloRoom && socketRef.current) {
+      socketRef.current.emit('card_solo_match', { player: { ...player, winScore } });
+    }
+  };
+
   // Render Tabletop Battle when in active game state
   if (gameState) {
     return (
@@ -170,6 +197,7 @@ export default function App() {
         gameState={gameState}
         onSendAction={handleSendGameAction}
         onLeaveRoom={handleLeaveRoom}
+        onPlayAgain={handlePlayAgain}
       />
     );
   }
@@ -179,6 +207,8 @@ export default function App() {
     <LobbyView
       playerName={player.name}
       playerAvatar={player.avatarIcon}
+      winScore={winScore}
+      onChangeWinScore={handleChangeWinScore}
       onUpdatePlayer={handleUpdatePlayer}
       onQuickMatch={handleQuickMatch}
       onCreateFriendRoom={handleCreateFriendRoom}

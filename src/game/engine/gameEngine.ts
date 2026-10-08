@@ -4,6 +4,7 @@ import {
   GameState,
   PlayerBattleState,
   PlayerKey,
+  WinScoreOption,
 } from '../types';
 import { CardInstance } from '../../cards/types';
 import { getCardDefinition } from '../../cards/cardRegistry';
@@ -111,8 +112,10 @@ export function initializeGame(
   pA: { playerId: string; name: string; socketId: string; avatarIcon: string },
   pB: { playerId: string; name: string; socketId: string; avatarIcon: string },
   customDeckA?: string[],
-  customDeckB?: string[]
+  customDeckB?: string[],
+  winScore: WinScoreOption = 3
 ): GameState {
+  const validWinScore: WinScoreOption = winScore === 5 ? 5 : 3;
   const setupA = buildInitialDeckAndSetup(pA.playerId, customDeckA);
   const setupB = buildInitialDeckAndSetup(pB.playerId, customDeckB);
 
@@ -124,7 +127,7 @@ export function initializeGame(
     socketId: pA.socketId,
     avatarIcon: pA.avatarIcon,
     score: 0,
-    maxScore: 3,
+    maxScore: validWinScore,
     activeCard: setupA.activeCard,
     bench: [null, null, null],
     hand: setupA.hand,
@@ -143,7 +146,7 @@ export function initializeGame(
     socketId: pB.socketId,
     avatarIcon: pB.avatarIcon,
     score: 0,
-    maxScore: 3,
+    maxScore: validWinScore,
     activeCard: setupB.activeCard,
     bench: [null, null, null],
     hand: setupB.hand,
@@ -163,6 +166,8 @@ export function initializeGame(
     turnNumber: 0,
     activePlayerKey: firstPlayerKey,
     firstPlayerKey,
+    winScore: validWinScore,
+    processedKnockoutIds: [],
     playerA,
     playerB,
     stateVersion: 1,
@@ -176,7 +181,7 @@ export function initializeGame(
     firstPlayer.playerId,
     firstPlayer.name,
     'GAME_START',
-    `バトル開始！先攻は ${firstPlayer.name} です。（3ポイント先取で勝利）`
+    `バトル開始！先攻は ${firstPlayer.name} です。（${validWinScore}ポイント先取で勝利）`
   );
 
   startTurn(state, firstPlayerKey);
@@ -248,13 +253,26 @@ function handleKnockoutAndTurnTransition(
   defenderKey: PlayerKey,
   endTurnAfterCompare: boolean
 ) {
+  if (state.phase === 'GAME_OVER') return;
+
   const attacker = state[attackerKey];
   const defender = state[defenderKey];
+  const winScore = state.winScore || attacker.maxScore || 3;
+
+  if (!Array.isArray(state.processedKnockoutIds)) {
+    state.processedKnockoutIds = [];
+  }
 
   // 1. まず相手ベンチでHP0以下になったカードのきぜつ処理（インフル等の全体ダメージ対応）
   for (let i = 0; i < defender.bench.length; i++) {
     const bCard = defender.bench[i];
-    if (bCard && bCard.currentHp <= 0) {
+    if (bCard != null && bCard.instanceId != null && bCard.currentHp <= 0) {
+      if (state.processedKnockoutIds.includes(bCard.instanceId)) {
+        defender.bench[i] = null;
+        continue;
+      }
+      state.processedKnockoutIds.push(bCard.instanceId);
+
       const bDef = getCardDefinition(bCard.definitionId);
       const pts = bDef?.stats.pointValue || 1;
       bCard.currentHp = 0;
@@ -266,28 +284,33 @@ function handleKnockoutAndTurnTransition(
       defender.trash.push(bCard);
       defender.bench[i] = null;
 
-      attacker.score = Math.min(attacker.maxScore, attacker.score + pts);
+      attacker.score = Math.min(winScore, attacker.score + pts);
       addLog(
         state,
         attacker.playerId,
         attacker.name,
         'KNOCKOUT',
-        `ベンチの「${bDef?.name}」がきぜつ！ ${attacker.name} が ${pts} ポイント獲得！（合計 ${attacker.score}/${attacker.maxScore} pt）`,
+        `ベンチの「${bDef?.name}」がきぜつ！ ${attacker.name} が ${pts} ポイント獲得！（合計 ${attacker.score}/${winScore} pt）`,
         bDef?.name,
         undefined,
         pts
       );
+      setAnimation(state, 'KNOCKOUT', attacker.playerId, {
+        targetCardId: bCard.instanceId,
+        cardName: bDef?.name,
+        pointsGained: pts,
+      });
     }
   }
 
   // 2. バトル場のきぜつチェック
   const knockedCard = defender.activeCard;
 
-  if (!knockedCard || knockedCard.currentHp > 0) {
-    if (attacker.score >= attacker.maxScore) {
+  if (knockedCard == null || knockedCard.currentHp > 0) {
+    if (attacker.score >= winScore) {
       state.phase = 'GAME_OVER';
       state.winnerPlayerId = attacker.playerId;
-      state.winReason = `${attacker.name} が先に ${attacker.maxScore} ポイントを獲得して勝利！`;
+      state.winReason = `${attacker.name} が先に ${winScore} ポイントを獲得して勝利！`;
       addLog(state, attacker.playerId, attacker.name, 'GAME_OVER', state.winReason);
       return;
     }
@@ -297,9 +320,22 @@ function handleKnockoutAndTurnTransition(
     return;
   }
 
+  // 二重得点防止ガード: 既に処理済みのinstanceIdならポイントを重複加算しない
+  if (
+    knockedCard.instanceId != null &&
+    state.processedKnockoutIds.includes(knockedCard.instanceId)
+  ) {
+    defender.activeCard = null;
+    return;
+  }
+  if (knockedCard.instanceId != null) {
+    state.processedKnockoutIds.push(knockedCard.instanceId);
+  }
+
   const knockedDef = getCardDefinition(knockedCard.definitionId);
   const pointsGained = knockedDef?.stats.pointValue || 1;
 
+  // Step 1 & 2: 撃破カードをバトル場から除去しトラッシュへ送る
   knockedCard.currentHp = 0;
   knockedCard.attachedEnergy = 0;
   knockedCard.tempAtkBuff = 0;
@@ -308,14 +344,15 @@ function handleKnockoutAndTurnTransition(
   defender.trash.push(knockedCard);
   defender.activeCard = null;
 
-  attacker.score = Math.min(attacker.maxScore, attacker.score + pointsGained);
+  // Step 3: 撃破したプレイヤーにポイント加算（二重加算なし）
+  attacker.score = Math.min(winScore, attacker.score + pointsGained);
 
   addLog(
     state,
     attacker.playerId,
     attacker.name,
     'KNOCKOUT',
-    `「${knockedDef?.name}」がきぜつ！ ${attacker.name} が ${pointsGained} ポイント獲得！（合計 ${attacker.score}/${attacker.maxScore} pt）`,
+    `「${knockedDef?.name}」がきぜつ！ ${attacker.name} が ${pointsGained} ポイント獲得！（合計 ${attacker.score}/${winScore} pt）`,
     knockedDef?.name,
     undefined,
     pointsGained
@@ -327,14 +364,16 @@ function handleKnockoutAndTurnTransition(
     pointsGained,
   });
 
-  if (attacker.score >= attacker.maxScore) {
+  // Step 4: 勝利条件チェック（3点または5点に到達したらベンチ選択を要求せず即座に勝利）
+  if (attacker.score >= winScore) {
     state.phase = 'GAME_OVER';
     state.winnerPlayerId = attacker.playerId;
-    state.winReason = `${attacker.name} が先に ${attacker.maxScore} ポイントを獲得して勝利！`;
+    state.winReason = `${attacker.name} が先に ${winScore} ポイントを獲得して勝利！`;
     addLog(state, attacker.playerId, attacker.name, 'GAME_OVER', state.winReason);
     return;
   }
 
+  // Step 5: ベンチに控えカードが存在するか確認
   const availableBenchIndices = defender.bench
     .map((c, idx) => (c !== null ? idx : -1))
     .filter((idx) => idx !== -1);
@@ -347,31 +386,7 @@ function handleKnockoutAndTurnTransition(
     return;
   }
 
-  if (availableBenchIndices.length === 1) {
-    const idx = availableBenchIndices[0];
-    const promoted = defender.bench[idx]!;
-    defender.bench[idx] = null;
-    promoted.zone = 'ACTIVE';
-    promoted.benchIndex = undefined;
-    defender.activeCard = promoted;
-
-    const promotedDef = getCardDefinition(promoted.definitionId);
-    addLog(
-      state,
-      defender.playerId,
-      defender.name,
-      'PROMOTE',
-      `${defender.name} はベンチから「${promotedDef?.name}」をバトル場に出した！`,
-      promotedDef?.name
-    );
-
-    recalculateDynamicStats(state);
-    if (endTurnAfterCompare) {
-      startTurn(state, defenderKey);
-    }
-    return;
-  }
-
+  // Step 6: 撃破された側がベンチから新しいバトル場のカードを選択するフェーズへ移行
   state.phase = 'WAITING_FOR_PROMOTION';
   state.promotionRequiredPlayerKey = defenderKey;
   addLog(
@@ -379,7 +394,7 @@ function handleKnockoutAndTurnTransition(
     defender.playerId,
     defender.name,
     'PROMOTE',
-    `${defender.name} はベンチから次に出すバトルカードを選択してください。`
+    `バトル場のカードがきぜつしました。${defender.name} はベンチから出すカードを選んでください。`
   );
 }
 
@@ -547,11 +562,18 @@ function evolveFieldCard(
   }
 
   let targetCard: CardInstance | null = null;
-  if (targetCardInstanceId) {
-    if (player.activeCard?.instanceId === targetCardInstanceId) {
+  if (targetCardInstanceId != null) {
+    if (
+      player.activeCard != null &&
+      player.activeCard.instanceId != null &&
+      player.activeCard.instanceId === targetCardInstanceId
+    ) {
       targetCard = player.activeCard;
     } else {
-      targetCard = player.bench.find((b) => b?.instanceId === targetCardInstanceId) || null;
+      targetCard =
+        player.bench.find(
+          (b) => b != null && b.instanceId != null && b.instanceId === targetCardInstanceId
+        ) || null;
     }
   } else {
     const candidates = [player.activeCard, ...player.bench].filter((c): c is CardInstance =>
@@ -621,10 +643,21 @@ function attachEnergyToCard(
     return { success: false, error: 'エネルギーは1ターンに1回だけ付与できます。' };
   }
 
-  let targetCard =
-    player.activeCard?.instanceId === targetCardInstanceId
-      ? player.activeCard
-      : player.bench.find((b) => b?.instanceId === targetCardInstanceId) || null;
+  let targetCard: CardInstance | null = null;
+  if (targetCardInstanceId != null) {
+    if (
+      player.activeCard != null &&
+      player.activeCard.instanceId != null &&
+      player.activeCard.instanceId === targetCardInstanceId
+    ) {
+      targetCard = player.activeCard;
+    } else {
+      targetCard =
+        player.bench.find(
+          (b) => b != null && b.instanceId != null && b.instanceId === targetCardInstanceId
+        ) || null;
+    }
+  }
 
   if (!targetCard && !targetCardInstanceId && player.activeCard) {
     targetCard = player.activeCard;
@@ -673,8 +706,10 @@ function retreatActiveCard(
   }
 
   let resolvedBenchIdx = benchIndex;
-  if (resolvedBenchIdx === undefined && targetCardInstanceId) {
-    resolvedBenchIdx = player.bench.findIndex((b) => b?.instanceId === targetCardInstanceId);
+  if (resolvedBenchIdx === undefined && targetCardInstanceId != null) {
+    resolvedBenchIdx = player.bench.findIndex(
+      (b) => b != null && b.instanceId != null && b.instanceId === targetCardInstanceId
+    );
   }
   if (
     resolvedBenchIdx === undefined ||
@@ -1061,8 +1096,10 @@ function promoteBenchCardToActive(
   const player = state[playerKey];
 
   let resolvedBenchIdx = benchIndex;
-  if (resolvedBenchIdx === undefined && cardInstanceId) {
-    resolvedBenchIdx = player.bench.findIndex((c) => c?.instanceId === cardInstanceId);
+  if (resolvedBenchIdx === undefined && cardInstanceId != null) {
+    resolvedBenchIdx = player.bench.findIndex(
+      (c) => c != null && c.instanceId != null && c.instanceId === cardInstanceId
+    );
   }
   if (
     resolvedBenchIdx === undefined ||

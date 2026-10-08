@@ -65,6 +65,7 @@ export function sanitizeGameStateForPlayer(
     activePlayerKey: state.activePlayerKey,
     firstPlayerKey: state.firstPlayerKey,
     promotionRequiredPlayerKey: state.promotionRequiredPlayerKey,
+    winScore: state.winScore || myRaw.maxScore || 3,
     isMyTurn: state.activePlayerKey === myKey && state.phase === 'MAIN',
     mustPromoteBench:
       state.phase === 'WAITING_FOR_PROMOTION' && state.promotionRequiredPlayerKey === myKey,

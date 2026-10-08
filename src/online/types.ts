@@ -1,12 +1,12 @@
 import { CardInstance, MaskedCardInstance } from '../cards/types';
-import { GameAnimationEvent, GameEventLog, GamePhase, PlayerKey } from '../game/types';
+import { GameAnimationEvent, GameEventLog, GamePhase, PlayerKey, WinScoreOption } from '../game/types';
 
 export interface SanitizedPlayerState {
   playerId: string;
   name: string;
   avatarIcon: string;
   score: number;
-  maxScore: number;
+  maxScore: WinScoreOption;
   activeCard: CardInstance | null;
   bench: (CardInstance | null)[]; // 3 slots
   deckCount: number;
@@ -29,6 +29,7 @@ export interface SanitizedGameState {
   activePlayerKey: PlayerKey;
   firstPlayerKey: PlayerKey;
   promotionRequiredPlayerKey?: PlayerKey;
+  winScore: WinScoreOption;
   isMyTurn: boolean;
   mustPromoteBench: boolean;
   myPlayerKey: PlayerKey;

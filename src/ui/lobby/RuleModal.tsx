@@ -32,7 +32,7 @@ export const RuleModal: React.FC<RuleModalProps> = ({ onClose }) => {
           {/* Section 1: Victory Condition */}
           <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700">
             <h3 className="font-black text-amber-300 mb-1.5 flex items-center gap-1.5 text-sm">
-              <Trophy className="w-4 h-4" /> 勝利条件（3ポイント先取）
+              <Trophy className="w-4 h-4" /> 勝利条件（3点先取 / 5点先取 選択式）
             </h3>
             <ul className="list-disc list-inside space-y-1 text-stone-200">
               <li>
@@ -42,7 +42,7 @@ export const RuleModal: React.FC<RuleModalProps> = ({ onClose }) => {
                 通常カード（Lv.1〜4）を倒すと<strong>1ポイント</strong>、最上位EXカード（Lv.5）を倒すと<strong>2ポイント</strong>獲得！
               </li>
               <li>
-                先に<strong className="text-emerald-300">3ポイント</strong>を獲得するか、相手のベンチに控えカードがいなくなった時点で即勝利となります。
+                ロビーで設定した目標ポイント（<strong className="text-emerald-300">3点先取</strong> または <strong className="text-emerald-300">5点先取</strong>）に先に到達するか、相手のベンチに控えカードがいなくなった時点で即勝利となります。
               </li>
             </ul>
           </div>

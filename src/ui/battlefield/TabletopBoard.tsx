@@ -25,12 +25,46 @@ interface TabletopBoardProps {
   gameState: SanitizedGameState;
   onSendAction: (actionType: string, payload?: any) => void;
   onLeaveRoom: () => void;
+  onPlayAgain?: () => void;
+}
+
+/**
+ * 必須ルール: 両方のオブジェクトおよびIDが存在することを確認してから比較するヘルパー
+ * undefined === undefined が true になる事故を完全に防止する
+ */
+function isCardMatchingId(
+  card: CardInstance | null | undefined,
+  targetId: string | null | undefined
+): boolean {
+  return (
+    card != null &&
+    targetId != null &&
+    card.instanceId != null &&
+    card.instanceId === targetId
+  );
+}
+
+function getSafeCardDamagePopup(
+  damagePopup: { targetCardId: string; damage: number } | null | undefined,
+  card: CardInstance | null | undefined
+): number | null {
+  if (
+    damagePopup != null &&
+    card != null &&
+    damagePopup.targetCardId != null &&
+    card.instanceId != null &&
+    damagePopup.targetCardId === card.instanceId
+  ) {
+    return damagePopup.damage;
+  }
+  return null;
 }
 
 export const TabletopBoard: React.FC<TabletopBoardProps> = ({
   gameState,
   onSendAction,
   onLeaveRoom,
+  onPlayAgain,
 }) => {
   const {
     me,
@@ -38,12 +72,14 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     isMyTurn,
     mustPromoteBench,
     phase,
+    winScore: gameWinScore,
     logs,
     winnerPlayerId,
     winReason,
     lastAnimation,
   } = gameState;
 
+  const winScore = gameWinScore || me?.maxScore || 3;
   const myBench = Array.isArray(me?.bench) ? me.bench : [null, null, null];
   const oppBench = Array.isArray(opponent?.bench) ? opponent.bench : [null, null, null];
   const myHand = Array.isArray(me?.hand) ? me.hand : [];
@@ -66,25 +102,42 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     damage: number;
   } | null>(null);
   const [attackingCardId, setAttackingCardId] = useState<string | null>(null);
+  const [scorePopup, setScorePopup] = useState<{
+    pointsGained: number;
+    scorerName: string;
+    isMe: boolean;
+    knockedCardName?: string;
+    currentScore: number;
+    maxScore: number;
+  } | null>(null);
+
+  const processedAnimIdsRef = React.useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (phase === 'GAME_OVER' && winnerPlayerId === me.playerId) {
+    if (
+      phase === 'GAME_OVER' &&
+      winnerPlayerId != null &&
+      me?.playerId != null &&
+      winnerPlayerId === me.playerId
+    ) {
       confetti({
         particleCount: 110,
         spread: 75,
         origin: { y: 0.6 },
       });
     }
-  }, [phase, winnerPlayerId, me.playerId]);
+  }, [phase, winnerPlayerId, me?.playerId]);
 
   useEffect(() => {
-    if (!lastAnimation) return;
+    if (!lastAnimation || !lastAnimation.id) return;
+    if (processedAnimIdsRef.current.has(lastAnimation.id)) return;
+    processedAnimIdsRef.current.add(lastAnimation.id);
 
     if (lastAnimation.type === 'ATTACK') {
-      if (lastAnimation.sourceCardId) {
+      if (lastAnimation.sourceCardId != null) {
         setAttackingCardId(lastAnimation.sourceCardId);
       }
-      if (lastAnimation.targetCardId && lastAnimation.damage) {
+      if (lastAnimation.targetCardId != null && lastAnimation.damage != null) {
         setDamagePopup({
           targetCardId: lastAnimation.targetCardId,
           damage: lastAnimation.damage,
@@ -104,10 +157,35 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     }
 
     if (lastAnimation.type === 'KNOCKOUT') {
+      const pts = lastAnimation.pointsGained || 1;
+      const isMeScorer =
+        lastAnimation.actorPlayerId != null &&
+        me?.playerId != null &&
+        lastAnimation.actorPlayerId === me.playerId;
+      const scorer = isMeScorer ? me : opponent;
+
       setAnimBanner(
-        `💥 「${lastAnimation.cardName || ''}」がきぜつ！ +${lastAnimation.pointsGained || 1} ポイント！`
+        `💥 「${lastAnimation.cardName || ''}」がきぜつ！ +${pts} POINT GET!`
       );
-      const t = setTimeout(() => setAnimBanner(null), 1600);
+      setScorePopup({
+        pointsGained: pts,
+        scorerName: scorer?.name || (isMeScorer ? 'YOU' : 'OPPONENT'),
+        isMe: isMeScorer,
+        knockedCardName: lastAnimation.cardName,
+        currentScore: scorer?.score ?? pts,
+        maxScore: winScore,
+      });
+
+      const t = setTimeout(() => {
+        setAnimBanner(null);
+        setScorePopup(null);
+      }, 2200);
+      return () => clearTimeout(t);
+    }
+
+    if (lastAnimation.type === 'PROMOTE') {
+      setAnimBanner(`🚀 ベンチから「${lastAnimation.cardName || ''}」がバトル場へ登場！`);
+      const t = setTimeout(() => setAnimBanner(null), 1300);
       return () => clearTimeout(t);
     }
 
@@ -128,7 +206,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
       const t = setTimeout(() => setAnimBanner(null), 1200);
       return () => clearTimeout(t);
     }
-  }, [lastAnimation?.id]);
+  }, [lastAnimation?.id, me, opponent, winScore]);
 
   const clearModes = () => {
     setSelectedHandCard(null);
@@ -148,11 +226,13 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
   };
 
   const handleSelectHandCard = (card: CardInstance) => {
+    if (card == null || card.instanceId == null) return;
+    if (phase === 'GAME_OVER') return;
     if (!isMyTurn) {
       setInspectCard(card);
       return;
     }
-    if (selectedHandCard?.instanceId === card.instanceId) {
+    if (isCardMatchingId(selectedHandCard, card.instanceId)) {
       clearModes();
       return;
     }
@@ -317,26 +397,41 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
   const myActiveDef = me.activeCard ? getCardDefinition(me.activeCard.definitionId) : null;
 
   const canAttachEnergyNow =
-    isMyTurn && !me.hasAttachedEnergyThisTurn && me.energyAvailable > 0;
-  const canAttackNow =
+    !mustPromoteBench &&
+    phase === 'MAIN' &&
     isMyTurn &&
-    !!me.activeCard &&
-    !!opponent.activeCard &&
+    !me.hasAttachedEnergyThisTurn &&
+    me.energyAvailable > 0;
+  const canAttackNow =
+    !mustPromoteBench &&
+    phase === 'MAIN' &&
+    isMyTurn &&
+    me.activeCard != null &&
+    opponent.activeCard != null &&
     me.activeCard.attachedEnergy >= me.activeCard.energyCost;
   const hasBenchCards = myBench.some((b) => b !== null);
   const canRetreatNow =
+    !mustPromoteBench &&
+    phase === 'MAIN' &&
     isMyTurn &&
     !me.hasRetreatedThisTurn &&
-    !!me.activeCard &&
+    me.activeCard != null &&
     hasBenchCards &&
     me.activeCard.attachedEnergy >= me.activeCard.retreatCost;
 
   const isGameOver = phase === 'GAME_OVER';
-  const iWon = winnerPlayerId === me.playerId;
+  const iWon =
+    winnerPlayerId != null && me?.playerId != null && winnerPlayerId === me.playerId;
 
   const getActionGuideText = (): string => {
+    if (isGameOver) {
+      return iWon ? '🎉 YOU WIN! 対戦終了' : '対戦終了';
+    }
     if (mustPromoteBench) {
-      return '⚠️ ベンチのカードをタップしてバトル場へ出してください！';
+      return '⚠️ バトル場のカードがきぜつしました。ベンチから出すカードを選んでください！';
+    }
+    if (phase === 'WAITING_FOR_PROMOTION') {
+      return '相手がベンチから新しいバトル場のカードを選んでいます…';
     }
     if (!isMyTurn) {
       return '相手のターン中…（カードタップで詳細確認）';
@@ -396,9 +491,10 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
       <div className="w-full overflow-x-auto overflow-y-visible pokepoke-scroll flex items-center justify-center px-2 pt-2.5 pb-1">
         <div className={`flex items-center justify-center ${overlapClass}`}>
           {myHand.map((card, idx) => {
-            if (!card) return null;
-            const isSelected = selectedHandCard?.instanceId === card.instanceId;
-            const isHovered = hoveredHandCardId === card.instanceId;
+            if (card == null || card.instanceId == null) return null;
+            const isSelected = isCardMatchingId(selectedHandCard, card.instanceId);
+            const isHovered =
+              hoveredHandCardId != null && hoveredHandCardId === card.instanceId;
             const cardDef = getCardDefinition(card.definitionId);
             const isEvoCard =
               cardDef?.type === 'ATTACK' && cardDef.evolution.evolvesFrom !== null;
@@ -529,8 +625,36 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
 
       {/* Floating Animation Banner */}
       {animBanner && (
-        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-50 px-3.5 py-1 rounded-full bg-stone-950/95 border-2 border-amber-400 text-amber-200 font-black text-[11px] shadow-2xl animate-bounce whitespace-nowrap">
+        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-50 px-3.5 py-1 rounded-full bg-stone-950/95 border-2 border-amber-400 text-amber-200 font-black text-[11px] shadow-2xl animate-bounce whitespace-nowrap pointer-events-none">
           {animBanner}
+        </div>
+      )}
+
+      {/* KO Point Reward Popup (+1 POINT GET! / +2 POINTS GET!) */}
+      {scorePopup && !isGameOver && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-stone-950 border-2 border-white shadow-2xl flex flex-col items-center gap-0.5 animate-bounce pointer-events-none">
+          <div className="text-xs sm:text-sm font-black tracking-wider flex items-center gap-1">
+            <Trophy className="w-4 h-4 fill-stone-950" />
+            <span>
+              +{scorePopup.pointsGained} POINT{scorePopup.pointsGained > 1 ? 'S' : ''} GET!
+            </span>
+          </div>
+          <div className="text-[10px] font-black text-stone-900">
+            {scorePopup.isMe ? 'YOU' : scorePopup.scorerName} : {scorePopup.currentScore} /{' '}
+            {scorePopup.maxScore} POINTS
+          </div>
+        </div>
+      )}
+
+      {/* Bench Promotion Instruction Banner when Active Card is Knocked Out */}
+      {mustPromoteBench && !isGameOver && (
+        <div className="fixed top-12 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-md px-3.5 py-2 rounded-2xl bg-rose-950/95 border-2 border-amber-400 text-stone-100 shadow-2xl text-center animate-fadeIn pointer-events-none">
+          <div className="text-xs font-black text-amber-300">
+            バトル場のカードがきぜつしました。
+          </div>
+          <div className="text-[11px] font-bold text-white mt-0.5">
+            ベンチから出すカードを選んでタップしてください。
+          </div>
         </div>
       )}
 
@@ -552,9 +676,9 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   : '😎'}
               </div>
               <span className="font-black text-xs text-stone-100 truncate">{opponent.name}</span>
-              {/* Opponent 3-Point Orbs */}
+              {/* Opponent Win-Point Orbs */}
               <div className="flex items-center gap-0.5 ml-1 shrink-0">
-                {Array.from({ length: opponent.maxScore }).map((_, idx) => (
+                {Array.from({ length: winScore }).map((_, idx) => (
                   <div
                     key={idx}
                     className={`w-3 h-3 rounded-full border flex items-center justify-center ${
@@ -567,7 +691,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   </div>
                 ))}
                 <span className="text-[9px] font-black text-amber-300 ml-0.5">
-                  {opponent.score}/{opponent.maxScore}
+                  {opponent.score}/{winScore} POINTS
                 </span>
               </div>
             </div>
@@ -599,6 +723,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                 slotIndex={idx}
                 slotRole="BENCH"
                 isFriendly={false}
+                damagePopup={getSafeCardDamagePopup(damagePopup, card)}
                 onClick={() => card && setInspectCard(card)}
                 onInspectCard={setInspectCard}
               />
@@ -630,12 +755,8 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
               card={opponent.activeCard}
               slotRole="ACTIVE"
               isFriendly={false}
-              isAttacker={attackingCardId === opponent.activeCard?.instanceId}
-              damagePopup={
-                damagePopup?.targetCardId === opponent.activeCard?.instanceId
-                  ? damagePopup.damage
-                  : null
-              }
+              isAttacker={isCardMatchingId(opponent.activeCard, attackingCardId)}
+              damagePopup={getSafeCardDamagePopup(damagePopup, opponent.activeCard)}
               onClick={() => opponent.activeCard && setInspectCard(opponent.activeCard)}
               onInspectCard={setInspectCard}
             />
@@ -753,33 +874,30 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
               slotRole="ACTIVE"
               isFriendly={true}
               canAct={canAttackNow}
-              isAttacker={attackingCardId === me.activeCard?.instanceId}
+              isAttacker={isCardMatchingId(me.activeCard, attackingCardId)}
               isTargetable={
-                (isAttachingEnergy && !!me.activeCard) ||
+                (isAttachingEnergy && me.activeCard != null) ||
                 (selectedIsEvolution &&
-                  !!me.activeCard &&
+                  me.activeCard != null &&
                   canEvolveCard(me.activeCard, selectedHandCard, gameState.turnNumber).ok)
               }
               targetBadgeText={
                 isAttachingEnergy
                   ? '⚡エネ付与'
                   : selectedIsEvolution &&
-                    !!me.activeCard &&
+                    me.activeCard != null &&
                     canEvolveCard(me.activeCard, selectedHandCard, gameState.turnNumber).ok
                   ? '🌟進化可能'
                   : undefined
               }
               canPlaceCard={
-                !me.activeCard &&
+                me.activeCard == null &&
                 selectedDef?.type === 'ATTACK' &&
                 !selectedIsEvolution &&
-                isMyTurn
+                isMyTurn &&
+                !mustPromoteBench
               }
-              damagePopup={
-                damagePopup?.targetCardId === me.activeCard?.instanceId
-                  ? damagePopup.damage
-                  : null
-              }
+              damagePopup={getSafeCardDamagePopup(damagePopup, me.activeCard)}
               onClick={handleMyActiveClick}
               onInspectCard={setInspectCard}
             />
@@ -845,15 +963,16 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
           <div className="flex items-center justify-center gap-2">
             <span className="text-[8px] font-bold text-slate-400">自分ベンチ</span>
             {myBench.map((card, idx) => {
-              const isAttachTarget = isAttachingEnergy && !!card;
-              const isRetreatTarget = isRetreating && !!card;
-              const isPromoteTarget = mustPromoteBench && !!card;
+              const isAttachTarget = isAttachingEnergy && card != null;
+              const isRetreatTarget = isRetreating && card != null;
+              const isPromoteTarget = mustPromoteBench && card != null;
               const isEvoTarget =
                 selectedIsEvolution &&
-                !!card &&
+                card != null &&
                 canEvolveCard(card, selectedHandCard, gameState.turnNumber).ok;
               const canPlaceOnBench =
                 isMyTurn &&
+                !mustPromoteBench &&
                 selectedDef?.type === 'ATTACK' &&
                 !selectedIsEvolution &&
                 card === null;
@@ -868,7 +987,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   isTargetable={isAttachTarget || isRetreatTarget || isPromoteTarget || isEvoTarget}
                   targetBadgeText={
                     isPromoteTarget
-                      ? 'バトル場へ'
+                      ? '選択してバトル場へ'
                       : isAttachTarget
                       ? '⚡エネ付与'
                       : isRetreatTarget
@@ -878,6 +997,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                       : undefined
                   }
                   canPlaceCard={canPlaceOnBench}
+                  damagePopup={getSafeCardDamagePopup(damagePopup, card)}
                   onClick={() => handleMyBenchClick(card, idx)}
                   onInspectCard={setInspectCard}
                 />
@@ -890,8 +1010,8 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="font-black text-[11px] text-amber-200 truncate">{me.name}</span>
               <div className="flex items-center gap-0.5 shrink-0">
-                <span className="text-[8px] text-stone-400 font-bold">獲得Pt:</span>
-                {Array.from({ length: me.maxScore }).map((_, idx) => (
+                <span className="text-[8px] text-stone-400 font-bold">YOU:</span>
+                {Array.from({ length: winScore }).map((_, idx) => (
                   <div
                     key={idx}
                     className={`w-3 h-3 rounded-full border flex items-center justify-center ${
@@ -904,7 +1024,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   </div>
                 ))}
                 <span className="text-[9px] font-black text-emerald-300 ml-0.5">
-                  {me.score}/{me.maxScore}
+                  {me.score}/{winScore} POINTS
                 </span>
               </div>
             </div>
@@ -947,7 +1067,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
           <div className="flex items-center gap-2 shrink-0">
             <span className="font-black text-xs text-stone-100">{opponent.name}</span>
             <div className="flex items-center gap-0.5">
-              {Array.from({ length: opponent.maxScore }).map((_, idx) => (
+              {Array.from({ length: winScore }).map((_, idx) => (
                 <div
                   key={idx}
                   className={`w-3 h-3 rounded-full border flex items-center justify-center ${
@@ -960,7 +1080,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                 </div>
               ))}
               <span className="text-[9px] font-black text-amber-300 ml-0.5">
-                {opponent.score}/{opponent.maxScore}
+                {opponent.score}/{winScore} POINTS
               </span>
             </div>
             <span className="text-[9px] text-slate-400">
@@ -1035,6 +1155,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                 slotIndex={idx}
                 slotRole="BENCH"
                 isFriendly={false}
+                damagePopup={getSafeCardDamagePopup(damagePopup, card)}
                 onClick={() => card && setInspectCard(card)}
                 onInspectCard={setInspectCard}
               />
@@ -1047,12 +1168,8 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
               card={opponent.activeCard}
               slotRole="ACTIVE"
               isFriendly={false}
-              isAttacker={attackingCardId === opponent.activeCard?.instanceId}
-              damagePopup={
-                damagePopup?.targetCardId === opponent.activeCard?.instanceId
-                  ? damagePopup.damage
-                  : null
-              }
+              isAttacker={isCardMatchingId(opponent.activeCard, attackingCardId)}
+              damagePopup={getSafeCardDamagePopup(damagePopup, opponent.activeCard)}
               onClick={() => opponent.activeCard && setInspectCard(opponent.activeCard)}
               onInspectCard={setInspectCard}
             />
@@ -1072,33 +1189,30 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
               slotRole="ACTIVE"
               isFriendly={true}
               canAct={canAttackNow}
-              isAttacker={attackingCardId === me.activeCard?.instanceId}
+              isAttacker={isCardMatchingId(me.activeCard, attackingCardId)}
               isTargetable={
-                (isAttachingEnergy && !!me.activeCard) ||
+                (isAttachingEnergy && me.activeCard != null) ||
                 (selectedIsEvolution &&
-                  !!me.activeCard &&
+                  me.activeCard != null &&
                   canEvolveCard(me.activeCard, selectedHandCard, gameState.turnNumber).ok)
               }
               targetBadgeText={
                 isAttachingEnergy
                   ? '⚡エネ付与'
                   : selectedIsEvolution &&
-                    !!me.activeCard &&
+                    me.activeCard != null &&
                     canEvolveCard(me.activeCard, selectedHandCard, gameState.turnNumber).ok
                   ? '🌟進化可能'
                   : undefined
               }
               canPlaceCard={
-                !me.activeCard &&
+                me.activeCard == null &&
                 selectedDef?.type === 'ATTACK' &&
                 !selectedIsEvolution &&
-                isMyTurn
+                isMyTurn &&
+                !mustPromoteBench
               }
-              damagePopup={
-                damagePopup?.targetCardId === me.activeCard?.instanceId
-                  ? damagePopup.damage
-                  : null
-              }
+              damagePopup={getSafeCardDamagePopup(damagePopup, me.activeCard)}
               onClick={handleMyActiveClick}
               onInspectCard={setInspectCard}
             />
@@ -1107,15 +1221,16 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
           {/* Right: My Bench (3 Slots) */}
           <div className="flex items-center gap-1.5">
             {myBench.map((card, idx) => {
-              const isAttachTarget = isAttachingEnergy && !!card;
-              const isRetreatTarget = isRetreating && !!card;
-              const isPromoteTarget = mustPromoteBench && !!card;
+              const isAttachTarget = isAttachingEnergy && card != null;
+              const isRetreatTarget = isRetreating && card != null;
+              const isPromoteTarget = mustPromoteBench && card != null;
               const isEvoTarget =
                 selectedIsEvolution &&
-                !!card &&
+                card != null &&
                 canEvolveCard(card, selectedHandCard, gameState.turnNumber).ok;
               const canPlaceOnBench =
                 isMyTurn &&
+                !mustPromoteBench &&
                 selectedDef?.type === 'ATTACK' &&
                 !selectedIsEvolution &&
                 card === null;
@@ -1130,7 +1245,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   isTargetable={isAttachTarget || isRetreatTarget || isPromoteTarget || isEvoTarget}
                   targetBadgeText={
                     isPromoteTarget
-                      ? 'バトル場へ'
+                      ? '選択してバトル場へ'
                       : isAttachTarget
                       ? '⚡エネ付与'
                       : isRetreatTarget
@@ -1140,6 +1255,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                       : undefined
                   }
                   canPlaceCard={canPlaceOnBench}
+                  damagePopup={getSafeCardDamagePopup(damagePopup, card)}
                   onClick={() => handleMyBenchClick(card, idx)}
                   onInspectCard={setInspectCard}
                 />
@@ -1161,7 +1277,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
               <div className="flex items-center gap-1">
                 <span className="font-black text-[10px] text-amber-200">{me.name}</span>
                 <span className="text-[9px] font-black text-emerald-300">
-                  {me.score}/{me.maxScore}pt
+                  {me.score}/{winScore} POINTS
                 </span>
               </div>
               <div className="flex items-center gap-1 text-[8px] text-slate-400">
@@ -1306,12 +1422,26 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
               </div>
             )}
 
-            <button
-              onClick={onLeaveRoom}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-stone-950 font-black text-sm shadow-lg transition-transform active:scale-95 cursor-pointer"
-            >
-              ロビーへ戻る
-            </button>
+            <div className="w-full flex flex-col gap-2.5">
+              {onPlayAgain && (
+                <button
+                  onClick={onPlayAgain}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-stone-950 font-black text-sm shadow-lg transition-transform active:scale-95 cursor-pointer"
+                >
+                  もう一度対戦する (PLAY AGAIN)
+                </button>
+              )}
+              <button
+                onClick={onLeaveRoom}
+                className={`w-full py-2.5 rounded-xl font-black text-xs shadow transition-transform active:scale-95 cursor-pointer ${
+                  onPlayAgain
+                    ? 'bg-slate-800 hover:bg-slate-700 text-stone-200 border border-slate-700'
+                    : 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-stone-950 py-3 text-sm'
+                }`}
+              >
+                ロビーへ戻る
+              </button>
+            </div>
           </div>
         </div>
       )}
