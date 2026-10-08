@@ -76,7 +76,7 @@ export function sanitizeGameStateForPlayer(
     stateVersion: state.stateVersion,
     winnerPlayerId: state.winnerPlayerId,
     winReason: state.winReason,
-    logs: (state.logs || []).slice(-30),
+    logs: [],
     lastAnimation: state.lastAnimation,
   };
 }

@@ -11,30 +11,17 @@ import { CardInstance } from '../../cards/types';
 import { getCardDefinition } from '../../cards/cardRegistry';
 import { buildInitialDeckAndSetup, createCardInstance } from './deckBuilder';
 
-let logIdCounter = 1;
-
 function addLog(
-  state: GameState,
-  actorId: string,
-  actorName: string,
-  type: AnimationEventType | 'TURN_END' | 'SURRENDER',
-  message: string,
-  cardName?: string,
-  targetName?: string,
-  value?: number
+  _state: GameState,
+  _actorId: string,
+  _actorName: string,
+  _type: AnimationEventType | 'TURN_END' | 'SURRENDER',
+  _message: string,
+  _cardName?: string,
+  _targetName?: string,
+  _value?: number
 ) {
-  state.logs.push({
-    id: `log_${Date.now()}_${logIdCounter++}`,
-    timestamp: Date.now(),
-    turnNumber: state.turnNumber,
-    actorPlayerId: actorId,
-    actorPlayerName: actorName,
-    type,
-    message,
-    cardName,
-    targetName,
-    value,
-  });
+  // ログ機能削除に伴い履歴保存を行わない
 }
 
 function setAnimation(
@@ -222,7 +209,10 @@ export function startTurn(state: GameState, nextPlayerKey: PlayerKey) {
   activePlayer.hasRetreatedThisTurn = false;
   activePlayer.hasUsedSpellThisTurn = false;
 
-  if (activePlayer.deck.length > 0) {
+  // 全員参加大乱闘モードの最初のターン(T1)は既に初期手札10枚が配られているため追加ドローせず10枚でスタート
+  const skipInitialTurn1Draw = state.battleFormat === 'allstar' && state.turnNumber === 1;
+
+  if (!skipInitialTurn1Draw && activePlayer.deck.length > 0) {
     const drawn = activePlayer.deck.shift()!;
     drawn.zone = 'HAND';
     activePlayer.hand.push(drawn);
@@ -242,7 +232,7 @@ export function startTurn(state: GameState, nextPlayerKey: PlayerKey) {
       activePlayer.playerId,
       activePlayer.name,
       'DRAW',
-      `ターン${state.turnNumber}: ${activePlayer.name} のターン開始（山札0枚・エネルギー＋1獲得）`
+      `ターン${state.turnNumber}: ${activePlayer.name} のターン開始（エネルギー＋1獲得）`
     );
   }
 
@@ -1044,6 +1034,7 @@ function activateSpellCard(
   setAnimation(state, 'SPELL', player.playerId, {
     sourceCardId: spellCard.instanceId,
     cardName: def.name,
+    attackName: effectSummary,
   });
 
   const anyOpponentKnockedOut =

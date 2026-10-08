@@ -7,7 +7,6 @@ import { CardView } from '../cards/CardView';
 import { GraveyardModal } from '../graveyard/GraveyardModal';
 import { FieldSlot } from './FieldSlot';
 import { CardDetailModal } from '../cards/CardDetailModal';
-import { LogDrawer } from './LogDrawer';
 import {
   Sword,
   Zap,
@@ -73,7 +72,6 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     mustPromoteBench,
     phase,
     winScore: gameWinScore,
-    logs,
     winnerPlayerId,
     winReason,
     lastAnimation,
@@ -85,7 +83,6 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
   const myHand = Array.isArray(me?.hand) ? me.hand : [];
   const myTrash = Array.isArray(me?.trash) ? me.trash : [];
   const oppTrash = Array.isArray(opponent?.trash) ? opponent.trash : [];
-  const safeLogs = Array.isArray(logs) ? logs : [];
 
   const [selectedHandCard, setSelectedHandCard] = useState<CardInstance | null>(null);
   const [hoveredHandCardId, setHoveredHandCardId] = useState<string | null>(null);
@@ -481,16 +478,20 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
         ? 'space-x-1.5'
         : total <= 6
         ? '-space-x-2'
-        : '-space-x-4'
+        : total <= 8
+        ? '-space-x-3.5'
+        : '-space-x-5'
       : total <= 4
       ? 'space-x-1'
       : total <= 6
       ? '-space-x-2.5 sm:-space-x-1.5'
-      : '-space-x-5 sm:-space-x-3';
+      : total <= 8
+      ? '-space-x-4 sm:-space-x-2.5'
+      : '-space-x-6 sm:-space-x-3.5';
 
     return (
-      <div className="w-full overflow-x-auto overflow-y-visible pokepoke-scroll flex items-center justify-center px-2 pt-2.5 pb-1">
-        <div className={`flex items-center justify-center ${overlapClass}`}>
+      <div className="w-full overflow-x-auto overflow-y-visible pokepoke-scroll flex items-center px-2 pt-2.5 pb-1">
+        <div className={`flex items-center mx-auto ${overlapClass}`}>
           {myHand.map((card, idx) => {
             if (card == null || card.instanceId == null) return null;
             const isSelected = isCardMatchingId(selectedHandCard, card.instanceId);
@@ -1027,7 +1028,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             })}
           </div>
 
-          {/* Player Info + Points + Deck/Trash + Log */}
+          {/* Player Info + Points + Deck/Trash */}
           <div className="flex items-center justify-between gap-1.5 bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-0.5">
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="font-black text-[11px] text-amber-200 truncate">{me.name}</span>
@@ -1067,8 +1068,6 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
               </button>
             </div>
           </div>
-
-          <LogDrawer logs={safeLogs} myPlayerId={me.playerId} />
         </div>
 
         {/* D. HAND AREA (shrink-0: Reserved space at bottom so hand is NEVER clipped) */}

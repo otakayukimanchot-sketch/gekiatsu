@@ -97,8 +97,8 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     level: 1,
     abilities: {
       attackName: '手札チェック',
-      activeEffect: '相手の手札をログに公開し、山札からカードを1枚引く',
-      description: '【魔法】相手の手札を確認してログに公開し、自分は山札からカードを1枚引く。',
+      activeEffect: '相手の手札を確認し、山札からカードを1枚引く',
+      description: '【魔法】相手の手札を確認し、自分は山札からカードを1枚引く。',
       spellEffect: 'PEEK_AND_DRAW',
     },
     ui: {

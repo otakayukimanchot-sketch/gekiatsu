@@ -112,8 +112,11 @@ export function buildInitialDeckAndSetup(
   activeCard.zone = 'ACTIVE';
   activeCard.summonTurn = 1;
 
-  // Draw 4 more cards for initial hand (total 5 opening cards: 1 in Active Spot + 4 in Hand)
-  const hand = allCards.splice(0, 4).map((c) => {
+  // Draw initial hand:
+  // - standard: 4 cards in hand (+ 1 in Active Spot = 5 opening cards)
+  // - allstar: 10 cards in hand (全員参加大乱闘モードのみ初期手札10枚)
+  const initialHandCount = battleFormat === 'allstar' ? 10 : 4;
+  const hand = allCards.splice(0, initialHandCount).map((c) => {
     c.zone = 'HAND';
     return c;
   });

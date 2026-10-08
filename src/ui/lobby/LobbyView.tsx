@@ -224,7 +224,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               >
                 <span>🔥 全員参加大乱闘</span>
                 <span className="text-[9px] font-normal opacity-90">
-                  全{ALL_CARD_DEFINITIONS.length}種総出バトル
+                  全{ALL_CARD_DEFINITIONS.length}種・初期手札10枚
                 </span>
               </button>
             </div>
