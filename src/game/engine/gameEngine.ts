@@ -59,6 +59,7 @@ export function recalculateDynamicStats(state: GameState) {
  * 攻撃カードが与える最終ダメージを計算する
  * - もえきゅん → しょーちゃん 特効即死
  * - りょち → ムエ 特効即死
+ * - もか / こはく → ムエ・しょーちゃん ダメージ+30
  */
 export function calculateCardDamage(
   attackerCard: CardInstance,
@@ -87,9 +88,17 @@ export function calculateCardDamage(
     };
   }
 
+  let skillBonus = 0;
+  if (
+    attackerDef?.abilities.combatSkill === 'BONUS_VS_MUE_AND_SHOCHAN_30' &&
+    (defenderDef?.id === 'atk_mue' || defenderDef?.id === 'atk_shochan')
+  ) {
+    skillBonus = 30;
+  }
+
   const totalReduction = defenderCard.damageReductionNextTurn;
   return {
-    damage: Math.max(10, attackerCard.currentAtk - totalReduction),
+    damage: Math.max(10, attackerCard.currentAtk + skillBonus - totalReduction),
     isInstantKill: false,
   };
 }
@@ -845,6 +854,14 @@ function activateSpellCard(
         benchTarget.attachedEnergy += 1;
         const tDef = getCardDefinition(benchTarget.definitionId);
         effectSummary = `${player.name} が「${def.name}」を発動！「${tDef?.name}」にボーナスエネルギー＋1！`;
+      }
+      break;
+    }
+    case 'BUFF_ATK_10': {
+      if (player.activeCard) {
+        player.activeCard.tempAtkBuff += 10;
+        const actDef = getCardDefinition(player.activeCard.definitionId);
+        effectSummary = `${player.name} が「${def.name}」を発動！このターン「${actDef?.name}」の攻撃ダメージ＋10！`;
       }
       break;
     }

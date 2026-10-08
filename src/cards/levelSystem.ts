@@ -268,8 +268,10 @@ function inferDefaultElement(seed: RawCardSeed): CardElement {
 function inferSubCategory(seed: RawCardSeed): CardSubCategory {
   if (seed.type === 'SPELL') {
     if (
+      seed.abilities.spellEffect === 'BUFF_ATK_10' ||
       seed.abilities.spellEffect === 'BUFF_ATK_20' ||
       seed.abilities.spellEffect === 'BUFF_ATK_30' ||
+      seed.abilities.spellEffect === 'BUFF_ATK_50' ||
       seed.abilities.spellEffect === 'EQUIP_ARMOR_HP_20_SHIELD_20' ||
       seed.abilities.spellEffect === 'EQUIP_BLADE_ATK_25_ENERGY_1'
     ) {

@@ -2,42 +2,19 @@ import { CardDefinition, RawCardSeed } from '../types';
 import { buildCardDefinition } from '../levelSystem';
 
 /**
- * 魔法（サポート）カード定義一覧 (全44種・Lv.1統一)
+ * 魔法（サポート）カード定義一覧 (Lv.1統一)
  *
  * 【記載順序】
- * 1. ドロー・サーチ系: Superfly / 数珠カード / さびしがりやのゆきや / のぞきのそうくん / モリシア（今は亡きショッピングセンター） / 秋葉原 / 受験パルキアニキ / trio（秋葉原のアイドルグッズ専門店） / ブラックコーヒー / バニラ
- * 2. エネルギー加速系: ふともも / 待てないそうくん / モンスターエナジー / ZONE / アル中カラカラ / 松岡修造 / 酒
- * 3. 火力強化系: 顎カード / 安松 / ユキやカード / 浅草寺 / FCバルセロナ / 21歳 拳で / ﾄﾞｩﾜｧ!!ｾﾝﾅﾅﾋｬｸ!! / 10人ニキ / バキ童
- * 4. 防御・回復・展開・機動力系: 見えてます / 三者面談 / グローバルラウンジ / イタリアン♡ / カラオケ / フェニックスホール（講堂） / 隅田川 / マクドナルド / 自己防衛おじさん / 離れるそうくん / ポカリ
- * 5. 直接ダメージ・妨害・入れ替え系: うんこかーど / 蛍光マーカーのりゅーのすけ / トレード / 五郎丸のキック / インフル / 朝のラッシュ / おでんツンツン男
+ * 1. ドロー・サーチ系: 数珠カード / モリシア（今は亡きショッピングセンター） / 秋葉原 / 受験パルキアニキ / trio（秋葉原のアイドルグッズ専門店） / ブラックコーヒー / バニラ / ポーカー
+ * 2. エネルギー加速系: ふともも / モンスターエナジー / ZONE / アル中カラカラ / 松岡修造 / 酒
+ * 3. 火力強化系: 顎カード / 泰松 / 浅草寺 / FCバルセロナ / 21歳 拳で / ﾄﾞｩﾜｧ!!ｾﾝﾅﾅﾋｬｸ!! / 10人ニキ / バキ童 / 千葉ロッテマリーンズ
+ * 4. 防御・回復・展開・機動力系: 三者面談 / グローバルラウンジ / イタリアン♡ / カラオケ / フェニックスホール（講堂） / 隅田川 / マック / 自己防衛おじさん / 離れるそうくん / ポカリ / あげパン / ロングバターデニッシュ / 浅草寺の芝生
+ * 5. 直接ダメージ・妨害・入れ替え系: うんこかーど / トレード / インフル / 朝のラッシュ / おでんツンツン男
  */
 const SPELL_CARD_SEEDS: RawCardSeed[] = [
   // ============================================================================
   // 1. ドロー・サーチ系魔法カード
   // ============================================================================
-  {
-    id: 'spl_superfly',
-    name: 'Superfly',
-    type: 'SPELL',
-    evolution: {
-      family: 'ドロー魔法',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 1,
-    abilities: {
-      attackName: 'モンゴルのお土産',
-      activeEffect: '山札からカードを1枚引く',
-      description: '【魔法】モンゴルから帰国してお土産に一枚あげる（山札からカードを1枚追加で引ける）。',
-      spellEffect: 'DRAW_1',
-    },
-    ui: {
-      tags: ['魔法', 'ドロー', 'お土産'],
-      flavorText: '「モンゴルから帰ってきたよ！これお土産の1枚！」',
-      artSymbol: 'Sparkles',
-    },
-  },
   {
     id: 'spl_juzu_card',
     name: '数珠カード',
@@ -58,52 +35,6 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     ui: {
       tags: ['魔法', 'ドロー', 'よしえ系'],
       flavorText: '「清めの数珠が運命の1枚を引き寄せる。」',
-      artSymbol: 'Sparkles',
-    },
-  },
-  {
-    id: 'spl_sabishigariya_yukiya',
-    name: 'さびしがりやのゆきや',
-    type: 'SPELL',
-    evolution: {
-      family: 'ゆきや系列サポート',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 1,
-    abilities: {
-      attackName: '仲間呼び',
-      activeEffect: '山札から攻撃カード1枚を手札に加える',
-      description: '【魔法】山札から攻撃カード1枚を手札に加える。',
-      spellEffect: 'SEARCH_ATTACK_CARD',
-    },
-    ui: {
-      tags: ['魔法', 'サーチ', 'ゆきや系'],
-      flavorText: '「一人じゃ寂しいから、もう一人呼んでいい…？」',
-      artSymbol: 'Heart',
-    },
-  },
-  {
-    id: 'spl_nozoki_sokun',
-    name: 'のぞきのそうくん',
-    type: 'SPELL',
-    evolution: {
-      family: 'そうくん系列サポート',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 1,
-    abilities: {
-      attackName: '手札チェック',
-      activeEffect: '相手の手札を確認し、山札からカードを1枚引く',
-      description: '【魔法】相手の手札を確認し、自分は山札からカードを1枚引く。',
-      spellEffect: 'PEEK_AND_DRAW',
-    },
-    ui: {
-      tags: ['魔法', '情報開示', 'そうくん系'],
-      flavorText: '「ちょっと見せて！何持ってるの！？」',
       artSymbol: 'Sparkles',
     },
   },
@@ -182,29 +113,6 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     },
   },
   {
-    id: 'spl_matenai_sokun',
-    name: '待てないそうくん',
-    type: 'SPELL',
-    evolution: {
-      family: 'そうくん系列サポート',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 1,
-    abilities: {
-      attackName: '先食いチャージ',
-      activeEffect: '自分のバトル場のカードにボーナスエネルギーを＋1個付与する',
-      description: '【魔法】自分のバトル場のカードにボーナスエネルギーを＋1個付与する。',
-      spellEffect: 'BONUS_ENERGY_ACTIVE',
-    },
-    ui: {
-      tags: ['魔法', 'エネルギー加速', 'そうくん系'],
-      flavorText: '「届いたら先に食べるのは当たり前だよね！」',
-      artSymbol: 'Flame',
-    },
-  },
-  {
     id: 'spl_monster_energy',
     name: 'モンスターエナジー',
     type: 'SPELL',
@@ -280,7 +188,7 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
   },
   {
     id: 'spl_yasumatsu',
-    name: '安松',
+    name: '泰松',
     type: 'SPELL',
     evolution: {
       family: 'つだぬまず系列サポート',
@@ -290,37 +198,14 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     },
     level: 1,
     abilities: {
-      attackName: '安松の咆哮',
-      activeEffect: 'このターン、自分のバトル場のカードの攻撃ダメージ＋30',
-      description: '【魔法】このターン、自分のバトル場のカードが使う攻撃のダメージを＋30する！',
-      spellEffect: 'BUFF_ATK_30',
+      attackName: '泰松のエール',
+      activeEffect: 'このターン、自分のバトル場のカードの攻撃ダメージ＋10',
+      description: '【魔法】このターン、自分のバトル場のカードが使う攻撃のダメージを＋10する！',
+      spellEffect: 'BUFF_ATK_10',
     },
     ui: {
-      tags: ['魔法', '超強化', 'つだぬまず'],
-      flavorText: '「安松の魂の叫びが仲間に渾身のパワーを授ける！！」',
-      artSymbol: 'Crown',
-    },
-  },
-  {
-    id: 'spl_yukiya_card',
-    name: 'ユキやカード',
-    type: 'SPELL',
-    evolution: {
-      family: 'よしえ系列サポート',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 1,
-    abilities: {
-      attackName: 'ユキやの加護',
-      activeEffect: '自分のバトル場のカードのHPを30回復し、このターンの攻撃ダメージ＋10',
-      description: '【魔法】自分のバトル場のカードのHPを30回復し、このターンの攻撃ダメージを＋10する。',
-      spellEffect: 'HEAL_30_BUFF_10',
-    },
-    ui: {
-      tags: ['魔法', '回復', '強化', 'ゆきや系'],
-      flavorText: '「ユキやの魔力が仲間を癒やし力を授ける。」',
+      tags: ['魔法', '火力強化', '泰松', 'つだぬまず'],
+      flavorText: '「泰松の応援が仲間の攻撃力を＋10底上げする！」',
       artSymbol: 'Crown',
     },
   },
@@ -374,29 +259,6 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
   // ============================================================================
   // 4. 防御・回復・展開系魔法カード
   // ============================================================================
-  {
-    id: 'spl_mietemasu',
-    name: '見えてます',
-    type: 'SPELL',
-    evolution: {
-      family: '防御魔法',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 1,
-    abilities: {
-      attackName: '見切りガード',
-      activeEffect: '自分のバトル場のHPを20回復し、次の相手ターンの被ダメージ−20',
-      description: '【魔法】自分のバトル場のカードのHPを20回復し、次の相手ターンに受けるダメージを−20する。',
-      spellEffect: 'HEAL_20_SHIELD_20',
-    },
-    ui: {
-      tags: ['魔法', '回復', '軽減'],
-      flavorText: '「全部見えてますから。」',
-      artSymbol: 'Lock',
-    },
-  },
   {
     id: 'spl_sansha_mendan',
     name: '三者面談',
@@ -538,7 +400,7 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
   },
   {
     id: 'spl_mcdonalds',
-    name: 'マクドナルド',
+    name: 'マック',
     type: 'SPELL',
     evolution: {
       family: '回復魔法',
@@ -550,7 +412,7 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     abilities: {
       attackName: 'ポテトLサイズセット',
       activeEffect: '自分のバトル場のHPを30回復し、このターンの攻撃ダメージ＋10',
-      description: '【魔法】揚げたてポテトでエネルギー補給！自分のバトル場のHPを30回復し、このターンの攻撃ダメージ＋10。',
+      description: '【魔法】マックの揚げたてポテトでエネルギー補給！自分のバトル場のHPを30回復し、このターンの攻撃ダメージ＋10。',
       spellEffect: 'HEAL_30_BUFF_10',
     },
     ui: {
@@ -587,30 +449,6 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     },
   },
   {
-    id: 'spl_fluorescent_ryunosuke',
-    name: '蛍光マーカーのりゅーのすけ',
-    type: 'SPELL',
-    evolution: {
-      family: 'りゅーのすけ系列サポート',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 1,
-    abilities: {
-      attackName: '目くらましビーム',
-      activeEffect: '相手のバトル場に10ダメージ＆エネルギー1個トラッシュ',
-      description:
-        '【魔法】相手のバトル場のカードに10ダメージを与え、さらに相手のバトル場のエネルギーを1個トラッシュする。',
-      spellEffect: 'DRAIN_ENERGY_DMG_10',
-    },
-    ui: {
-      tags: ['魔法', '妨害', 'りゅーのすけ系'],
-      flavorText: '「蛍光マーカー眩しいだろー！その隙にポイッ！」',
-      artSymbol: 'Zap',
-    },
-  },
-  {
     id: 'spl_trade',
     name: 'トレード',
     type: 'SPELL',
@@ -632,29 +470,6 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
       tags: ['魔法', '入れ替え'],
       flavorText: '「ちょっとそこの控え、前に出てきなさい！」',
       artSymbol: 'Sparkles',
-    },
-  },
-  {
-    id: 'spl_goromaru_kick',
-    name: '五郎丸のキック',
-    type: 'SPELL',
-    evolution: {
-      family: '直接ダメージ魔法',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 1,
-    abilities: {
-      attackName: 'ルーティン・プレースキック',
-      activeEffect: '相手のバトル場のカードに30ダメージを与える',
-      description: '【魔法】精神統一のポーズから渾身のキック！相手のバトル場のカードに30ダメージを与える。',
-      spellEffect: 'DIRECT_DMG_30',
-    },
-    ui: {
-      tags: ['魔法', '直接ダメージ', 'キック'],
-      flavorText: '「静寂のルーティンから放たれる弾道は、正確にゴールポストを射抜く。」',
-      artSymbol: 'Crosshair',
     },
   },
   {
@@ -1065,6 +880,126 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     ui: {
       tags: ['魔法', 'ドロー', 'バニラ'],
       flavorText: '「バーニラ、バニラ、バーニラ♪ 耳から離れない中毒性で手札を補充！」',
+      artSymbol: 'Sparkles',
+    },
+  },
+  {
+    id: 'spl_chiba_lotte',
+    name: '千葉ロッテマリーンズ',
+    type: 'SPELL',
+    evolution: {
+      family: '強化魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '幕張の熱狂応援歌',
+      activeEffect: 'このターン、自分のバトル場のカードの攻撃ダメージ＋30',
+      description:
+        '【魔法】ZOZOマリンに轟く圧倒的応援のボルテージ！このターン、自分のバトル場のカードが使う攻撃のダメージを＋30する！',
+      spellEffect: 'BUFF_ATK_30',
+    },
+    ui: {
+      tags: ['魔法', '超強化', 'ロッテ', '野球'],
+      flavorText: '「俺たちの誇り！熱狂の応援が選手に限界突破の力を宿す！」',
+      artSymbol: 'Flame',
+    },
+  },
+  {
+    id: 'spl_agepan',
+    name: 'あげパン',
+    type: 'SPELL',
+    evolution: {
+      family: '回復魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '給食の王様チャージ',
+      activeEffect: '自分のバトル場のHPを30回復し、このターンの攻撃ダメージ＋10',
+      description:
+        '【魔法】きなこと砂糖がたっぷりまぶされた人気メニュー！自分のバトル場のHPを30回復し、このターンの攻撃ダメージを＋10する。',
+      spellEffect: 'HEAL_30_BUFF_10',
+    },
+    ui: {
+      tags: ['魔法', '回復', 'パン', '強化'],
+      flavorText: '「あげパンの日はテンション最高潮！甘くて香ばしい至福の味！」',
+      artSymbol: 'Heart',
+    },
+  },
+  {
+    id: 'spl_long_butter_danish',
+    name: 'ロングバターデニッシュ',
+    type: 'SPELL',
+    evolution: {
+      family: '回復魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '超ロング糖分補給',
+      activeEffect: '自分の場（バトル場・ベンチ）のすべてのカードのHPを25回復する',
+      description:
+        '【魔法】ボリューム満点のロングバターデニッシュをみんなでシェア！自分の場（バトル場・ベンチ）すべてのカードのHPを25回復する。',
+      spellEffect: 'HEAL_ALL_25',
+    },
+    ui: {
+      tags: ['魔法', '全体回復', 'デニッシュ', 'パン'],
+      flavorText: '「長〜いデニッシュで腹持ち抜群！ベンチの仲間まで元気いっぱい！」',
+      artSymbol: 'Heart',
+    },
+  },
+  {
+    id: 'spl_sensoji_lawn',
+    name: '浅草寺の芝生',
+    type: 'SPELL',
+    evolution: {
+      family: '回復魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '芝生でごろ寝リラックス',
+      activeEffect: '自分のバトル場のHPを20回復し、次の相手ターンの被ダメージ−20',
+      description:
+        '【魔法】浅草寺の芝生でゆったりくつろぐ！自分のバトル場のカードのHPを20回復し、さらに次の相手ターンに受けるダメージを−20する。',
+      spellEffect: 'HEAL_20_SHIELD_20',
+    },
+    ui: {
+      tags: ['魔法', '回復', '軽減', '浅草寺'],
+      flavorText: '「芝生の上で一休み。心地よい風がダメージを和らげる。」',
+      artSymbol: 'Trees',
+    },
+  },
+  {
+    id: 'spl_poker',
+    name: 'ポーカー',
+    type: 'SPELL',
+    evolution: {
+      family: 'ドロー魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: 'オールイン・ドロー',
+      activeEffect: '山札からカードを1枚引く（手札が3枚以下なら2枚引く）',
+      description:
+        '【魔法】勝負師のポーカーフェイスで手札を引き込む！山札からカードを1枚引く（自分の手札が3枚以下なら2枚引く）。',
+      spellEffect: 'DRAW_2_IF_LOW_HAND',
+    },
+    ui: {
+      tags: ['魔法', 'ドロー', 'ポーカー'],
+      flavorText: '「ロイヤルストレートフラッシュを狙え！運命のドローに全てを賭ける！」',
       artSymbol: 'Sparkles',
     },
   },

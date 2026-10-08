@@ -8,7 +8,7 @@ import { buildCardDefinition } from '../levelSystem';
  * 1. よしえ進化系列: 綺麗なよしえ (Lv.2) → 塩よしえ (Lv.3) → 「普通に話すだけならいいよー（嘘）」嘉慧 (Lv.4) → よしえEX (Lv.5)
  * 2. りゅうく進化系列: 吉田りゅうく (Lv.3) → リューク・スカイウォーカー (Lv.5)
  * 3. サブレ・キャノン系列: まゆサブレ (Lv.3) → 顎・キャノン (Lv.4) / キャノンの殴り (Lv.2) / ボイメキャノン (Lv.3)
- * 4. ヘッドフォンニキ系列: ヘッドフォンニキ (Lv.2) → オンフードヘッドフォンニキ (Lv.4) / 赤ヘッドフォン (Lv.2)
+ * 4. ヘッドフォンニキ系列: ヘッドフォンニキ (Lv.2) → オンフードヘッドフォンニキ (Lv.4)
  * 5. ゆきや進化系列＆派生: ゆきや (Lv.2) → 裏切りのゆきや (Lv.4) → ゆきやEX (Lv.5) / さみしいゆきや (Lv.1) / 返金のゆきや (Lv.2) / おどるゆきや (Lv.3)
  * 6. 博子進化系列: 博子 (Lv.2) → ピロコ (Lv.4) → 博子EX (Lv.5)
  * 7. りゅーのすけ進化系列: りゅーのすけ (Lv.1) → じゅーりゅーのすけ (Lv.3) → りゅーのすけEX (Lv.5)
@@ -20,8 +20,8 @@ import { buildCardDefinition } from '../levelSystem';
  * 13. ガボン進化系列: ガボン (Lv.2) → メイド服のガボン (Lv.4) → ガボンEX (Lv.5)
  * 14. づっきー進化系列: づっきー (Lv.2) → 昼夜逆転のづっきー (Lv.3) → 作曲家なづっきー (Lv.4) → づっきーEX (Lv.5)
  * 15. ２世進化系列: ２世 (Lv.2) → はしゃぐ２世 (Lv.4) → ２世EX (Lv.5)
- * 16. つだぬまず＆特効系列: しょーちゃん (Lv.3) / おりちゃん (Lv.3) / ムエ (Lv.4) / もえきゅん (Lv.2・しょーちゃん即死) / りょち (Lv.2・ムエ即死) / メンヘラな泰松 (Lv.3)
- * 17. 単体アタッカー: 情報処理基礎のおばぁ (Lv.1) / 顎 (Lv.1) / 井上教授（壁） (Lv.1) / ヨートン (Lv.2) / バニラなそうくん (Lv.2) / 野々村議員 (Lv.2) / 大谷翔平 (Lv.4)
+ * 16. つだぬまず＆特効系列: しょーちゃん (Lv.3) / おりちゃん (Lv.3) / ムエ (Lv.4) / もえきゅん (Lv.2・しょーちゃん即死) / りょち (Lv.2・ムエ即死) / もか (Lv.2・ムエ＆しょーちゃん+30) / こはく (Lv.2・ムエ＆しょーちゃん+30) / メンヘラな泰松 (Lv.3)
+ * 17. 単体アタッカー: 情報処理基礎のおばぁ (Lv.1) / 顎 (Lv.1) / 井上教授（壁） (Lv.1) / ヨートン (Lv.2) / バニラなそうくん (Lv.2) / 野々村議員 (Lv.2) / Rikua (Lv.3) / 中央大学教授（ピザを持ってくる） (Lv.3) / ブーン (Lv.2) / レジェンド校長 (Lv.4)
  */
 const ATTACK_CARD_SEEDS: RawCardSeed[] = [
   // ============================================================================
@@ -82,7 +82,6 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
       stage: 3,
       evolvesFrom: 'evo_yoshie_salt',
       evolvesTo: 'evo_yoshie_ex',
-      triggerCardId: 'spl_yukiya_card',
     },
     level: 4,
     abilities: {
@@ -312,28 +311,6 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
       artSymbol: 'Crown',
     },
   },
-  {
-    id: 'atk_red_headphone',
-    name: '赤ヘッドフォン',
-    type: 'ATTACK',
-    evolution: {
-      family: 'ヘッドフォンニキ系列',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 2,
-    abilities: {
-      attackName: 'クリムゾンビート',
-      activeEffect: '2エネルギーで50ダメージを与える音波攻撃',
-      description: '真紅のヘッドフォンで闘志を高めるLv.2基礎カード。HP80・攻撃力50で扱いやすい。',
-    },
-    ui: {
-      tags: ['ニキ系', '赤ヘッドフォン', 'Lv.2'],
-      flavorText: '「赤いヘッドフォンは通常の3倍のグルーヴを生む。」',
-      artSymbol: 'Flame',
-    },
-  },
 
   // ============================================================================
   // 5. ゆきや進化系列＆派生カード
@@ -561,7 +538,6 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
       stage: 1,
       evolvesFrom: null,
       evolvesTo: 'evo_juryunosuke',
-      triggerCardId: 'spl_fluorescent_ryunosuke',
     },
     level: 1,
     abilities: {
@@ -1061,6 +1037,56 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
     },
   },
   {
+    id: 'atk_moka',
+    name: 'もか',
+    type: 'ATTACK',
+    evolution: {
+      family: '特効系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 2,
+    abilities: {
+      attackName: 'もかスマイルアタック',
+      activeEffect: '通常50ダメージ（相手が「ムエ」または「しょーちゃん」ならダメージ＋30！）',
+      passiveEffect: '特効：攻撃対象が「ムエ」または「しょーちゃん」の場合、与えるダメージ＋30',
+      combatSkill: 'BONUS_VS_MUE_AND_SHOCHAN_30',
+      description:
+        '【特効】通常攻撃（50ダメージ）に加え、相手が「ムエ」または「しょーちゃん」のときはダメージが＋30（合計80ダメージ）になる！',
+    },
+    ui: {
+      tags: ['特効', 'もか', 'Lv.2'],
+      flavorText: '「ムエちゃんとしょーちゃんには容赦しないよ♡」',
+      artSymbol: 'Heart',
+    },
+  },
+  {
+    id: 'atk_kohaku',
+    name: 'こはく',
+    type: 'ATTACK',
+    evolution: {
+      family: '特効系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 2,
+    abilities: {
+      attackName: 'こはくラッシュ',
+      activeEffect: '通常50ダメージ（相手が「ムエ」または「しょーちゃん」ならダメージ＋30！）',
+      passiveEffect: '特効：攻撃対象が「ムエ」または「しょーちゃん」の場合、与えるダメージ＋30',
+      combatSkill: 'BONUS_VS_MUE_AND_SHOCHAN_30',
+      description:
+        '【特効】通常攻撃（50ダメージ）に加え、相手が「ムエ」または「しょーちゃん」のときはダメージが＋30（合計80ダメージ）になる！',
+    },
+    ui: {
+      tags: ['特効', 'こはく', 'Lv.2'],
+      flavorText: '「ムエちゃんもしょーちゃんもまとめて相手してあげる！」',
+      artSymbol: 'Sparkles',
+    },
+  },
+  {
     id: 'atk_menhera_yasumatsu',
     name: 'メンヘラな泰松',
     type: 'ATTACK',
@@ -1187,7 +1213,7 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
       stage: 1,
       evolvesFrom: null,
       evolvesTo: null,
-      triggerCardId: 'spl_matenai_sokun',
+      triggerCardId: 'spl_vanilla',
     },
     level: 2,
     abilities: {
@@ -1470,11 +1496,79 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
   },
 
   // ============================================================================
-  // 18. 超大型単体アタッカー: 大谷翔平
+  // 18. 新規単体アタッカー: Rikua / 中央大学教授（ピザを持ってくる） / ブーン / レジェンド校長
   // ============================================================================
   {
-    id: 'atk_ohtani_shohei',
-    name: '大谷翔平',
+    id: 'atk_rikua',
+    name: 'Rikua',
+    type: 'ATTACK',
+    evolution: {
+      family: '単体',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 3,
+    abilities: {
+      attackName: 'スタイリッシュ・スラッシュ',
+      activeEffect: '2エネルギーで70ダメージを与える主力攻撃',
+      description: 'クールな立ち回りで2エネルギー70ダメージを叩き込むLv.3主力アタッカー。',
+    },
+    ui: {
+      tags: ['Rikua', '主力', 'Lv.3'],
+      flavorText: '「Rikuaの洗練された一撃が戦場を駆け抜ける！」',
+      artSymbol: 'Zap',
+    },
+  },
+  {
+    id: 'atk_chuo_pizza_prof',
+    name: '中央大学教授（ピザを持ってくる）',
+    type: 'ATTACK',
+    evolution: {
+      family: '単体',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 3,
+    abilities: {
+      attackName: '焼きたてピザ差し入れアタック',
+      activeEffect: '2エネルギーで70ダメージを与える主力攻撃',
+      description:
+        '熱々のピザを片手に颯爽と現れる中央大学教授！HP100・攻撃力70で味方の士気も最高潮に高める。',
+    },
+    ui: {
+      tags: ['中央大学', 'ピザ', '教授', 'Lv.3'],
+      flavorText: '「みんなお疲れ！熱々のピザを持ってきたぞ〜！！」',
+      artSymbol: 'Flame',
+    },
+  },
+  {
+    id: 'atk_boon',
+    name: 'ブーン',
+    type: 'ATTACK',
+    evolution: {
+      family: '単体',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 2,
+    abilities: {
+      attackName: '超速ブーン突撃',
+      activeEffect: '2エネルギーで50ダメージを与える高速突撃',
+      description:
+        '両手を広げて風を切り裂くLv.2アタッカー！2エネルギーで50ダメージをテンポ良く与える。',
+    },
+    ui: {
+      tags: ['ブーン', '高速', 'Lv.2'],
+      flavorText: '「⊂二二二（ ＾ω＾）二⊃ ブーン！！」',
+      artSymbol: 'Wind',
+    },
+  },
+  {
+    id: 'atk_legend_principal',
+    name: 'レジェンド校長',
     type: 'ATTACK',
     evolution: {
       family: '単体',
@@ -1484,15 +1578,15 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
     },
     level: 4,
     abilities: {
-      attackName: '二刀流特大ホームラン＆165キロ剛速球',
-      activeEffect: '3エネルギーで100ダメージを与える超一流の二刀流攻撃',
+      attackName: '伝説の全校朝礼演説',
+      activeEffect: '3エネルギーで100ダメージを与える威厳の一撃',
       description:
-        '進化なしで場に出せるLv.4二刀流スーパースター！HP130・攻撃力100で攻守ともに別次元の強さを誇る。',
+        '進化なしで場に出せるLv.4のレジェンド校長！HP130・攻撃力100の圧倒的威厳で戦場を掌握する。',
     },
     ui: {
-      tags: ['二刀流', 'MVP', 'Lv.4'],
-      flavorText: '「憧れるのをやめましょう。打って投げて戦場を支配する世界のショウヘイ！」',
-      artSymbol: 'Flame',
+      tags: ['校長', 'レジェンド', 'Lv.4'],
+      flavorText: '「えー、皆さんが静かになるまで3分かかりました。これより伝説の訓話を始めます！」',
+      artSymbol: 'Crown',
     },
   },
 ];

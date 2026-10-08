@@ -10,7 +10,7 @@ export const CARD_EVOLUTION_LINES = {
   yoshieLine: {
     familyName: 'よしえ系列',
     stages: ['atk_yoshie_clean', 'evo_yoshie_salt', 'evo_yoshie_kakei', 'evo_yoshie_ex'],
-    relatedSupportCards: ['spl_juzu_card', 'spl_unko_card', 'spl_yukiya_card'],
+    relatedSupportCards: ['spl_juzu_card', 'spl_unko_card'],
   },
   ryukuLine: {
     familyName: 'りゅうく系列',
@@ -25,7 +25,7 @@ export const CARD_EVOLUTION_LINES = {
   headphoneNikiLine: {
     familyName: 'ヘッドフォンニキ系列',
     stages: ['atk_headphone_niki', 'evo_onhood_headphone_niki'],
-    relatedSupportCards: ['atk_red_headphone'],
+    relatedSupportCards: [],
   },
   yukiyaLine: {
     familyName: 'ゆきや系列',
@@ -34,7 +34,6 @@ export const CARD_EVOLUTION_LINES = {
       'atk_samishii_yukiya',
       'atk_henkin_yukiya',
       'atk_odoru_yukiya',
-      'spl_sabishigariya_yukiya',
     ],
   },
   hirokoLine: {
@@ -45,12 +44,12 @@ export const CARD_EVOLUTION_LINES = {
   ryunosukeLine: {
     familyName: 'りゅーのすけ系列',
     stages: ['atk_ryunosuke', 'evo_juryunosuke', 'evo_ryunosuke_ex'],
-    relatedSupportCards: ['spl_fluorescent_ryunosuke'],
+    relatedSupportCards: [],
   },
   nakamuraLine: {
     familyName: '中村先生系列',
     stages: ['atk_nakamura_sensei', 'evo_superfly_unit', 'evo_nakamura_ex'],
-    relatedSupportCards: ['spl_superfly'],
+    relatedSupportCards: [],
   },
   utanLine: {
     familyName: 'うーたん系列',
@@ -87,11 +86,6 @@ export const CARD_EVOLUTION_LINES = {
     stages: ['atk_nisei', 'evo_hashagu_nisei', 'evo_nisei_ex'],
     relatedSupportCards: [],
   },
-  ohtaniGroup: {
-    familyName: '大谷翔平',
-    stages: ['atk_ohtani_shohei'],
-    relatedSupportCards: [],
-  },
   tsudanumazuGroup: {
     familyName: 'つだぬまず＆特効系列',
     stages: [
@@ -100,9 +94,11 @@ export const CARD_EVOLUTION_LINES = {
       'atk_mue',
       'atk_moekyun',
       'atk_ryochi',
+      'atk_moka',
+      'atk_kohaku',
       'atk_menhera_yasumatsu',
     ],
-    relatedSupportCards: ['spl_yasumatsu', 'spl_sensoji', 'spl_sumidagawa'],
+    relatedSupportCards: ['spl_yasumatsu', 'spl_sensoji', 'spl_sensoji_lawn', 'spl_sumidagawa'],
   },
 } as const;
 

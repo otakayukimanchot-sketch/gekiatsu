@@ -74,6 +74,7 @@ export type CombatUnitSkill =
   | 'NONE'
   | 'INSTANT_KILL_SHOCHAN'    // もえきゅん: しょーちゃんに対して即死ダメージ
   | 'INSTANT_KILL_MUE'        // りょち: ムエに対して即死ダメージ
+  | 'BONUS_VS_MUE_AND_SHOCHAN_30' // もか / こはく: ムエちゃん・しょーちゃんに対してダメージ+30
   | 'BERSERK_LOW_HP_30'       // 背水: HP50%以下でダメージ+30
   | 'SWARM_BONUS_10_PER_BENCH'// 陣形: ベンチ1体につきダメージ+10
   | 'HAND_SCALE_BONUS_20'     // 叡智: 手札4枚以上でダメージ+20
@@ -97,6 +98,7 @@ export type SpellEffectKind =
   | 'BONUS_ENERGY_ACTIVE'
   | 'BONUS_ENERGY_BENCH'
   | 'SURGE_ENERGY_IF_SWARM'
+  | 'BUFF_ATK_10'
   | 'BUFF_ATK_20'
   | 'BUFF_ATK_30'
   | 'BUFF_ATK_50'
