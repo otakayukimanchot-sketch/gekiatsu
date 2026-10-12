@@ -891,29 +891,6 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   <span>切断中 ({disconnectSecondsLeft}s)</span>
                 </span>
               )}
-              <EmoteSpeechBubble
-                emoji={oppActiveEmote?.emoji || null}
-                eventKey={oppActiveEmote?.eventId}
-                position="top-right"
-              />
-              {/* Opponent Win-Point Orbs */}
-              <div className="flex items-center gap-0.5 ml-1 shrink-0">
-                {Array.from({ length: winScore }).map((_, idx) => (
-                  <div
-                    key={idx}
-                    className={`w-3 h-3 rounded-full border flex items-center justify-center ${
-                      idx < opponent.score
-                        ? 'bg-amber-400 border-yellow-200 shadow-xs shadow-amber-400'
-                        : 'bg-slate-950 border-slate-700'
-                    }`}
-                  >
-                    {idx < opponent.score && <Trophy className="w-2 h-2 text-stone-950" />}
-                  </div>
-                ))}
-                <span className="text-[9px] font-black text-amber-300 ml-0.5">
-                  {opponent.score}/{winScore} POINTS
-                </span>
-              </div>
             </div>
 
             <div className="flex items-center gap-1 shrink-0 text-[10px] font-bold">
@@ -1021,9 +998,48 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
           </div>
 
           {/* Center Status Bar */}
-          <div className="w-full flex items-center justify-between gap-1.5 py-1 px-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 shadow-inner">
-            <div className="px-2 py-0.5 rounded-lg bg-slate-950 border border-amber-500/40 text-[9px] font-black text-amber-400 shrink-0">
-              VS
+          <div className="relative w-full flex items-center justify-between gap-2 py-1 px-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 shadow-inner">
+            {/* Left Side: [VS] + Score "〇-〇" + Emote Display Above/Below [VS] */}
+            <div className="relative flex items-center gap-1.5 shrink-0">
+              {/* Opponent Emote Above [VS] on the left side */}
+              {oppActiveEmote?.emoji && (
+                <div className="absolute bottom-full left-0 mb-1.5 z-40 pointer-events-none flex items-center gap-1">
+                  <EmoteSpeechBubble
+                    emoji={oppActiveEmote.emoji}
+                    eventKey={oppActiveEmote.eventId}
+                    position="top-right"
+                  />
+                </div>
+              )}
+
+              <div className="px-2 py-0.5 rounded-lg bg-slate-950 border border-amber-500/40 text-[9px] font-black text-amber-400 shrink-0">
+                VS
+              </div>
+
+              {/* Numeric "〇-〇" Score Display in the Middle Space */}
+              <div
+                className="px-2.5 py-0.5 rounded-lg bg-slate-950 border border-slate-700 flex items-center gap-1.5 shadow-sm"
+                title={`自分 ${me.score} - ${opponent.score} 相手 (${winScore}点先取)`}
+              >
+                <span className="text-xs sm:text-sm font-black font-mono text-emerald-400 leading-none">
+                  {me.score}
+                </span>
+                <span className="text-[10px] font-black text-stone-400 leading-none">-</span>
+                <span className="text-xs sm:text-sm font-black font-mono text-amber-400 leading-none">
+                  {opponent.score}
+                </span>
+              </div>
+
+              {/* My Emote Below [VS] on the left side */}
+              {myActiveEmote?.emoji && (
+                <div className="absolute top-full left-0 mt-1.5 z-40 pointer-events-none flex items-center gap-1">
+                  <EmoteSpeechBubble
+                    emoji={myActiveEmote.emoji}
+                    eventKey={myActiveEmote.eventId}
+                    position="bottom-right"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col items-center justify-center flex-1 min-w-0 px-1">
@@ -1246,33 +1262,13 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             })}
           </div>
 
-          {/* Player Info + Points + Deck/Trash + Emote Control */}
+          {/* Player Info + Deck/Trash + Emote Control */}
           <div className="flex items-center justify-between gap-1.5 bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-0.5">
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="font-black text-[11px] text-amber-200 truncate">{me.name}</span>
-              <EmoteSpeechBubble
-                emoji={myActiveEmote?.emoji || null}
-                eventKey={myActiveEmote?.eventId}
-                position="bottom-right"
-              />
-              <div className="flex items-center gap-0.5 shrink-0">
-                <span className="text-[8px] text-stone-400 font-bold">YOU:</span>
-                {Array.from({ length: winScore }).map((_, idx) => (
-                  <div
-                    key={idx}
-                    className={`w-3 h-3 rounded-full border flex items-center justify-center ${
-                      idx < me.score
-                        ? 'bg-emerald-400 border-white shadow-xs shadow-emerald-400'
-                        : 'bg-slate-950 border-slate-700'
-                    }`}
-                  >
-                    {idx < me.score && <Trophy className="w-2 h-2 text-stone-950" />}
-                  </div>
-                ))}
-                <span className="text-[9px] font-black text-emerald-300 ml-0.5">
-                  {me.score}/{winScore} POINTS
-                </span>
-              </div>
+              <span className="text-[9px] text-stone-400 font-bold shrink-0">
+                ({winScore}点先取)
+              </span>
             </div>
 
             <div className="flex items-center gap-1 shrink-0 text-[9px] font-bold">
@@ -1349,28 +1345,6 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                 <span>切断中 ({disconnectSecondsLeft}s)</span>
               </span>
             )}
-            <EmoteSpeechBubble
-              emoji={oppActiveEmote?.emoji || null}
-              eventKey={oppActiveEmote?.eventId}
-              position="top-right"
-            />
-            <div className="flex items-center gap-0.5">
-              {Array.from({ length: winScore }).map((_, idx) => (
-                <div
-                  key={idx}
-                  className={`w-3 h-3 rounded-full border flex items-center justify-center ${
-                    idx < opponent.score
-                      ? 'bg-amber-400 border-yellow-200'
-                      : 'bg-slate-950 border-slate-700'
-                  }`}
-                >
-                  {idx < opponent.score && <Trophy className="w-2 h-2 text-stone-950" />}
-                </div>
-              ))}
-              <span className="text-[9px] font-black text-amber-300 ml-0.5">
-                {opponent.score}/{winScore} POINTS
-              </span>
-            </div>
             <span className="text-[9px] text-slate-400">
               手札:{opponent.handCount} 山札:{opponent.deckCount}
             </span>
@@ -1457,11 +1431,38 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             />
           </div>
 
-          {/* Center: VS Badge */}
-          <div className="flex flex-col items-center justify-center gap-1 shrink-0">
-            <div className="px-2 py-1 rounded-lg bg-slate-950 border border-amber-500/40 text-[10px] font-black text-amber-400 shadow">
+          {/* Center: VS Badge + Numeric Score "〇-〇" + Emotes Above/Below VS */}
+          <div className="relative flex flex-col items-center justify-center gap-1 shrink-0">
+            {oppActiveEmote?.emoji && (
+              <div className="absolute bottom-full mb-1 z-40 pointer-events-none">
+                <EmoteSpeechBubble
+                  emoji={oppActiveEmote.emoji}
+                  eventKey={oppActiveEmote.eventId}
+                  position="top-right"
+                />
+              </div>
+            )}
+            <div className="px-2 py-0.5 rounded-lg bg-slate-950 border border-amber-500/40 text-[10px] font-black text-amber-400 shadow">
               VS
             </div>
+            <div className="px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-700 flex items-center gap-1 shadow">
+              <span className="text-xs font-black font-mono text-emerald-400 leading-none">
+                {me.score}
+              </span>
+              <span className="text-[9px] font-black text-stone-400 leading-none">-</span>
+              <span className="text-xs font-black font-mono text-amber-400 leading-none">
+                {opponent.score}
+              </span>
+            </div>
+            {myActiveEmote?.emoji && (
+              <div className="absolute top-full mt-1 z-40 pointer-events-none">
+                <EmoteSpeechBubble
+                  emoji={myActiveEmote.emoji}
+                  eventKey={myActiveEmote.eventId}
+                  position="bottom-right"
+                />
+              </div>
+            )}
           </div>
 
           {/* Center-Right: My Active Spot */}
@@ -1558,14 +1559,6 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             <div className="flex flex-col gap-0.5 pr-1 border-r border-slate-800">
               <div className="flex items-center gap-1">
                 <span className="font-black text-[10px] text-amber-200">{me.name}</span>
-                <EmoteSpeechBubble
-                  emoji={myActiveEmote?.emoji || null}
-                  eventKey={myActiveEmote?.eventId}
-                  position="bottom-right"
-                />
-                <span className="text-[9px] font-black text-emerald-300">
-                  {me.score}/{winScore} POINTS
-                </span>
               </div>
               <div className="flex items-center gap-1 text-[8px] text-slate-400">
                 <span>山札:{me.deckCount}</span>

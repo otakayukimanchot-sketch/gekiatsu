@@ -237,7 +237,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             <span>ハイテンポ1対1カードバトル</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 tracking-wider drop-shadow-md">
-            ホンモノカードバトル
+            ホン〇ノカードバトル
           </h1>
           <p className="text-slate-400 text-xs">
             エネルギーを付けてわざを放て！シンプル＆戦略的ポケポケ型バトル

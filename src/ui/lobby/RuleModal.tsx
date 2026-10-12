@@ -17,7 +17,7 @@ export const RuleModal: React.FC<RuleModalProps> = ({ onClose }) => {
         <div className="flex items-center justify-between p-3.5 border-b border-slate-800 bg-slate-950">
           <div className="flex items-center gap-2 font-black text-sm text-amber-300">
             <BookOpen className="w-4 h-4 text-amber-400" />
-            <span>「ホンモノカードバトル」公式ルールブック</span>
+            <span>「ホン〇ノカードバトル」公式ルールブック</span>
           </div>
           <button
             onClick={onClose}
