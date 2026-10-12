@@ -1003,6 +1003,174 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
       artSymbol: 'Sparkles',
     },
   },
+  {
+    id: 'spl_trade_ticket',
+    name: 'トレードチケット',
+    type: 'SPELL',
+    evolution: {
+      family: '手札交換魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: 'トレードチケット交換',
+      activeEffect: '手札から最大2枚を山札に戻してシャッフルし、戻した枚数分引く（対戦中1回のみ・引き直し不可）',
+      description:
+        '【魔法】自分の手札を最大2枚まで山札に戻してシャッフルする。その後、戻した枚数と同じ数のカードを引く。対戦中に1回のみ使用可能。この効果で引いたカードの引き直しはできない。',
+      spellEffect: 'TRADE_TICKET',
+    },
+    ui: {
+      tags: ['魔法', '手札交換', '対戦中1回'],
+      flavorText: '「切り札を引き込む1回限りの特別チケット！」',
+      artSymbol: 'Sparkles',
+    },
+  },
+  {
+    id: 'spl_search_change',
+    name: '歩美ちゃん',
+    type: 'SPELL',
+    evolution: {
+      family: 'サーチ魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: 'トップ3サーチ',
+      activeEffect: '山札の上から3枚を見て、その中の攻撃カード1枚を手札に加え、残りを山札に戻してシャッフル',
+      description:
+        '【魔法】自分の山札の上から3枚を見る。その中から攻撃カードを1枚選び、手札に加える。残りのカードは山札に戻してシャッフルする（対象カードがない場合は手札に加えない）。',
+      spellEffect: 'SEARCH_CHANGE_TOP3',
+    },
+    ui: {
+      tags: ['魔法', 'サーチ', '歩美ちゃん', 'トップ3'],
+      flavorText: '「山札の未来を3枚先読みし、最良のアタッカーを掴み取る！」',
+      artSymbol: 'BookOpen',
+    },
+  },
+  {
+    id: 'spl_taimatsu_advice',
+    name: '泰松の助言',
+    type: 'SPELL',
+    evolution: {
+      family: 'つだぬまず系列サポート',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '泰松の導き',
+      activeEffect: '手札からランダムに1枚を山札に戻してシャッフルし、山札から3枚引く',
+      description:
+        '【魔法】自分の手札からランダムに1枚を山札に戻してシャッフルする。その後、山札からカードを3枚引く。このカードを使ったターン、他のサポートカードは使えない。手札が悪い時に有効。',
+      spellEffect: 'TAIMATSU_ADVICE',
+    },
+    ui: {
+      tags: ['魔法', 'ドロー', '手札入替', '泰松'],
+      flavorText: '「迷った時はその1枚を戻してみろ。新たな3枚が道を照らす！」',
+      artSymbol: 'Flame',
+    },
+  },
+  {
+    id: 'spl_energy_interference',
+    name: '一口ちょうだい',
+    type: 'SPELL',
+    evolution: {
+      family: '妨害魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: '一口つまみ食い',
+      activeEffect: '相手のバトル場のエネルギーが3個以上なら1個を相手エネルギーゾーンへ戻す（3個未満は不発）',
+      description:
+        '【魔法】相手のバトル場のカードにエネルギーが3個以上ついているなら、そのうち1個を相手のエネルギーゾーンへ戻す。3個未満の場合は効果は発動しない。',
+      spellEffect: 'ENERGY_INTERFERENCE',
+    },
+    ui: {
+      tags: ['魔法', 'エネ妨害', '一口ちょうだい'],
+      flavorText: '「ねぇねぇ、それ美味しそう！一口ちょうだい！」',
+      artSymbol: 'Zap',
+    },
+  },
+  {
+    id: 'spl_hand_sort',
+    name: 'スノアロリターン',
+    type: 'SPELL',
+    evolution: {
+      family: '手札交換魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: 'スノアロリターン',
+      activeEffect: '手札から最大2枚を山札に戻してシャッフルし、戻した枚数と同じ数のカードを引く',
+      description:
+        '【魔法】自分の手札を最大2枚まで山札に戻してシャッフルする。その後、戻した枚数と同じ数のカードを引く。',
+      spellEffect: 'HAND_SORT',
+    },
+    ui: {
+      tags: ['魔法', '手札整理', 'スノアロリターン'],
+      flavorText: '「不要なカードを山札へ戻し、理想の陣形へと手札を整える。」',
+      artSymbol: 'Sparkles',
+    },
+  },
+  {
+    id: 'spl_snatch',
+    name: 'スナッチ',
+    type: 'SPELL',
+    evolution: {
+      family: '妨害魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: 'スナッチ・スワップ',
+      activeEffect: '自分の手札からランダムに1枚選び、相手の手札1枚と交換する',
+      description:
+        '【魔法】自分の手札からランダムに1枚を選び、相手の手札からランダムに選んだ1枚と交換する。',
+      spellEffect: 'SNATCH_1',
+    },
+    ui: {
+      tags: ['魔法', 'スナッチ', '手札交換', '妨害'],
+      flavorText: '「お前の切り札、ちょっと貸してみろ！」',
+      artSymbol: 'Sparkles',
+    },
+  },
+  {
+    id: 'spl_snatch_2',
+    name: 'スナッチ2',
+    type: 'SPELL',
+    evolution: {
+      family: '妨害魔法',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 1,
+    abilities: {
+      attackName: 'ダブルスナッチ・スワップ',
+      activeEffect: '自分の手札からランダムに2枚選び、相手の手札2枚と交換する',
+      description:
+        '【魔法】自分の手札からランダムに2枚を選び、相手の手札からランダムに選んだ2枚と交換する。',
+      spellEffect: 'SNATCH_2',
+    },
+    ui: {
+      tags: ['魔法', 'スナッチ2', '手札交換', '超妨害'],
+      flavorText: '「手札2枚まとめて大強奪！相手の戦術を根底から覆す！」',
+      artSymbol: 'Sparkles',
+    },
+  },
 ];
 
 export const SPELL_CARDS: CardDefinition[] = SPELL_CARD_SEEDS.map(buildCardDefinition);

@@ -25,7 +25,9 @@ export interface SanitizedPlayerState {
   hasAttachedEnergyThisTurn: boolean;
   hasRetreatedThisTurn: boolean;
   hasUsedSpellThisTurn: boolean;
+  hasUsedTradeTicketThisMatch?: boolean;
   isConnected: boolean;
+  disconnectedAt?: number;
 }
 
 export interface SanitizedGameState {
@@ -41,6 +43,8 @@ export interface SanitizedGameState {
   isMyTurn: boolean;
   mustPromoteBench: boolean;
   myPlayerKey: PlayerKey;
+  isSpectator?: boolean;
+  spectatorCount?: number;
   me: SanitizedPlayerState;
   opponent: SanitizedPlayerState;
   stateVersion: number;
@@ -48,4 +52,21 @@ export interface SanitizedGameState {
   winReason?: string;
   logs: GameEventLog[];
   lastAnimation?: GameAnimationEvent;
+}
+
+export interface LiveMatchSummary {
+  roomId: string;
+  type: 'random' | 'friend' | 'solo';
+  inviteCode?: string;
+  winScore: WinScoreOption;
+  battleFormat: BattleFormatOption;
+  turnNumber: number;
+  phase: GamePhase;
+  playerAName: string;
+  playerAAvatar: string;
+  playerAScore: number;
+  playerBName: string;
+  playerBAvatar: string;
+  playerBScore: number;
+  spectatorCount: number;
 }

@@ -96,9 +96,19 @@ export function decideNextBotAction(
 
   // 5. Use Spell card if not yet used this turn
   if (!bot.hasUsedSpellThisTurn) {
-    const spellInHand = bot.hand.find(
-      (c) => getCardDefinition(c.definitionId)?.type === 'SPELL'
-    );
+    const spellInHand = bot.hand.find((c) => {
+      const def = getCardDefinition(c.definitionId);
+      if (def?.type !== 'SPELL') return false;
+      const eff = def.abilities.spellEffect;
+      if (eff === 'TRADE_TICKET' && bot.hasUsedTradeTicketThisMatch) return false;
+      if (eff === 'ENERGY_INTERFERENCE') {
+        return opp.activeCard != null && opp.activeCard.attachedEnergy >= 3;
+      }
+      if (eff === 'SNATCH_1' || eff === 'SNATCH_2') {
+        return bot.hand.length >= 2 && opp.hand.length >= 1;
+      }
+      return true;
+    });
     if (spellInHand) {
       return {
         actionType: 'USE_SPELL_CARD',

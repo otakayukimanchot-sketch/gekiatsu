@@ -7,6 +7,8 @@ import { CardView } from '../cards/CardView';
 import { GraveyardModal } from '../graveyard/GraveyardModal';
 import { FieldSlot } from './FieldSlot';
 import { CardDetailModal } from '../cards/CardDetailModal';
+import { EmoteControl, EmoteSpeechBubble } from './EmoteSystem';
+import { MatchResultOverlay } from './MatchResultOverlay';
 import {
   Sword,
   Zap,
@@ -17,12 +19,18 @@ import {
   AlertTriangle,
   Layers,
   Trash2,
+  Eye,
+  Info,
+  WifiOff,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface TabletopBoardProps {
   gameState: SanitizedGameState;
   onSendAction: (actionType: string, payload?: any) => void;
+  onSendEmote?: (emoteId: string) => void;
+  activeEmotes?: Record<string, { emoji: string; eventId: string }>;
+  emoteCooldownUntil?: number;
   onLeaveRoom: () => void;
   onPlayAgain?: () => void;
 }
@@ -62,6 +70,9 @@ function getSafeCardDamagePopup(
 export const TabletopBoard: React.FC<TabletopBoardProps> = ({
   gameState,
   onSendAction,
+  onSendEmote,
+  activeEmotes = {},
+  emoteCooldownUntil = 0,
   onLeaveRoom,
   onPlayAgain,
 }) => {
@@ -75,6 +86,8 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     winnerPlayerId,
     winReason,
     lastAnimation,
+    isSpectator,
+    spectatorCount,
   } = gameState;
 
   const winScore = gameWinScore || me?.maxScore || 3;
@@ -92,9 +105,55 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
   const [viewingTrash, setViewingTrash] = useState<'me' | 'opp' | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmSurrender, setConfirmSurrender] = useState(false);
+  const [cooldownRemainingMs, setCooldownRemainingMs] = useState(0);
+  const [disconnectSecondsLeft, setDisconnectSecondsLeft] = useState<number>(60);
+  const [handReturnPicker, setHandReturnPicker] = useState<{
+    spellCard: CardInstance;
+    selectedIds: string[];
+  } | null>(null);
+
+  useEffect(() => {
+    if (opponent && !opponent.isConnected && phase !== 'GAME_OVER') {
+      const startTs = opponent.disconnectedAt || Date.now();
+      const updateTimer = () => {
+        const elapsed = Date.now() - startTs;
+        const remSec = Math.max(0, Math.ceil((60_000 - elapsed) / 1000));
+        setDisconnectSecondsLeft(remSec);
+      };
+      updateTimer();
+      const id = window.setInterval(updateTimer, 500);
+      return () => window.clearInterval(id);
+    } else {
+      setDisconnectSecondsLeft(60);
+    }
+  }, [opponent?.isConnected, opponent?.disconnectedAt, phase]);
+
+  useEffect(() => {
+    const updateCooldown = () => {
+      const rem = Math.max(0, emoteCooldownUntil - Date.now());
+      setCooldownRemainingMs(rem);
+    };
+    updateCooldown();
+    if (emoteCooldownUntil > Date.now()) {
+      const interval = window.setInterval(updateCooldown, 100);
+      return () => window.clearInterval(interval);
+    }
+  }, [emoteCooldownUntil]);
+
+  const myActiveEmote = me?.playerId ? activeEmotes[me.playerId] : undefined;
+  const oppActiveEmote = opponent?.playerId ? activeEmotes[opponent.playerId] : undefined;
 
   // Animation states
   const [animBanner, setAnimBanner] = useState<string | null>(null);
+  const [vfxOverlay, setVfxOverlay] = useState<{
+    kind: 'SKILL' | 'SPELL' | 'EVOLVE' | 'KNOCKOUT';
+    title: string;
+    subtitle?: string;
+  } | null>(null);
+  const [vanishingGhost, setVanishingGhost] = useState<{
+    cardName: string;
+    points: number;
+  } | null>(null);
   const [damagePopup, setDamagePopup] = useState<{
     targetCardId: string;
     damage: number;
@@ -110,6 +169,15 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
   } | null>(null);
 
   const processedAnimIdsRef = React.useRef<Set<string>>(new Set());
+  const animTimerRef = React.useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (animTimerRef.current) {
+        window.clearTimeout(animTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (
@@ -131,6 +199,21 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     if (processedAnimIdsRef.current.has(lastAnimation.id)) return;
     processedAnimIdsRef.current.add(lastAnimation.id);
 
+    const scheduleClearAllAnims = (durationMs: number) => {
+      if (animTimerRef.current) {
+        window.clearTimeout(animTimerRef.current);
+      }
+      animTimerRef.current = window.setTimeout(() => {
+        setAttackingCardId(null);
+        setDamagePopup(null);
+        setAnimBanner(null);
+        setVfxOverlay(null);
+        setScorePopup(null);
+        setVanishingGhost(null);
+        animTimerRef.current = null;
+      }, durationMs);
+    };
+
     if (lastAnimation.type === 'ATTACK') {
       if (lastAnimation.sourceCardId != null) {
         setAttackingCardId(lastAnimation.sourceCardId);
@@ -146,12 +229,13 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
           lastAnimation.damage || 0
         } ダメージ！`
       );
-      const t = setTimeout(() => {
-        setAttackingCardId(null);
-        setDamagePopup(null);
-        setAnimBanner(null);
-      }, 1400);
-      return () => clearTimeout(t);
+      setVfxOverlay({
+        kind: 'SKILL',
+        title: `⚔️ ${lastAnimation.attackName || 'SKILL ATTACK'}`,
+        subtitle: `${lastAnimation.cardName || ''} ➔ -${lastAnimation.damage || 0} DMG`,
+      });
+      scheduleClearAllAnims(1200);
+      return;
     }
 
     if (lastAnimation.type === 'KNOCKOUT') {
@@ -162,9 +246,14 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
         lastAnimation.actorPlayerId === me.playerId;
       const scorer = isMeScorer ? me : opponent;
 
+      setVfxOverlay(null);
       setAnimBanner(
         `💥 「${lastAnimation.cardName || ''}」がきぜつ！ +${pts} POINT GET!`
       );
+      setVanishingGhost({
+        cardName: lastAnimation.cardName || 'カード',
+        points: pts,
+      });
       setScorePopup({
         pointsGained: pts,
         scorerName: scorer?.name || (isMeScorer ? 'YOU' : 'OPPONENT'),
@@ -174,37 +263,54 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
         maxScore: winScore,
       });
 
-      const t = setTimeout(() => {
-        setAnimBanner(null);
-        setScorePopup(null);
-      }, 2200);
-      return () => clearTimeout(t);
+      if (isMeScorer) {
+        confetti({
+          particleCount: 45,
+          spread: 60,
+          origin: { y: 0.45 },
+        });
+      }
+
+      scheduleClearAllAnims(1900);
+      return;
     }
 
     if (lastAnimation.type === 'PROMOTE') {
+      setVfxOverlay(null);
       setAnimBanner(`🚀 ベンチから「${lastAnimation.cardName || ''}」がバトル場へ登場！`);
-      const t = setTimeout(() => setAnimBanner(null), 1300);
-      return () => clearTimeout(t);
+      scheduleClearAllAnims(1100);
+      return;
     }
 
     if (lastAnimation.type === 'ATTACH_ENERGY') {
+      setVfxOverlay(null);
       setAnimBanner(`⚡ 「${lastAnimation.cardName || ''}」にエネルギー付与！`);
-      const t = setTimeout(() => setAnimBanner(null), 1000);
-      return () => clearTimeout(t);
+      scheduleClearAllAnims(950);
+      return;
     }
 
     if (lastAnimation.type === 'EVOLVE') {
       setAnimBanner(`🌟 進化！「${lastAnimation.cardName || ''}」が降臨！`);
-      const t = setTimeout(() => setAnimBanner(null), 1500);
-      return () => clearTimeout(t);
+      setVfxOverlay({
+        kind: 'EVOLVE',
+        title: `🌟 EVOLUTION!`,
+        subtitle: `${lastAnimation.cardName || ''} が覚醒降臨！`,
+      });
+      scheduleClearAllAnims(1250);
+      return;
     }
 
     if (lastAnimation.type === 'SPELL') {
       setAnimBanner(`✨ 「${lastAnimation.cardName || ''}」を発動！`);
-      const t = setTimeout(() => setAnimBanner(null), 1200);
-      return () => clearTimeout(t);
+      setVfxOverlay({
+        kind: 'SPELL',
+        title: `✨ MAGIC CAST : ${lastAnimation.cardName || '魔法'}`,
+        subtitle: lastAnimation.attackName || '',
+      });
+      scheduleClearAllAnims(1150);
+      return;
     }
-  }, [lastAnimation?.id, me, opponent, winScore]);
+  }, [lastAnimation?.id]);
 
   const clearModes = () => {
     setSelectedHandCard(null);
@@ -225,13 +331,17 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
 
   const handleSelectHandCard = (card: CardInstance) => {
     if (card == null || card.instanceId == null) return;
-    if (phase === 'GAME_OVER') return;
+    if (phase === 'GAME_OVER' || isSpectator) {
+      setInspectCard(card);
+      return;
+    }
     if (!isMyTurn) {
       setInspectCard(card);
       return;
     }
+    // Second tap on an already-selected hand card opens the detailed card modal
     if (isCardMatchingId(selectedHandCard, card.instanceId)) {
-      clearModes();
+      setInspectCard(card);
       return;
     }
     setSelectedHandCard(card);
@@ -280,6 +390,25 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     if (def.type === 'SPELL') {
       if (me.hasUsedSpellThisTurn) {
         setActionError('魔法カードは1ターンに1枚まで使用できます。');
+        return;
+      }
+      if (
+        def.abilities.spellEffect === 'TRADE_TICKET' &&
+        me.hasUsedTradeTicketThisMatch
+      ) {
+        setActionError('「トレードチケット」は1回の対戦中に1度しか使用できません。');
+        return;
+      }
+      const otherHandCards = myHand.filter((c) => c.instanceId !== selectedHandCard.instanceId);
+      if (
+        (def.abilities.spellEffect === 'TRADE_TICKET' ||
+          def.abilities.spellEffect === 'HAND_SORT') &&
+        otherHandCards.length > 0
+      ) {
+        setHandReturnPicker({
+          spellCard: selectedHandCard,
+          selectedIds: [],
+        });
         return;
       }
       onSendAction('USE_SPELL_CARD', {
@@ -425,6 +554,9 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     if (isGameOver) {
       return iWon ? '🎉 YOU WIN! 対戦終了' : '対戦終了';
     }
+    if (isSpectator) {
+      return `👁️ ライブ観戦モード（カードをタップまたは長押しで能力・ステータス詳細を表示）`;
+    }
     if (mustPromoteBench) {
       return '⚠️ バトル場のカードがきぜつしました。ベンチから出すカードを選んでください！';
     }
@@ -432,7 +564,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
       return '相手がベンチから新しいバトル場のカードを選んでいます…';
     }
     if (!isMyTurn) {
-      return '相手のターン中…（カードタップで詳細確認）';
+      return '相手のターン中…（カードタップ/長押しで詳細確認）';
     }
     if (isAttachingEnergy) {
       return '⚡ エネルギーを付ける自分のカードをタップ！';
@@ -538,7 +670,19 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   isSelected={isSelected}
                   canAct={isMyTurn && hasEvoTargetNow}
                   isUnplayableEvolution={isEvoCard && !hasEvoTargetNow}
+                  onLongPress={() => setInspectCard(card)}
                 />
+                <button
+                  type="button"
+                  title="カード詳細"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setInspectCard(card);
+                  }}
+                  className="absolute top-0.5 right-0.5 z-30 w-4 h-4 rounded-full bg-black/75 hover:bg-amber-500 text-stone-200 hover:text-stone-950 border border-white/30 flex items-center justify-center cursor-pointer shadow"
+                >
+                  <Info className="w-2.5 h-2.5" />
+                </button>
               </div>
             );
           })}
@@ -625,6 +769,69 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
         }}
       />
 
+      {/* Opponent Connection Lost Small Notice */}
+      {!opponent.isConnected && !isGameOver && (
+        <div className="fixed top-2 right-2 z-50 px-3 py-1.5 rounded-xl bg-rose-950/95 border border-rose-500/80 text-rose-100 text-[11px] font-bold shadow-xl flex items-center gap-1.5 animate-pulse pointer-events-none">
+          <WifiOff className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+          <span>Connection lost / 相手の通信が切断されました</span>
+          <span className="px-1.5 py-0.5 rounded bg-black/50 text-amber-300 font-mono font-black text-[10px]">
+            {disconnectSecondsLeft}s
+          </span>
+        </div>
+      )}
+
+      {/* Spectator Mode Banner */}
+      {isSpectator && (
+        <div className="fixed top-2 left-1/2 -translate-x-1/2 z-50 px-3.5 py-1 rounded-full bg-emerald-950/95 border border-emerald-400 text-emerald-200 font-black text-[11px] shadow-xl flex items-center gap-2">
+          <Eye className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+          <span>LIVE 観戦中 ({spectatorCount || 1}人視聴)</span>
+          <button
+            onClick={onLeaveRoom}
+            className="ml-1 px-2 py-0.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-[10px] font-black cursor-pointer"
+          >
+            退室
+          </button>
+        </div>
+      )}
+
+      {/* Spectacular Non-Intrusive Skill / Spell / Evolve VFX Overlay */}
+      {vfxOverlay && (
+        <div className="fixed inset-0 z-40 pointer-events-none flex items-center justify-center overflow-hidden">
+          {vfxOverlay.kind === 'SPELL' && (
+            <div className="w-64 h-64 rounded-full border-4 border-dashed border-fuchsia-400/70 bg-radial from-fuchsia-500/25 via-indigo-500/15 to-transparent anim-magic-circle flex items-center justify-center shadow-[0_0_50px_rgba(217,70,239,0.6)]" />
+          )}
+          {vfxOverlay.kind === 'SKILL' && (
+            <div className="w-[120%] h-8 bg-gradient-to-r from-transparent via-amber-300 to-transparent shadow-[0_0_35px_rgba(251,191,36,0.95)] anim-slash-beam" />
+          )}
+          {vfxOverlay.kind === 'EVOLVE' && (
+            <div className="w-72 h-72 rounded-full border-4 border-amber-300/80 bg-radial from-yellow-300/35 via-amber-500/15 to-transparent anim-magic-circle shadow-[0_0_60px_rgba(251,191,36,0.85)]" />
+          )}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-5 py-2 rounded-2xl bg-stone-950/90 border-2 border-amber-300 shadow-2xl text-center animate-fadeIn">
+            <div className="text-sm sm:text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-amber-300 to-yellow-400 tracking-wider drop-shadow">
+              {vfxOverlay.title}
+            </div>
+            {vfxOverlay.subtitle && (
+              <div className="text-[10px] font-bold text-stone-200 mt-0.5 max-w-xs truncate">
+                {vfxOverlay.subtitle}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Card Disappearing / Shatter Ghost Effect on Knockout */}
+      {vanishingGhost && (
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-45 pointer-events-none flex flex-col items-center justify-center">
+          <div className="w-28 h-38 rounded-xl border-2 border-rose-400 bg-gradient-to-b from-rose-600/80 to-stone-950/90 flex flex-col items-center justify-center p-2 shadow-[0_0_40px_rgba(244,63,94,0.9)] anim-card-vanish">
+            <Skull className="w-8 h-8 text-white mb-1" />
+            <span className="text-[10px] font-black text-white text-center leading-tight">
+              {vanishingGhost.cardName}
+            </span>
+            <span className="text-[9px] font-black text-amber-300 mt-1">KNOCK OUT!</span>
+          </div>
+        </div>
+      )}
+
       {/* Floating Animation Banner */}
       {animBanner && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-50 px-3.5 py-1 rounded-full bg-stone-950/95 border-2 border-amber-400 text-amber-200 font-black text-[11px] shadow-2xl animate-bounce whitespace-nowrap pointer-events-none">
@@ -634,7 +841,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
 
       {/* KO Point Reward Popup (+1 POINT GET! / +2 POINTS GET!) */}
       {scorePopup && !isGameOver && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-stone-950 border-2 border-white shadow-2xl flex flex-col items-center gap-0.5 animate-bounce pointer-events-none">
+        <div className="fixed top-20 left-1/2 z-50 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-300 to-amber-500 text-stone-950 border-2 border-white shadow-[0_0_35px_rgba(251,191,36,0.9)] flex flex-col items-center gap-0.5 anim-score-burst pointer-events-none">
           <div className="text-xs sm:text-sm font-black tracking-wider flex items-center gap-1">
             <Trophy className="w-4 h-4 fill-stone-950" />
             <span>
@@ -678,6 +885,17 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   : '😎'}
               </div>
               <span className="font-black text-xs text-stone-100 truncate">{opponent.name}</span>
+              {!opponent.isConnected && !isGameOver && (
+                <span className="px-1.5 py-0.5 rounded bg-rose-950 border border-rose-500 text-rose-200 text-[9px] font-black flex items-center gap-0.5 shrink-0 animate-pulse">
+                  <WifiOff className="w-2.5 h-2.5 text-rose-400" />
+                  <span>切断中 ({disconnectSecondsLeft}s)</span>
+                </span>
+              )}
+              <EmoteSpeechBubble
+                emoji={oppActiveEmote?.emoji || null}
+                eventKey={oppActiveEmote?.eventId}
+                position="top-right"
+              />
               {/* Opponent Win-Point Orbs */}
               <div className="flex items-center gap-0.5 ml-1 shrink-0">
                 {Array.from({ length: winScore }).map((_, idx) => (
@@ -1028,10 +1246,15 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             })}
           </div>
 
-          {/* Player Info + Points + Deck/Trash */}
+          {/* Player Info + Points + Deck/Trash + Emote Control */}
           <div className="flex items-center justify-between gap-1.5 bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-0.5">
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="font-black text-[11px] text-amber-200 truncate">{me.name}</span>
+              <EmoteSpeechBubble
+                emoji={myActiveEmote?.emoji || null}
+                eventKey={myActiveEmote?.eventId}
+                position="bottom-right"
+              />
               <div className="flex items-center gap-0.5 shrink-0">
                 <span className="text-[8px] text-stone-400 font-bold">YOU:</span>
                 {Array.from({ length: winScore }).map((_, idx) => (
@@ -1053,6 +1276,13 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             </div>
 
             <div className="flex items-center gap-1 shrink-0 text-[9px] font-bold">
+              {!isSpectator && onSendEmote && (
+                <EmoteControl
+                  disabled={isGameOver}
+                  cooldownRemainingMs={cooldownRemainingMs}
+                  onSelectEmote={onSendEmote}
+                />
+              )}
               <div className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-stone-300 flex items-center gap-0.5">
                 <Layers className="w-2.5 h-2.5 text-amber-400" />
                 <span>山札</span>
@@ -1113,6 +1343,17 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
               </button>
             )}
             <span className="font-black text-xs text-stone-100">{opponent.name}</span>
+            {!opponent.isConnected && !isGameOver && (
+              <span className="px-1.5 py-0.5 rounded bg-rose-950 border border-rose-500 text-rose-200 text-[9px] font-black flex items-center gap-0.5 shrink-0 animate-pulse">
+                <WifiOff className="w-2.5 h-2.5 text-rose-400" />
+                <span>切断中 ({disconnectSecondsLeft}s)</span>
+              </span>
+            )}
+            <EmoteSpeechBubble
+              emoji={oppActiveEmote?.emoji || null}
+              eventKey={oppActiveEmote?.eventId}
+              position="top-right"
+            />
             <div className="flex items-center gap-0.5">
               {Array.from({ length: winScore }).map((_, idx) => (
                 <div
@@ -1312,11 +1553,16 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
         <div className="relative flex items-center justify-between gap-2 bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-1">
           {renderSelectedHandFloatingBar()}
 
-          {/* Left Controls: Player Points + Energy + Attack + Retreat */}
+          {/* Left Controls: Player Points + Emote + Energy + Attack + Retreat */}
           <div className="flex items-center gap-1.5 shrink-0">
             <div className="flex flex-col gap-0.5 pr-1 border-r border-slate-800">
               <div className="flex items-center gap-1">
                 <span className="font-black text-[10px] text-amber-200">{me.name}</span>
+                <EmoteSpeechBubble
+                  emoji={myActiveEmote?.emoji || null}
+                  eventKey={myActiveEmote?.eventId}
+                  position="bottom-right"
+                />
                 <span className="text-[9px] font-black text-emerald-300">
                   {me.score}/{winScore} POINTS
                 </span>
@@ -1331,6 +1577,15 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                 </button>
               </div>
             </div>
+
+            {!isSpectator && onSendEmote && (
+              <EmoteControl
+                disabled={isGameOver}
+                cooldownRemainingMs={cooldownRemainingMs}
+                onSelectEmote={onSendEmote}
+                compact
+              />
+            )}
 
             {/* Energy Button */}
             <button
@@ -1412,6 +1667,89 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
         <CardDetailModal card={inspectCard} onClose={() => setInspectCard(null)} />
       )}
 
+      {/* Trade Ticket / Hand Sort Card Selection Modal */}
+      {handReturnPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md rounded-2xl bg-slate-900 border-2 border-amber-400 shadow-2xl p-4 text-stone-100 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="font-black text-sm text-amber-300">
+                {getCardDefinition(handReturnPicker.spellCard.definitionId)?.name}：山札に戻す手札を選択（最大2枚）
+              </div>
+              <button
+                onClick={() => setHandReturnPicker(null)}
+                className="text-xs text-slate-400 hover:text-white cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-xs text-stone-300">
+              山札に戻すカードを1〜2枚タップして選んでください。戻した枚数と同じだけ山札からドローします（選ばずに発動すると自動で最大2枚入れ替えます）。
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2 py-2 max-h-60 overflow-y-auto">
+              {myHand
+                .filter((c) => c.instanceId !== handReturnPicker.spellCard.instanceId)
+                .map((c) => {
+                  const picked = handReturnPicker.selectedIds.includes(c.instanceId);
+                  return (
+                    <div
+                      key={c.instanceId}
+                      onClick={() => {
+                        setHandReturnPicker((prev) => {
+                          if (!prev) return null;
+                          if (prev.selectedIds.includes(c.instanceId)) {
+                            return {
+                              ...prev,
+                              selectedIds: prev.selectedIds.filter((id) => id !== c.instanceId),
+                            };
+                          }
+                          if (prev.selectedIds.length >= 2) return prev;
+                          return {
+                            ...prev,
+                            selectedIds: [...prev.selectedIds, c.instanceId],
+                          };
+                        });
+                      }}
+                      className={`relative cursor-pointer transition-transform ${
+                        picked ? 'scale-105 ring-2 ring-amber-400 rounded-lg' : 'opacity-85'
+                      }`}
+                    >
+                      <CardView card={c} size="hand" isSelected={picked} />
+                      {picked && (
+                        <div className="absolute -top-1.5 -right-1.5 bg-amber-400 text-stone-950 font-black text-[9px] px-1.5 py-0.5 rounded-full shadow">
+                          戻す
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+              <button
+                onClick={() => setHandReturnPicker(null)}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-stone-300 text-xs font-bold cursor-pointer"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={() => {
+                  onSendAction('USE_SPELL_CARD', {
+                    cardInstanceId: handReturnPicker.spellCard.instanceId,
+                    selectedCardInstanceIds: handReturnPicker.selectedIds,
+                  });
+                  setHandReturnPicker(null);
+                  clearModes();
+                }}
+                className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-stone-950 font-black text-xs cursor-pointer shadow"
+              >
+                {handReturnPicker.selectedIds.length > 0
+                  ? `${handReturnPicker.selectedIds.length}枚戻してドロー`
+                  : 'おまかせで発動'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Trash Modal */}
       {viewingTrash && (
         <GraveyardModal
@@ -1422,69 +1760,14 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
         />
       )}
 
-      {/* Game Over Modal */}
+      {/* Ultimate Battle Result Screen */}
       {isGameOver && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-sm rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-400 shadow-2xl p-6 text-center text-stone-100 flex flex-col items-center">
-            {iWon ? (
-              <div className="w-16 h-16 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-300 mb-3 shadow-lg animate-bounce">
-                <Trophy className="w-8 h-8" />
-              </div>
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center text-slate-400 mb-3 shadow-lg">
-                <Skull className="w-8 h-8" />
-              </div>
-            )}
-
-            <h2
-              className={`text-2xl font-black mb-1 tracking-wider ${
-                iWon ? 'text-amber-300' : 'text-slate-400'
-              }`}
-            >
-              {iWon ? 'VICTORY!' : 'DEFEAT...'}
-            </h2>
-            <p className="text-sm font-bold text-stone-200 mb-2">
-              {iWon ? 'あなたの勝利です！' : '敗北……次は勝とう！'}
-            </p>
-
-            <div className="flex items-center justify-center gap-4 my-2 px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs font-black">
-              <span className="text-emerald-300">
-                {me.name}: {me.score} pt
-              </span>
-              <span className="text-slate-500">VS</span>
-              <span className="text-amber-300">
-                {opponent.name}: {opponent.score} pt
-              </span>
-            </div>
-
-            {winReason && (
-              <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 text-xs text-stone-300 mb-5 leading-relaxed">
-                {winReason}
-              </div>
-            )}
-
-            <div className="w-full flex flex-col gap-2.5">
-              {onPlayAgain && (
-                <button
-                  onClick={onPlayAgain}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-stone-950 font-black text-sm shadow-lg transition-transform active:scale-95 cursor-pointer"
-                >
-                  もう一度対戦する (PLAY AGAIN)
-                </button>
-              )}
-              <button
-                onClick={onLeaveRoom}
-                className={`w-full py-2.5 rounded-xl font-black text-xs shadow transition-transform active:scale-95 cursor-pointer ${
-                  onPlayAgain
-                    ? 'bg-slate-800 hover:bg-slate-700 text-stone-200 border border-slate-700'
-                    : 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-stone-950 py-3 text-sm'
-                }`}
-              >
-                ロビーへ戻る
-              </button>
-            </div>
-          </div>
-        </div>
+        <MatchResultOverlay
+          gameState={gameState}
+          onPlayAgain={onPlayAgain}
+          onLeaveRoom={onLeaveRoom}
+          onInspectCard={setInspectCard}
+        />
       )}
     </div>
   );

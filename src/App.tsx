@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { SanitizedGameState } from './online/types';
+import { SanitizedGameState, LiveMatchSummary } from './online/types';
 import { BattleFormatOption, WinScoreOption } from './game/types';
+import {
+  EMOTE_COOLDOWN_MS,
+  EMOTE_DISPLAY_DURATION_MS,
+  EmoteBroadcastEvent,
+} from './game/emotes';
 import { TabletopBoard } from './ui/battlefield/TabletopBoard';
 import { LobbyView } from './ui/lobby/LobbyView';
 
@@ -52,8 +57,14 @@ export default function App() {
   const [createdInviteCode, setCreatedInviteCode] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [liveMatches, setLiveMatches] = useState<LiveMatchSummary[]>([]);
+  const [activeEmotes, setActiveEmotes] = useState<
+    Record<string, { emoji: string; eventId: string }>
+  >({});
+  const [emoteCooldownUntil, setEmoteCooldownUntil] = useState<number>(0);
 
   const socketRef = useRef<Socket | null>(null);
+  const emoteTimersRef = useRef<Record<string, number>>({});
   const playerRef = useRef(player);
   playerRef.current = player;
   const gameStateRef = useRef(gameState);
@@ -112,6 +123,52 @@ export default function App() {
       setCreatedInviteCode(data.inviteCode);
       sessionStorage.setItem('honmono_active_room', data.roomId);
     });
+
+    socket.on('card_live_matches', (data: { matches: LiveMatchSummary[] }) => {
+      setLiveMatches(Array.isArray(data.matches) ? data.matches : []);
+    });
+
+    socket.on('card_emote_event', (evt: EmoteBroadcastEvent) => {
+      if (!evt || !evt.senderPlayerId || !evt.emoji) return;
+
+      // Clear previous timer for this sender if another emote arrives before 2.5s
+      const existingTimer = emoteTimersRef.current[evt.senderPlayerId];
+      if (existingTimer) {
+        window.clearTimeout(existingTimer);
+      }
+
+      setActiveEmotes((prev) => ({
+        ...prev,
+        [evt.senderPlayerId]: {
+          emoji: evt.emoji,
+          eventId: evt.eventId,
+        },
+      }));
+
+      if (playerRef.current && evt.senderPlayerId === playerRef.current.id) {
+        setEmoteCooldownUntil(Date.now() + (evt.cooldownMs || EMOTE_COOLDOWN_MS));
+      }
+
+      emoteTimersRef.current[evt.senderPlayerId] = window.setTimeout(() => {
+        setActiveEmotes((prev) => {
+          const current = prev[evt.senderPlayerId];
+          if (!current || current.eventId !== evt.eventId) return prev;
+          const next = { ...prev };
+          delete next[evt.senderPlayerId];
+          return next;
+        });
+        delete emoteTimersRef.current[evt.senderPlayerId];
+      }, EMOTE_DISPLAY_DURATION_MS);
+    });
+
+    socket.on(
+      'card_emote_rejected',
+      (data: { reason?: string; retryAfterMs?: number }) => {
+        if (data?.retryAfterMs && data.retryAfterMs > 0) {
+          setEmoteCooldownUntil(Date.now() + data.retryAfterMs);
+        }
+      }
+    );
 
     socket.on('card_error', (data: { message: string }) => {
       setErrorMessage(data.message);
@@ -202,11 +259,39 @@ export default function App() {
     });
   };
 
+  const handleSendEmote = (emoteId: string) => {
+    if (!socketRef.current || !gameState || !isConnected) return;
+    if (Date.now() < emoteCooldownUntil) return;
+    const clientRequestId =
+      'req_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+    socketRef.current.emit('card_send_emote', {
+      roomId: gameState.roomId,
+      emoteId,
+      clientRequestId,
+    });
+  };
+
   const handleLeaveRoom = () => {
+    if (gameState?.isSpectator && socketRef.current) {
+      socketRef.current.emit('card_leave_spectate', { roomId: gameState.roomId });
+    }
     setGameState(null);
     setIsMatching(false);
     setCreatedInviteCode(null);
     sessionStorage.removeItem('honmono_active_room');
+  };
+
+  const handleRequestLiveMatches = () => {
+    if (!socketRef.current) return;
+    socketRef.current.emit('card_list_live_matches');
+  };
+
+  const handleSpectateMatch = (targetIdOrCode: string) => {
+    if (!socketRef.current || !targetIdOrCode.trim()) return;
+    socketRef.current.emit('card_spectate_match', {
+      targetIdOrCode,
+      player: { id: player.id, name: player.name },
+    });
   };
 
   const handlePlayAgain = () => {
@@ -226,6 +311,9 @@ export default function App() {
       <TabletopBoard
         gameState={gameState}
         onSendAction={handleSendGameAction}
+        onSendEmote={handleSendEmote}
+        activeEmotes={activeEmotes}
+        emoteCooldownUntil={emoteCooldownUntil}
         onLeaveRoom={handleLeaveRoom}
         onPlayAgain={handlePlayAgain}
       />
@@ -247,6 +335,9 @@ export default function App() {
       onJoinFriendRoom={handleJoinFriendRoom}
       onSoloBotMatch={handleSoloBotMatch}
       onCancelMatch={handleCancelMatch}
+      onRequestLiveMatches={handleRequestLiveMatches}
+      onSpectateMatch={handleSpectateMatch}
+      liveMatches={liveMatches}
       isMatching={isMatching}
       matchingMessage={matchingMessage}
       createdInviteCode={createdInviteCode}

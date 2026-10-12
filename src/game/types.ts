@@ -28,7 +28,9 @@ export interface PlayerBattleState {
   hasAttachedEnergyThisTurn: boolean;
   hasRetreatedThisTurn: boolean;
   hasUsedSpellThisTurn: boolean;
+  hasUsedTradeTicketThisMatch?: boolean;
   isConnected: boolean;
+  disconnectedAt?: number;
 }
 
 export type AnimationEventType =
@@ -109,6 +111,7 @@ export interface GameActionPayload {
   actionType: GameActionType;
   cardInstanceId?: string;
   targetCardInstanceId?: string;
+  selectedCardInstanceIds?: string[];
   benchIndex?: number; // 0..2
   customDeckIds?: string[];
   stateVersion?: number;

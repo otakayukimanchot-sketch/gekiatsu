@@ -27,6 +27,7 @@ interface CardViewProps {
   canAct?: boolean;
   isUnplayableEvolution?: boolean;
   onClick?: () => void;
+  onLongPress?: () => void;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -59,12 +60,42 @@ export const CardView: React.FC<CardViewProps> = ({
   canAct = false,
   isUnplayableEvolution = false,
   onClick,
+  onLongPress,
   className = '',
   style = {},
 }) => {
+  const pressTimerRef = React.useRef<number | null>(null);
+  const longPressedRef = React.useRef(false);
+
   if (!card) return null;
   const def = getCardDefinition(card.definitionId);
   if (!def) return null;
+
+  const startPress = () => {
+    longPressedRef.current = false;
+    if (!onLongPress) return;
+    if (pressTimerRef.current) window.clearTimeout(pressTimerRef.current);
+    pressTimerRef.current = window.setTimeout(() => {
+      longPressedRef.current = true;
+      onLongPress();
+    }, 450);
+  };
+
+  const cancelPress = () => {
+    if (pressTimerRef.current) {
+      window.clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (longPressedRef.current) {
+      e.stopPropagation();
+      longPressedRef.current = false;
+      return;
+    }
+    onClick?.();
+  };
 
   const IconComp = SYMBOL_MAP[def.artSymbol] || Sparkles;
   const theme = def.colorTheme;
@@ -89,7 +120,13 @@ export const CardView: React.FC<CardViewProps> = ({
 
   return (
     <div
-      onClick={onClick}
+      onClick={handleClick}
+      onTouchStart={startPress}
+      onTouchEnd={cancelPress}
+      onTouchMove={cancelPress}
+      onMouseDown={startPress}
+      onMouseUp={cancelPress}
+      onMouseLeave={cancelPress}
       style={style}
       className={`relative select-none rounded-lg overflow-hidden border-2 shadow-md transition-all duration-150 cursor-pointer flex flex-col justify-between p-1 bg-gradient-to-b ${theme.frameGradient} ${theme.borderClass} ${sizeClasses[size]} ${
         isSelected

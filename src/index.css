@@ -170,3 +170,93 @@
 .animate-slideUp {
   animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* ============================================================================
+   Spectacular yet Unobtrusive Combat & Card Effect Animations
+   ============================================================================ */
+@keyframes skillLunge {
+  0% { transform: scale(1) translateY(0); filter: brightness(1); }
+  30% { transform: scale(1.16) translateY(-10px); filter: brightness(1.45) drop-shadow(0 0 18px rgba(251, 191, 36, 0.9)); }
+  60% { transform: scale(0.96) translateY(4px); filter: brightness(1.2); }
+  100% { transform: scale(1) translateY(0); filter: brightness(1); }
+}
+
+@keyframes hitShake {
+  0%, 100% { transform: translateX(0) rotate(0deg); filter: brightness(1); }
+  15% { transform: translateX(-7px) rotate(-4deg); filter: brightness(1.7) sepia(1) hue-rotate(-50deg) saturate(4); }
+  35% { transform: translateX(7px) rotate(4deg); filter: brightness(1.5); }
+  55% { transform: translateX(-5px) rotate(-2deg); }
+  75% { transform: translateX(5px) rotate(2deg); }
+}
+
+@keyframes cardVanishShatter {
+  0% { opacity: 1; transform: scale(1) rotate(0deg); filter: brightness(2) contrast(2); }
+  40% { opacity: 0.85; transform: scale(1.15) rotate(6deg); filter: brightness(2.5) hue-rotate(25deg) blur(1px); }
+  100% { opacity: 0; transform: scale(0.25) rotate(-18deg) translateY(20px); filter: blur(6px); }
+}
+
+@keyframes magicCircleSpin {
+  0% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+  30% { opacity: 1; transform: scale(1.08) rotate(90deg); }
+  75% { opacity: 0.95; transform: scale(1) rotate(220deg); }
+  100% { opacity: 0; transform: scale(1.35) rotate(320deg); }
+}
+
+@keyframes slashBeam {
+  0% { opacity: 0; transform: scaleX(0.1) rotate(-28deg); }
+  30% { opacity: 1; transform: scaleX(1.15) rotate(-28deg); }
+  100% { opacity: 0; transform: scaleX(1.4) rotate(-28deg); }
+}
+
+@keyframes scoreBurstPop {
+  0% { opacity: 0; transform: translate(-50%, 16px) scale(0.5); }
+  25% { opacity: 1; transform: translate(-50%, 0px) scale(1.12); }
+  45% { transform: translate(-50%, 0px) scale(0.97); }
+  80% { opacity: 1; transform: translate(-50%, 0px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -18px) scale(0.9); }
+}
+
+.anim-skill-lunge {
+  animation: skillLunge 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.anim-hit-shake {
+  animation: hitShake 0.55s ease-in-out;
+}
+
+.anim-card-vanish {
+  animation: cardVanishShatter 0.75s cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
+}
+
+.anim-magic-circle {
+  animation: magicCircleSpin 1.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.anim-slash-beam {
+  animation: slashBeam 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.anim-score-burst {
+  animation: scoreBurstPop 2.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes emoteHoldFill {
+  0% { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
+}
+
+@keyframes emoteBubbleLifecycle {
+  0% { opacity: 0; transform: scale(0.35) translateY(6px); }
+  12% { opacity: 1; transform: scale(1.16) translateY(-2px); }
+  20% { opacity: 1; transform: scale(1) translateY(0); }
+  85% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(0.8) translateY(-6px); }
+}
+
+.emote-hold-fill {
+  animation: emoteHoldFill 0.4s linear forwards;
+}
+
+.anim-emote-bubble {
+  animation: emoteBubbleLifecycle 2.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

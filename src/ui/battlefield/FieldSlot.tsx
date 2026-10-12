@@ -12,6 +12,7 @@ interface FieldSlotProps {
   isTargetable?: boolean;
   targetBadgeText?: string;
   isAttacker?: boolean;
+  isKnockedOutAnim?: boolean;
   canAct?: boolean;
   canPlaceCard?: boolean;
   damagePopup?: number | null;
@@ -28,6 +29,7 @@ export const FieldSlot: React.FC<FieldSlotProps> = ({
   isTargetable = false,
   targetBadgeText,
   isAttacker = false,
+  isKnockedOutAnim = false,
   canAct = false,
   canPlaceCard = false,
   damagePopup = null,
@@ -60,7 +62,11 @@ export const FieldSlot: React.FC<FieldSlotProps> = ({
     >
       {card ? (
         <div
-          className="relative w-full h-full flex items-center justify-center"
+          className={`relative w-full h-full flex items-center justify-center ${
+            isAttacker ? 'anim-skill-lunge' : ''
+          } ${damagePopup !== null && damagePopup > 0 ? 'anim-hit-shake' : ''} ${
+            isKnockedOutAnim ? 'anim-card-vanish' : ''
+          }`}
           onContextMenu={(e) => {
             e.preventDefault();
             onInspectCard?.(card);
@@ -73,6 +79,7 @@ export const FieldSlot: React.FC<FieldSlotProps> = ({
             isTargetable={isTargetable}
             isAttacker={isAttacker}
             canAct={canAct}
+            onLongPress={() => onInspectCard?.(card)}
             className="w-full h-full"
           />
 

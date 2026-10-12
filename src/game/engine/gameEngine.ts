@@ -136,6 +136,7 @@ export function initializeGame(
     hasAttachedEnergyThisTurn: false,
     hasRetreatedThisTurn: false,
     hasUsedSpellThisTurn: false,
+    hasUsedTradeTicketThisMatch: false,
     isConnected: true,
   };
 
@@ -155,6 +156,7 @@ export function initializeGame(
     hasAttachedEnergyThisTurn: false,
     hasRetreatedThisTurn: false,
     hasUsedSpellThisTurn: false,
+    hasUsedTradeTicketThisMatch: false,
     isConnected: true,
   };
 
@@ -764,6 +766,13 @@ function retreatActiveCard(
   return { success: true };
 }
 
+function shuffleDeck(deck: CardInstance[]) {
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+}
+
 /**
  * 5. 魔法（サポート）カード発動処理
  */
@@ -771,7 +780,8 @@ function activateSpellCard(
   state: GameState,
   playerKey: PlayerKey,
   opponentKey: PlayerKey,
-  cardInstanceId?: string
+  cardInstanceId?: string,
+  selectedCardInstanceIds?: string[]
 ): { success: boolean; error?: string } {
   const player = state[playerKey];
   const opponent = state[opponentKey];
@@ -789,10 +799,17 @@ function activateSpellCard(
     return { success: false, error: '選択されたカードは魔法カードではありません。' };
   }
 
+  if (def.abilities.spellEffect === 'TRADE_TICKET' && player.hasUsedTradeTicketThisMatch) {
+    return { success: false, error: '「トレードチケット」は1回の対戦中に1度しか使用できません。' };
+  }
+
   player.hand.splice(handIdx, 1);
   spellCard.zone = 'TRASH';
   player.trash.push(spellCard);
   player.hasUsedSpellThisTurn = true;
+  if (def.abilities.spellEffect === 'TRADE_TICKET') {
+    player.hasUsedTradeTicketThisMatch = true;
+  }
 
   let effectSummary = def.abilities.description;
 
@@ -1030,6 +1047,207 @@ function activateSpellCard(
         if (c) c.retreatCost = 0;
       });
       effectSummary = `${player.name} が「${def.name}」を発動！自分の場のすべてのカードの「にげる」コストが 0 になった！`;
+      break;
+    }
+    case 'TRADE_TICKET':
+    case 'HAND_SORT': {
+      // Return up to 2 cards from hand to deck, shuffle, then draw the same number of cards
+      let cardsToReturn: CardInstance[] = [];
+      if (Array.isArray(selectedCardInstanceIds) && selectedCardInstanceIds.length > 0) {
+        const targetIds = selectedCardInstanceIds.slice(0, 2);
+        for (const id of targetIds) {
+          const idx = player.hand.findIndex((c) => c.instanceId === id);
+          if (idx !== -1) {
+            const [removed] = player.hand.splice(idx, 1);
+            cardsToReturn.push(removed);
+          }
+        }
+      } else {
+        // Auto-select up to 2 cards (prioritize unplayable evolution cards or duplicates)
+        const count = Math.min(2, player.hand.length);
+        const fieldCards = [player.activeCard, ...player.bench].filter(
+          (fc): fc is CardInstance => fc !== null
+        );
+        const sortedHand = [...player.hand].sort((a, b) => {
+          const defA = getCardDefinition(a.definitionId);
+          const defB = getCardDefinition(b.definitionId);
+          const unplayableEvoA =
+            defA?.type === 'ATTACK' &&
+            defA.evolution.evolvesFrom !== null &&
+            !fieldCards.some((fc) => canEvolveCard(fc, a, state.turnNumber).ok)
+              ? 0
+              : 1;
+          const unplayableEvoB =
+            defB?.type === 'ATTACK' &&
+            defB.evolution.evolvesFrom !== null &&
+            !fieldCards.some((fc) => canEvolveCard(fc, b, state.turnNumber).ok)
+              ? 0
+              : 1;
+          return unplayableEvoA - unplayableEvoB;
+        });
+        const chosenIds = sortedHand.slice(0, count).map((c) => c.instanceId);
+        for (const id of chosenIds) {
+          const idx = player.hand.findIndex((c) => c.instanceId === id);
+          if (idx !== -1) {
+            const [removed] = player.hand.splice(idx, 1);
+            cardsToReturn.push(removed);
+          }
+        }
+      }
+
+      const returnCount = cardsToReturn.length;
+      for (const c of cardsToReturn) {
+        c.zone = 'DECK';
+        player.deck.push(c);
+      }
+      shuffleDeck(player.deck);
+
+      let drawnCount = 0;
+      for (let i = 0; i < returnCount; i++) {
+        if (player.deck.length > 0) {
+          const drawn = player.deck.shift()!;
+          drawn.zone = 'HAND';
+          player.hand.push(drawn);
+          drawnCount++;
+        }
+      }
+      effectSummary =
+        returnCount > 0
+          ? `${player.name} が「${def.name}」を発動！手札${returnCount}枚を山札に戻してシャッフルし、${drawnCount}枚引いた！`
+          : `${player.name} が「${def.name}」を発動！（戻す手札が0枚のため山札をシャッフル）`;
+      break;
+    }
+    case 'SEARCH_CHANGE_TOP3': {
+      // Look at top 3 cards of deck, pick 1 Attack card to add to hand, return remaining to deck and shuffle
+      const topCards = player.deck.splice(0, 3);
+      const attackCandidates = topCards.filter(
+        (c) => getCardDefinition(c.definitionId)?.type === 'ATTACK'
+      );
+
+      if (attackCandidates.length > 0) {
+        // Prioritize usable evolution or highest level attack card
+        const fieldCards = [player.activeCard, ...player.bench].filter(
+          (fc): fc is CardInstance => fc !== null
+        );
+        attackCandidates.sort((a, b) => {
+          const canEvoA = fieldCards.some((fc) => canEvolveCard(fc, a, state.turnNumber).ok)
+            ? 10
+            : 0;
+          const canEvoB = fieldCards.some((fc) => canEvolveCard(fc, b, state.turnNumber).ok)
+            ? 10
+            : 0;
+          const lvlA = getCardDefinition(a.definitionId)?.level || 1;
+          const lvlB = getCardDefinition(b.definitionId)?.level || 1;
+          return canEvoB + lvlB - (canEvoA + lvlA);
+        });
+
+        const chosen = attackCandidates[0];
+        const chosenIdx = topCards.findIndex((c) => c.instanceId === chosen.instanceId);
+        if (chosenIdx !== -1) {
+          topCards.splice(chosenIdx, 1);
+        }
+        chosen.zone = 'HAND';
+        player.hand.push(chosen);
+
+        for (const rem of topCards) {
+          rem.zone = 'DECK';
+          player.deck.push(rem);
+        }
+        shuffleDeck(player.deck);
+
+        const chosenDef = getCardDefinition(chosen.definitionId);
+        effectSummary = `${player.name} が「${def.name}」を発動！山札の上から3枚を見て攻撃カード「${chosenDef?.name}」を手札に加え、残りを山札に戻してシャッフルした！`;
+      } else {
+        for (const rem of topCards) {
+          rem.zone = 'DECK';
+          player.deck.push(rem);
+        }
+        shuffleDeck(player.deck);
+        effectSummary = `${player.name} が「${def.name}」を発動！山札の上から3枚に対象の攻撃カードがなかったため、山札に戻してシャッフルした。`;
+      }
+      break;
+    }
+    case 'TAIMATSU_ADVICE': {
+      // Return 1 random card from hand to deck and shuffle, then draw 3 cards
+      let returnedName = '';
+      if (player.hand.length > 0) {
+        const randIdx = Math.floor(Math.random() * player.hand.length);
+        const [returnedCard] = player.hand.splice(randIdx, 1);
+        returnedName = getCardDefinition(returnedCard.definitionId)?.name || 'カード';
+        returnedCard.zone = 'DECK';
+        player.deck.push(returnedCard);
+      }
+      shuffleDeck(player.deck);
+
+      let drawnCount = 0;
+      for (let i = 0; i < 3; i++) {
+        if (player.deck.length > 0) {
+          const drawn = player.deck.shift()!;
+          drawn.zone = 'HAND';
+          player.hand.push(drawn);
+          drawnCount++;
+        }
+      }
+      effectSummary = returnedName
+        ? `${player.name} が「${def.name}」を発動！手札からランダムに1枚を山札に戻してシャッフルし、カードを${drawnCount}枚引いた！`
+        : `${player.name} が「${def.name}」を発動！山札をシャッフルしてカードを${drawnCount}枚引いた！`;
+      break;
+    }
+    case 'ENERGY_INTERFERENCE': {
+      // If opponent's Active card has 3 or more Energy attached, return 1 of them to opponent's Energy Zone. If < 3, does not activate.
+      if (opponent.activeCard && opponent.activeCard.attachedEnergy >= 3) {
+        opponent.activeCard.attachedEnergy -= 1;
+        opponent.energyAvailable += 1;
+        const oppDef = getCardDefinition(opponent.activeCard.definitionId);
+        effectSummary = `${player.name} が「${def.name}」を発動！相手の「${oppDef?.name}」のエネルギー1個をエネルギーゾーンへ戻した！（残り⚡${opponent.activeCard.attachedEnergy}）`;
+      } else {
+        effectSummary = `${player.name} が「${def.name}」を発動！（相手バトル場のエネルギーが3個未満のため効果不発）`;
+      }
+      break;
+    }
+    case 'SNATCH_1':
+    case 'SNATCH_2': {
+      const targetSwapCount = def.abilities.spellEffect === 'SNATCH_2' ? 2 : 1;
+      const actualSwapCount = Math.min(
+        targetSwapCount,
+        player.hand.length,
+        opponent.hand.length
+      );
+      if (actualSwapCount <= 0) {
+        effectSummary = `${player.name} が「${def.name}」を発動！（互いの手札が足りないため交換不発）`;
+      } else {
+        const mySelected: CardInstance[] = [];
+        const oppSelected: CardInstance[] = [];
+
+        for (let i = 0; i < actualSwapCount; i++) {
+          const myIdx = Math.floor(Math.random() * player.hand.length);
+          const [myCard] = player.hand.splice(myIdx, 1);
+          mySelected.push(myCard);
+
+          const oppIdx = Math.floor(Math.random() * opponent.hand.length);
+          const [oppCard] = opponent.hand.splice(oppIdx, 1);
+          oppSelected.push(oppCard);
+        }
+
+        const givenNames: string[] = [];
+        const takenNames: string[] = [];
+
+        for (const c of mySelected) {
+          c.ownerId = opponent.playerId;
+          c.zone = 'HAND';
+          opponent.hand.push(c);
+          givenNames.push(getCardDefinition(c.definitionId)?.name || 'カード');
+        }
+
+        for (const c of oppSelected) {
+          c.ownerId = player.playerId;
+          c.zone = 'HAND';
+          player.hand.push(c);
+          takenNames.push(getCardDefinition(c.definitionId)?.name || 'カード');
+        }
+
+        effectSummary = `${player.name} が「${def.name}」を発動！自分の手札${actualSwapCount}枚（${givenNames.join('・')}）と相手の手札${actualSwapCount}枚（${takenNames.join('・')}）をランダムに交換した！`;
+      }
       break;
     }
   }
@@ -1271,7 +1489,13 @@ export function handleGameAction(
       );
       break;
     case 'USE_SPELL_CARD':
-      result = activateSpellCard(state, playerKey, opponentKey, payload.cardInstanceId);
+      result = activateSpellCard(
+        state,
+        playerKey,
+        opponentKey,
+        payload.cardInstanceId,
+        payload.selectedCardInstanceIds
+      );
       break;
     case 'ATTACK':
       result = executeCardAttack(state, playerKey, opponentKey);

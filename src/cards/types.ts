@@ -119,7 +119,14 @@ export type SpellEffectKind =
   | 'PEEK_AND_DRAW'
   | 'HAND_RELOAD_3'
   | 'PHOENIX_WALL_TOKEN'
-  | 'FREE_RETREAT_THIS_TURN';
+  | 'FREE_RETREAT_THIS_TURN'
+  | 'TRADE_TICKET'
+  | 'SEARCH_CHANGE_TOP3'
+  | 'TAIMATSU_ADVICE'
+  | 'ENERGY_INTERFERENCE'
+  | 'HAND_SORT'
+  | 'SNATCH_1'
+  | 'SNATCH_2';
 
 export interface EvolutionInfo {
   family: string;

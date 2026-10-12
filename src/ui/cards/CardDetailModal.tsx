@@ -79,29 +79,53 @@ export const CardDetailModal: React.FC<CardDetailModalProps> = ({
 
           {/* Battle Stats Box for Attack Cards */}
           {def.type === 'ATTACK' && (
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="p-1.5 rounded-xl bg-stone-800/90 border border-stone-700">
-                <div className="text-[10px] text-stone-400 mb-0.5 flex items-center justify-center gap-1">
-                  <Zap className="w-3 h-3 text-yellow-400" /> 必要エネ
+            <div className="space-y-2">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="p-1.5 rounded-xl bg-stone-800/90 border border-stone-700">
+                  <div className="text-[10px] text-stone-400 mb-0.5 flex items-center justify-center gap-1">
+                    <Zap className="w-3 h-3 text-yellow-400" /> 必要エネ
+                  </div>
+                  <div className="font-black text-xs text-yellow-300">
+                    {card.attachedEnergy} / {def.stats.energyCost}
+                  </div>
                 </div>
-                <div className="font-black text-xs text-yellow-300">
-                  {card.attachedEnergy} / {def.stats.energyCost}
+                <div className="p-1.5 rounded-xl bg-stone-800/90 border border-stone-700">
+                  <div className="text-[10px] text-stone-400 mb-0.5 flex items-center justify-center gap-1">
+                    <Footprints className="w-3 h-3 text-sky-400" /> にげる
+                  </div>
+                  <div className="font-black text-xs text-sky-300">
+                    エネ {card.retreatCost ?? def.stats.retreatCost}個
+                  </div>
+                </div>
+                <div className="p-1.5 rounded-xl bg-stone-800/90 border border-stone-700">
+                  <div className="text-[10px] text-stone-400 mb-0.5 flex items-center justify-center gap-1">
+                    <Trophy className="w-3 h-3 text-amber-400" /> 撃破Pt
+                  </div>
+                  <div className="font-black text-xs text-amber-300">{def.stats.pointValue} pt</div>
                 </div>
               </div>
-              <div className="p-1.5 rounded-xl bg-stone-800/90 border border-stone-700">
-                <div className="text-[10px] text-stone-400 mb-0.5 flex items-center justify-center gap-1">
-                  <Footprints className="w-3 h-3 text-sky-400" /> にげる
+
+              {(card.tempAtkBuff > 0 ||
+                card.damageReductionNextTurn > 0 ||
+                card.currentAtk !== def.stats.attack) && (
+                <div className="p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 flex flex-wrap gap-2 text-[11px]">
+                  {card.currentAtk !== def.stats.attack && (
+                    <span className="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-500/60 text-emerald-300 font-bold">
+                      現在攻撃力: {card.currentAtk} (基礎 {def.stats.attack})
+                    </span>
+                  )}
+                  {card.tempAtkBuff > 0 && (
+                    <span className="px-2 py-0.5 rounded bg-amber-950 border border-amber-400/60 text-amber-300 font-bold">
+                      このターン攻撃バフ: +{card.tempAtkBuff}
+                    </span>
+                  )}
+                  {card.damageReductionNextTurn > 0 && (
+                    <span className="px-2 py-0.5 rounded bg-sky-950 border border-sky-400/60 text-sky-300 font-bold">
+                      次ターン被ダメージ軽減: -{card.damageReductionNextTurn}
+                    </span>
+                  )}
                 </div>
-                <div className="font-black text-xs text-sky-300">
-                  エネ {def.stats.retreatCost}個
-                </div>
-              </div>
-              <div className="p-1.5 rounded-xl bg-stone-800/90 border border-stone-700">
-                <div className="text-[10px] text-stone-400 mb-0.5 flex items-center justify-center gap-1">
-                  <Trophy className="w-3 h-3 text-amber-400" /> 撃破Pt
-                </div>
-                <div className="font-black text-xs text-amber-300">{def.stats.pointValue} pt</div>
-              </div>
+              )}
             </div>
           )}
 

@@ -93,9 +93,29 @@ async function startServer() {
       cardRoomManager.handleCardAction(socket, roomId, playerId, payload);
     });
 
+    // Real-time Emote transmission (never trusts client playerId; validated via socket.id)
+    socket.on("card_send_emote", (payload) => {
+      cardRoomManager.handleSendEmote(socket, payload);
+    });
+
     // Rejoin match
     socket.on("card_rejoin_match", ({ roomId, playerId }) => {
       cardRoomManager.rejoinMatch(socket, roomId, playerId);
+    });
+
+    // List live matches for spectating
+    socket.on("card_list_live_matches", () => {
+      socket.emit("card_live_matches", { matches: cardRoomManager.getLiveMatches() });
+    });
+
+    // Spectate match by roomId or inviteCode
+    socket.on("card_spectate_match", ({ targetIdOrCode, player }) => {
+      cardRoomManager.spectateMatch(socket, targetIdOrCode, player);
+    });
+
+    // Leave spectate
+    socket.on("card_leave_spectate", ({ roomId }) => {
+      cardRoomManager.leaveSpectate(socket, roomId);
     });
 
     // Disconnect
