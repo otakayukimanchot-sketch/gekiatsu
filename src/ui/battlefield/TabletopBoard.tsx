@@ -1016,18 +1016,23 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                 VS
               </div>
 
-              {/* Numeric "〇-〇" Score Display in the Middle Space */}
-              <div
-                className="px-2.5 py-0.5 rounded-lg bg-slate-950 border border-slate-700 flex items-center gap-1.5 shadow-sm"
-                title={`自分 ${me.score} - ${opponent.score} 相手 (${winScore}点先取)`}
-              >
-                <span className="text-xs sm:text-sm font-black font-mono text-emerald-400 leading-none">
-                  {me.score}
+              {/* Numeric "〇-〇" Score Display with Required Points displayed directly above */}
+              <div className="flex flex-col items-center justify-center">
+                <span className="text-[8px] font-black text-amber-300 tracking-tight leading-none mb-0.5 whitespace-nowrap">
+                  {winScore}点先取
                 </span>
-                <span className="text-[10px] font-black text-stone-400 leading-none">-</span>
-                <span className="text-xs sm:text-sm font-black font-mono text-amber-400 leading-none">
-                  {opponent.score}
-                </span>
+                <div
+                  className="px-2.5 py-0.5 rounded-lg bg-slate-950 border border-slate-700 flex items-center gap-1.5 shadow-sm"
+                  title={`自分 ${me.score} - ${opponent.score} 相手 (${winScore}点先取)`}
+                >
+                  <span className="text-xs sm:text-sm font-black font-mono text-emerald-400 leading-none">
+                    {me.score}
+                  </span>
+                  <span className="text-[10px] font-black text-stone-400 leading-none">-</span>
+                  <span className="text-xs sm:text-sm font-black font-mono text-amber-400 leading-none">
+                    {opponent.score}
+                  </span>
+                </div>
               </div>
 
               {/* My Emote Below [VS] on the left side */}
@@ -1445,6 +1450,9 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             <div className="px-2 py-0.5 rounded-lg bg-slate-950 border border-amber-500/40 text-[10px] font-black text-amber-400 shadow">
               VS
             </div>
+            <span className="text-[8px] font-black text-amber-300 tracking-tight leading-none whitespace-nowrap">
+              {winScore}点先取
+            </span>
             <div className="px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-700 flex items-center gap-1 shadow">
               <span className="text-xs font-black font-mono text-emerald-400 leading-none">
                 {me.score}

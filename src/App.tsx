@@ -9,6 +9,8 @@ import {
 } from './game/emotes';
 import { TabletopBoard } from './ui/battlefield/TabletopBoard';
 import { LobbyView } from './ui/lobby/LobbyView';
+import { initPrivacyGuard, purgeAllDeviceStorage } from './utils/noStorageGuard';
+import { maskWireData, unmaskWireData } from './utils/wireSecurity';
 
 interface LocalPlayerProfile {
   id: string;
@@ -19,37 +21,19 @@ interface LocalPlayerProfile {
 }
 
 export default function App() {
-  // Player Profile from localStorage
+  // Pure volatile in-memory player profile: NEVER written to disk/localStorage while on Wi-Fi
   const [player, setPlayer] = useState<LocalPlayerProfile>(() => {
-    const saved = localStorage.getItem('honmono_card_player');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return {
-          ...parsed,
-          winScore: parsed.winScore === 7 ? 7 : parsed.winScore === 5 ? 5 : 3,
-          battleFormat: parsed.battleFormat === 'allstar' ? 'allstar' : 'standard',
-        };
-      } catch (e) {}
-    }
-    const newId = 'p_' + Math.random().toString(36).substring(2, 9);
-    const newProfile: LocalPlayerProfile = {
-      id: newId,
+    return {
+      id: 'p_' + Math.random().toString(36).substring(2, 9),
       name: 'デュエリスト',
       avatarIcon: 'smile',
       winScore: 3,
       battleFormat: 'standard',
     };
-    localStorage.setItem('honmono_card_player', JSON.stringify(newProfile));
-    return newProfile;
   });
 
-  const [winScore, setWinScore] = useState<WinScoreOption>(
-    player.winScore === 7 ? 7 : player.winScore === 5 ? 5 : 3
-  );
-  const [battleFormat, setBattleFormat] = useState<BattleFormatOption>(
-    player.battleFormat === 'allstar' ? 'allstar' : 'standard'
-  );
+  const [winScore, setWinScore] = useState<WinScoreOption>(3);
+  const [battleFormat, setBattleFormat] = useState<BattleFormatOption>('standard');
 
   const [gameState, setGameState] = useState<SanitizedGameState | null>(null);
   const [isMatching, setIsMatching] = useState(false);
@@ -69,66 +53,82 @@ export default function App() {
   playerRef.current = player;
   const gameStateRef = useRef(gameState);
   gameStateRef.current = gameState;
+  const inMemoryRoomIdRef = useRef<string | null>(null);
 
-  // Initialize Socket connection
+  // Zero-Storage Privacy Guard: continuously purges any disk/browser storage and blocks storage APIs
+  useEffect(() => {
+    const cleanup = initPrivacyGuard();
+    return () => {
+      cleanup();
+      purgeAllDeviceStorage();
+    };
+  }, []);
+
+  // Initialize Socket connection with wire-level payload encryption and zero network leakage
   useEffect(() => {
     const socket = io({
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 15,
-      reconnectionDelay: 1000
+      reconnectionDelay: 1000,
     });
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('[Socket Connected] ID:', socket.id);
       setIsConnected(true);
       setErrorMessage(null);
 
-      // Check if we need to rejoin an active match
-      const savedRoomId = sessionStorage.getItem('honmono_active_room');
-      if (savedRoomId && playerRef.current) {
-        console.log('[Attempting Rejoin]', savedRoomId);
-        socket.emit('card_rejoin_match', {
-          roomId: savedRoomId,
-          playerId: playerRef.current.id
-        });
+      // Rejoin in-memory room if reconnecting
+      if (inMemoryRoomIdRef.current && playerRef.current) {
+        socket.emit(
+          'card_rejoin_match',
+          maskWireData({
+            roomId: inMemoryRoomIdRef.current,
+            playerId: playerRef.current.id,
+          })
+        );
       }
     });
 
     socket.on('disconnect', () => {
-      console.log('[Socket Disconnected]');
       setIsConnected(false);
     });
 
-    socket.on('connect_error', (err) => {
-      console.warn('[Socket Connect Error]', err);
+    socket.on('connect_error', () => {
       setIsConnected(false);
     });
 
-    socket.on('card_game_state', (state: SanitizedGameState) => {
-      console.log('[Game State Received] Turn:', state.turnNumber, 'Phase:', state.phase);
+    socket.on('card_game_state', (raw: unknown) => {
+      const state = unmaskWireData<SanitizedGameState>(raw);
+      if (!state) return;
+
       setGameState(state);
       setIsMatching(false);
       setCreatedInviteCode(null);
       setErrorMessage(null);
-      sessionStorage.setItem('honmono_active_room', state.roomId);
+      inMemoryRoomIdRef.current = state.roomId;
     });
 
-    socket.on('match_waiting', (data: { message: string }) => {
+    socket.on('match_waiting', (raw: unknown) => {
+      const data = unmaskWireData<{ message: string }>(raw);
+      if (!data) return;
       setIsMatching(true);
       setMatchingMessage(data.message);
     });
 
-    socket.on('friend_room_created', (data: { inviteCode: string; roomId: string }) => {
+    socket.on('friend_room_created', (raw: unknown) => {
+      const data = unmaskWireData<{ inviteCode: string; roomId: string }>(raw);
+      if (!data) return;
       setCreatedInviteCode(data.inviteCode);
-      sessionStorage.setItem('honmono_active_room', data.roomId);
+      inMemoryRoomIdRef.current = data.roomId;
     });
 
-    socket.on('card_live_matches', (data: { matches: LiveMatchSummary[] }) => {
-      setLiveMatches(Array.isArray(data.matches) ? data.matches : []);
+    socket.on('card_live_matches', (raw: unknown) => {
+      const data = unmaskWireData<{ matches: LiveMatchSummary[] }>(raw);
+      setLiveMatches(Array.isArray(data?.matches) ? data.matches : []);
     });
 
-    socket.on('card_emote_event', (evt: EmoteBroadcastEvent) => {
+    socket.on('card_emote_event', (raw: unknown) => {
+      const evt = unmaskWireData<EmoteBroadcastEvent>(raw);
       if (!evt || !evt.senderPlayerId || !evt.emoji) return;
 
       // Clear previous timer for this sender if another emote arrives before 2.5s
@@ -161,17 +161,16 @@ export default function App() {
       }, EMOTE_DISPLAY_DURATION_MS);
     });
 
-    socket.on(
-      'card_emote_rejected',
-      (data: { reason?: string; retryAfterMs?: number }) => {
-        if (data?.retryAfterMs && data.retryAfterMs > 0) {
-          setEmoteCooldownUntil(Date.now() + data.retryAfterMs);
-        }
+    socket.on('card_emote_rejected', (raw: unknown) => {
+      const data = unmaskWireData<{ reason?: string; retryAfterMs?: number }>(raw);
+      if (data?.retryAfterMs && data.retryAfterMs > 0) {
+        setEmoteCooldownUntil(Date.now() + data.retryAfterMs);
       }
-    );
+    });
 
-    socket.on('card_error', (data: { message: string }) => {
-      setErrorMessage(data.message);
+    socket.on('card_error', (raw: unknown) => {
+      const data = unmaskWireData<{ message: string }>(raw);
+      setErrorMessage(data?.message || 'エラーが発生しました。');
       setIsMatching(false);
       setTimeout(() => setErrorMessage(null), 4000);
     });
@@ -182,23 +181,17 @@ export default function App() {
   }, []);
 
   const handleUpdatePlayer = (name: string, avatarIcon: string) => {
-    const updated = { ...player, name, avatarIcon, winScore, battleFormat };
-    setPlayer(updated);
-    localStorage.setItem('honmono_card_player', JSON.stringify(updated));
+    setPlayer((prev) => ({ ...prev, name, avatarIcon }));
   };
 
   const handleChangeWinScore = (newWinScore: WinScoreOption) => {
     setWinScore(newWinScore);
-    const updated = { ...player, winScore: newWinScore, battleFormat };
-    setPlayer(updated);
-    localStorage.setItem('honmono_card_player', JSON.stringify(updated));
+    setPlayer((prev) => ({ ...prev, winScore: newWinScore }));
   };
 
   const handleChangeBattleFormat = (newFormat: BattleFormatOption) => {
     setBattleFormat(newFormat);
-    const updated = { ...player, winScore, battleFormat: newFormat };
-    setPlayer(updated);
-    localStorage.setItem('honmono_card_player', JSON.stringify(updated));
+    setPlayer((prev) => ({ ...prev, battleFormat: newFormat }));
   };
 
   const handleQuickMatch = (overrideFormat?: BattleFormatOption) => {
@@ -207,24 +200,33 @@ export default function App() {
     const fmtLabel = fmt === 'allstar' ? '全員参加大乱闘' : '標準デッキ';
     setIsMatching(true);
     setMatchingMessage(`対戦相手を探しています（${fmtLabel} / ${winScore}点先取）…`);
-    socketRef.current.emit('card_quick_match', {
-      player: { ...player, winScore, battleFormat: fmt },
-    });
+    socketRef.current.emit(
+      'card_quick_match',
+      maskWireData({
+        player: { ...player, winScore, battleFormat: fmt },
+      })
+    );
   };
 
   const handleCreateFriendRoom = () => {
     if (!socketRef.current) return;
-    socketRef.current.emit('card_create_friend_room', {
-      player: { ...player, winScore, battleFormat },
-    });
+    socketRef.current.emit(
+      'card_create_friend_room',
+      maskWireData({
+        player: { ...player, winScore, battleFormat },
+      })
+    );
   };
 
   const handleJoinFriendRoom = (code: string) => {
     if (!socketRef.current || !code.trim()) return;
-    socketRef.current.emit('card_join_friend_room', {
-      inviteCode: code,
-      player: { ...player, winScore, battleFormat },
-    });
+    socketRef.current.emit(
+      'card_join_friend_room',
+      maskWireData({
+        inviteCode: code,
+        player: { ...player, winScore, battleFormat },
+      })
+    );
   };
 
   const handleSoloBotMatch = (overrideFormat?: BattleFormatOption) => {
@@ -233,9 +235,12 @@ export default function App() {
     if (overrideFormat && overrideFormat !== battleFormat) {
       handleChangeBattleFormat(overrideFormat);
     }
-    socketRef.current.emit('card_solo_match', {
-      player: { ...player, winScore, battleFormat: fmt },
-    });
+    socketRef.current.emit(
+      'card_solo_match',
+      maskWireData({
+        player: { ...player, winScore, battleFormat: fmt },
+      })
+    );
   };
 
   const handleCancelMatch = () => {
@@ -243,20 +248,23 @@ export default function App() {
     socketRef.current.emit('card_cancel_match');
     setIsMatching(false);
     setCreatedInviteCode(null);
-    sessionStorage.removeItem('honmono_active_room');
+    inMemoryRoomIdRef.current = null;
   };
 
   const handleSendGameAction = (actionType: string, payload: any = {}) => {
     if (!socketRef.current || !gameState) return;
-    socketRef.current.emit('card_action', {
-      roomId: gameState.roomId,
-      playerId: player.id,
-      payload: {
-        actionType,
-        ...payload,
-        stateVersion: gameState.stateVersion
-      }
-    });
+    socketRef.current.emit(
+      'card_action',
+      maskWireData({
+        roomId: gameState.roomId,
+        playerId: player.id,
+        payload: {
+          actionType,
+          ...payload,
+          stateVersion: gameState.stateVersion,
+        },
+      })
+    );
   };
 
   const handleSendEmote = (emoteId: string) => {
@@ -264,21 +272,28 @@ export default function App() {
     if (Date.now() < emoteCooldownUntil) return;
     const clientRequestId =
       'req_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-    socketRef.current.emit('card_send_emote', {
-      roomId: gameState.roomId,
-      emoteId,
-      clientRequestId,
-    });
+    socketRef.current.emit(
+      'card_send_emote',
+      maskWireData({
+        roomId: gameState.roomId,
+        emoteId,
+        clientRequestId,
+      })
+    );
   };
 
   const handleLeaveRoom = () => {
     if (gameState?.isSpectator && socketRef.current) {
-      socketRef.current.emit('card_leave_spectate', { roomId: gameState.roomId });
+      socketRef.current.emit(
+        'card_leave_spectate',
+        maskWireData({ roomId: gameState.roomId })
+      );
     }
     setGameState(null);
     setIsMatching(false);
     setCreatedInviteCode(null);
-    sessionStorage.removeItem('honmono_active_room');
+    inMemoryRoomIdRef.current = null;
+    purgeAllDeviceStorage();
   };
 
   const handleRequestLiveMatches = () => {
@@ -288,10 +303,13 @@ export default function App() {
 
   const handleSpectateMatch = (targetIdOrCode: string) => {
     if (!socketRef.current || !targetIdOrCode.trim()) return;
-    socketRef.current.emit('card_spectate_match', {
-      targetIdOrCode,
-      player: { id: player.id, name: player.name },
-    });
+    socketRef.current.emit(
+      'card_spectate_match',
+      maskWireData({
+        targetIdOrCode,
+        player: { id: player.id, name: player.name },
+      })
+    );
   };
 
   const handlePlayAgain = () => {
@@ -299,9 +317,12 @@ export default function App() {
     const prevFormat = gameState?.battleFormat || battleFormat;
     handleLeaveRoom();
     if (isSoloRoom && socketRef.current) {
-      socketRef.current.emit('card_solo_match', {
-        player: { ...player, winScore, battleFormat: prevFormat },
-      });
+      socketRef.current.emit(
+        'card_solo_match',
+        maskWireData({
+          player: { ...player, winScore, battleFormat: prevFormat },
+        })
+      );
     }
   };
 

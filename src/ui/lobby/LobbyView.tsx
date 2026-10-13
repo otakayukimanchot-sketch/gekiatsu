@@ -244,8 +244,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           </p>
         </div>
 
-        {/* Connection Status indicator */}
-        <div className="flex items-center justify-center gap-2 text-xs">
+        {/* Connection Status & Wi-Fi Privacy Protection indicator */}
+        <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
           {isConnected ? (
             <span className="flex items-center gap-1 text-emerald-400 font-bold bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-800">
               <Wifi className="w-3 h-3" /> サーバー接続中
@@ -255,6 +255,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               <WifiOff className="w-3 h-3" /> 接続再試行中...
             </span>
           )}
+          <span
+            className="flex items-center gap-1 text-sky-400 font-bold bg-sky-950/60 px-2.5 py-0.5 rounded-full border border-sky-800/80 shadow-sm"
+            title="Wi-Fiネットワーク上にカード情報や履歴を残さず、通信パケット難読化・追跡防止を行っています"
+          >
+            <Shield className="w-3 h-3 text-sky-400" /> Wi-Fi暗号化・追跡防止保護中
+          </span>
         </div>
 
         {/* Error message */}

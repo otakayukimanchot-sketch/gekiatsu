@@ -14,6 +14,7 @@ import {
   getEmoteById,
 } from '../game/emotes';
 import { Server, Socket } from 'socket.io';
+import { maskWireData } from '../utils/wireSecurity';
 
 export interface RoomParticipant {
   socketId: string;
@@ -132,9 +133,9 @@ export class CardRoomManager {
     } else {
       this.quickMatchQueue.push(participant);
       const formatLabel = requestedFormat === 'allstar' ? '全員参加大乱闘' : '標準デッキ';
-      socket.emit('match_waiting', {
+      socket.emit('match_waiting', maskWireData({
         message: `対戦相手を探しています（${formatLabel} / ${requestedWinScore}点先取）…`,
-      });
+      }));
     }
   }
 
@@ -185,7 +186,7 @@ export class CardRoomManager {
     this.rooms.set(roomId, room);
     socket.join(roomId);
 
-    socket.emit('friend_room_created', { inviteCode, roomId });
+    socket.emit('friend_room_created', maskWireData({ inviteCode, roomId }));
     return roomId;
   }
 
@@ -206,9 +207,9 @@ export class CardRoomManager {
     const room = this.rooms.get(roomId);
 
     if (!room) {
-      socket.emit('card_error', {
+      socket.emit('card_error', maskWireData({
         message: 'ルームが見つかりません。合言葉を確認してください。',
-      });
+      }));
       return;
     }
 
@@ -233,7 +234,7 @@ export class CardRoomManager {
         }
         return;
       }
-      socket.emit('card_error', { message: 'ルームは満員です。' });
+      socket.emit('card_error', maskWireData({ message: 'ルームは満員です。' }));
       return;
     }
 
@@ -343,13 +344,13 @@ export class CardRoomManager {
   ) {
     const room = this.rooms.get(roomId);
     if (!room || !room.gameState) {
-      socket.emit('card_error', { message: '対戦が見つかりません。' });
+      socket.emit('card_error', maskWireData({ message: '対戦が見つかりません。' }));
       return;
     }
 
     const result = handleGameAction(room.gameState, playerId, payload);
     if (!result.success) {
-      socket.emit('card_error', { message: result.error || '操作が無効です。' });
+      socket.emit('card_error', maskWireData({ message: result.error || '操作が無効です。' }));
       return;
     }
 
@@ -377,36 +378,36 @@ export class CardRoomManager {
     }
   ) {
     if (!payload || typeof payload.roomId !== 'string' || typeof payload.emoteId !== 'string') {
-      socket.emit('card_emote_rejected', { reason: '無効なエモートリクエストです。' });
+      socket.emit('card_emote_rejected', maskWireData({ reason: '無効なエモートリクエストです。' }));
       return;
     }
 
     const room = this.rooms.get(payload.roomId);
     if (!room || !room.gameState) {
-      socket.emit('card_emote_rejected', { reason: '対戦ルームが見つかりません。' });
+      socket.emit('card_emote_rejected', maskWireData({ reason: '対戦ルームが見つかりません。' }));
       return;
     }
 
     // Verify match state (allow during active match phases MAIN, WAITING_FOR_PROMOTION, and GAME_OVER post-match screen)
     const allowedPhases = ['MAIN', 'WAITING_FOR_PROMOTION', 'GAME_OVER'];
     if (!allowedPhases.includes(room.gameState.phase)) {
-      socket.emit('card_emote_rejected', { reason: '現在はエモートを送信できません。' });
+      socket.emit('card_emote_rejected', maskWireData({ reason: '現在はエモートを送信できません。' }));
       return;
     }
 
     // Never trust client-provided player identities: look up participant strictly by socket.id
     const sender = room.participants.find((p) => !p.isBot && p.socketId === socket.id);
     if (!sender) {
-      socket.emit('card_emote_rejected', {
+      socket.emit('card_emote_rejected', maskWireData({
         reason: 'この対戦のプレイヤーのみエモートを送信できます。',
-      });
+      }));
       return;
     }
 
     // Validate emoteId against the 24 allowed emotes
     const emoteDef = getEmoteById(payload.emoteId);
     if (!emoteDef) {
-      socket.emit('card_emote_rejected', { reason: '存在しないエモートIDです。' });
+      socket.emit('card_emote_rejected', maskWireData({ reason: '存在しないエモートIDです。' }));
       return;
     }
 
@@ -431,10 +432,10 @@ export class CardRoomManager {
 
     if (elapsed < this.emoteCooldownMs) {
       const retryAfterMs = this.emoteCooldownMs - elapsed;
-      socket.emit('card_emote_rejected', {
+      socket.emit('card_emote_rejected', maskWireData({
         reason: 'クールダウン中です。',
         retryAfterMs,
-      });
+      }));
       return;
     }
 
@@ -497,18 +498,19 @@ export class CardRoomManager {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
+    const maskedEvent = maskWireData(event);
     for (const p of room.participants) {
       if (p.isBot) continue;
       const sock = this.io.sockets.sockets.get(p.socketId);
       if (sock) {
-        sock.emit('card_emote_event', event);
+        sock.emit('card_emote_event', maskedEvent);
       }
     }
 
     for (const spec of room.spectators) {
       const sock = this.io.sockets.sockets.get(spec.socketId);
       if (sock) {
-        sock.emit('card_emote_event', event);
+        sock.emit('card_emote_event', maskedEvent);
       }
     }
   }
@@ -580,9 +582,9 @@ export class CardRoomManager {
       room = this.rooms.get('friend_' + code);
     }
     if (!room || !room.gameState) {
-      socket.emit('card_error', {
+      socket.emit('card_error', maskWireData({
         message: '観戦できる進行中のルームが見つかりません。',
-      });
+      }));
       return;
     }
 
@@ -700,7 +702,7 @@ export class CardRoomManager {
       const sock = this.io.sockets.sockets.get(p.socketId);
       if (sock) {
         const sanitized = sanitizeGameStateForPlayer(room.gameState, p.playerId, specCount);
-        sock.emit('card_game_state', sanitized);
+        sock.emit('card_game_state', maskWireData(sanitized));
       }
     }
 
@@ -708,7 +710,7 @@ export class CardRoomManager {
       const sock = this.io.sockets.sockets.get(spec.socketId);
       if (sock) {
         const sanitized = sanitizeGameStateForPlayer(room.gameState, spec.playerId, specCount);
-        sock.emit('card_game_state', sanitized);
+        sock.emit('card_game_state', maskWireData(sanitized));
       }
     }
   }
@@ -720,7 +722,7 @@ export class CardRoomManager {
     spectatorCount: number = 0
   ) {
     const sanitized = sanitizeGameStateForPlayer(state, playerId, spectatorCount);
-    socket.emit('card_game_state', sanitized);
+    socket.emit('card_game_state', maskWireData(sanitized));
   }
 
   private scheduleBotIfNeeded(roomId: string) {
