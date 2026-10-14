@@ -12,16 +12,33 @@ import { getCardDefinition } from '../../cards/cardRegistry';
 import { buildInitialDeckAndSetup, createCardInstance } from './deckBuilder';
 
 function addLog(
-  _state: GameState,
-  _actorId: string,
-  _actorName: string,
-  _type: AnimationEventType | 'TURN_END' | 'SURRENDER',
-  _message: string,
-  _cardName?: string,
-  _targetName?: string,
-  _value?: number
+  state: GameState,
+  actorId: string,
+  actorName: string,
+  type: AnimationEventType | 'TURN_END' | 'SURRENDER',
+  message: string,
+  cardName?: string,
+  targetName?: string,
+  value?: number
 ) {
-  // ログ機能削除に伴い履歴保存を行わない
+  if (!state.logs) {
+    state.logs = [];
+  }
+  state.logs.push({
+    id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    timestamp: Date.now(),
+    turnNumber: state.turnNumber,
+    actorPlayerId: actorId,
+    actorPlayerName: actorName,
+    type,
+    message,
+    cardName,
+    targetName,
+    value,
+  });
+  if (state.logs.length > 50) {
+    state.logs.shift();
+  }
 }
 
 function setAnimation(
@@ -59,7 +76,9 @@ export function recalculateDynamicStats(state: GameState) {
  * 攻撃カードが与える最終ダメージを計算する
  * - もえきゅん → しょーちゃん 特効即死
  * - りょち → ムエ 特効即死
+ * - 涼森れむ → おりちゃん 特効即死
  * - もか / こはく → ムエ・しょーちゃん ダメージ+30
+ * - 伝説のTENGA / 柏木こなつ → おりちゃんに80ダメージ
  */
 export function calculateCardDamage(
   attackerCard: CardInstance,
@@ -88,12 +107,30 @@ export function calculateCardDamage(
     };
   }
 
+  if (
+    attackerDef?.abilities.combatSkill === 'INSTANT_KILL_ORICHAN' &&
+    defenderDef?.id === 'atk_orichan'
+  ) {
+    return {
+      damage: Math.max(defenderCard.currentHp, defenderCard.maxHp, 999),
+      isInstantKill: true,
+    };
+  }
+
   let skillBonus = 0;
   if (
     attackerDef?.abilities.combatSkill === 'BONUS_VS_MUE_AND_SHOCHAN_30' &&
     (defenderDef?.id === 'atk_mue' || defenderDef?.id === 'atk_shochan')
   ) {
     skillBonus = 30;
+  }
+
+  if (
+    attackerDef?.abilities.combatSkill === 'DAMAGE_80_VS_ORICHAN' &&
+    defenderDef?.id === 'atk_orichan'
+  ) {
+    // 基礎攻撃力50に+30ボーナスを付与して80ダメージ（バフ時はさらに上乗せ）
+    skillBonus = Math.max(30, 80 - attackerCard.currentAtk);
   }
 
   const totalReduction = defenderCard.damageReductionNextTurn;
@@ -296,7 +333,7 @@ function handleKnockoutAndTurnTransition(
         attacker.playerId,
         attacker.name,
         'KNOCKOUT',
-        `ベンチの「${bDef?.name}」がきぜつ！ ${attacker.name} が ${pts} ポイント獲得！（合計 ${attacker.score}/${winScore} pt）`,
+        `ベンチの攻撃カード「${bDef?.name}」が撃破された！（${attacker.name} +${pts}pt）`,
         bDef?.name,
         undefined,
         pts
@@ -358,7 +395,7 @@ function handleKnockoutAndTurnTransition(
     attacker.playerId,
     attacker.name,
     'KNOCKOUT',
-    `「${knockedDef?.name}」がきぜつ！ ${attacker.name} が ${pointsGained} ポイント獲得！（合計 ${attacker.score}/${winScore} pt）`,
+    `攻撃カード「${knockedDef?.name}」が撃破された！（${attacker.name} +${pointsGained}pt）`,
     knockedDef?.name,
     undefined,
     pointsGained
@@ -815,18 +852,24 @@ function activateSpellCard(
 
   switch (def.abilities.spellEffect) {
     case 'DRAW_1': {
-      if (player.deck.length > 0) {
-        const drawn = player.deck.shift()!;
-        drawn.zone = 'HAND';
-        player.hand.push(drawn);
-        effectSummary = `${player.name} が魔法「${def.name}」を発動！山札からカードを1枚引いた！`;
+      let actualDrawn = 0;
+      for (let i = 0; i < 3; i++) {
+        if (player.deck.length > 0) {
+          const drawn = player.deck.shift()!;
+          drawn.zone = 'HAND';
+          player.hand.push(drawn);
+          actualDrawn++;
+        }
+      }
+      if (actualDrawn > 0) {
+        effectSummary = `${player.name} が魔法「${def.name}」を発動！山札からカードを${actualDrawn}枚引いた！`;
       } else {
         effectSummary = `${player.name} が魔法「${def.name}」を発動！（山札が0枚のためドローなし）`;
       }
       break;
     }
     case 'DRAW_2_IF_LOW_HAND': {
-      const drawCount = player.hand.length <= 3 ? 2 : 1;
+      const drawCount = player.hand.length <= 3 ? 4 : 3;
       let actualDrawn = 0;
       for (let i = 0; i < drawCount; i++) {
         if (player.deck.length > 0) {
@@ -1168,7 +1211,7 @@ function activateSpellCard(
       break;
     }
     case 'TAIMATSU_ADVICE': {
-      // Return 1 random card from hand to deck and shuffle, then draw 3 cards
+      // Return 1 random card from hand to deck and shuffle, then draw 5 cards
       let returnedName = '';
       if (player.hand.length > 0) {
         const randIdx = Math.floor(Math.random() * player.hand.length);
@@ -1180,7 +1223,7 @@ function activateSpellCard(
       shuffleDeck(player.deck);
 
       let drawnCount = 0;
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 5; i++) {
         if (player.deck.length > 0) {
           const drawn = player.deck.shift()!;
           drawn.zone = 'HAND';
@@ -1265,7 +1308,8 @@ function activateSpellCard(
   }
 
   recalculateDynamicStats(state);
-  addLog(state, player.playerId, player.name, 'SPELL', effectSummary, def.name);
+  const spellLogMessage = `${player.name} が魔法カード「${def.name}」を使用！（${effectSummary}）`;
+  addLog(state, player.playerId, player.name, 'SPELL', spellLogMessage, def.name);
   setAnimation(state, 'SPELL', player.playerId, {
     sourceCardId: spellCard.instanceId,
     cardName: def.name,

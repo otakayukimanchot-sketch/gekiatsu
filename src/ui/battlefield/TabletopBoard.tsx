@@ -22,8 +22,135 @@ import {
   Eye,
   Info,
   WifiOff,
+  History,
+  X,
+  ScrollText,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { GameEventLog } from '../../game/types';
+
+export interface ParsedActionLog {
+  id: string;
+  turnNumber: number;
+  timestamp: number;
+  actorLabel: string;
+  actorBadge: string;
+  typeLabel: string;
+  typeBadge: string;
+  icon: string;
+  summary: string;
+  fullMessage: string;
+  isMe: boolean;
+  isOpp: boolean;
+  rawType: string;
+}
+
+export function parseGameLog(
+  log: GameEventLog,
+  myPlayerId?: string,
+  oppPlayerId?: string
+): ParsedActionLog {
+  const isMe = myPlayerId != null && log.actorPlayerId === myPlayerId;
+  const isOpp = oppPlayerId != null && log.actorPlayerId === oppPlayerId;
+  const actorLabel = isMe ? '自分' : isOpp ? '相手' : log.actorPlayerName;
+  const actorBadge = isMe
+    ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+    : isOpp
+    ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+    : 'bg-slate-700 text-slate-300 border-slate-600';
+
+  let typeBadge = 'bg-slate-800 text-slate-300 border-slate-700';
+  let typeLabel = '行動';
+  let icon = '📢';
+  let summary = log.message;
+
+  switch (log.type) {
+    case 'SPELL':
+      typeBadge = 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+      typeLabel = '魔法';
+      icon = '✨';
+      summary = `魔法カード「${log.cardName || ''}」を使用`;
+      break;
+    case 'KNOCKOUT':
+      typeBadge = 'bg-rose-600/30 text-rose-300 border-rose-500/50 animate-pulse';
+      typeLabel = '撃破';
+      icon = '💥';
+      summary = log.message;
+      break;
+    case 'ATTACK':
+      typeBadge = 'bg-red-500/20 text-red-300 border-red-500/40';
+      typeLabel = '攻撃';
+      icon = '⚔️';
+      summary = log.message;
+      break;
+    case 'EVOLVE':
+      typeBadge = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+      typeLabel = '進化';
+      icon = '🌟';
+      summary = `「${log.cardName || ''}」へ進化！`;
+      break;
+    case 'ATTACH_ENERGY':
+      typeBadge = 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
+      typeLabel = 'エネルギー';
+      icon = '⚡';
+      summary = `「${log.cardName || ''}」にエネルギー付与`;
+      break;
+    case 'PLAY_CARD':
+      typeBadge = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+      typeLabel = '登場';
+      icon = '🃏';
+      summary = `「${log.cardName || ''}」を場に出した`;
+      break;
+    case 'RETREAT':
+      typeBadge = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
+      typeLabel = '交代';
+      icon = '🏃';
+      summary = `バトル場とベンチを交代`;
+      break;
+    case 'PROMOTE':
+      typeBadge = 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+      typeLabel = 'バトル場へ';
+      icon = '🛡️';
+      summary = `「${log.cardName || ''}」をバトル場に出した`;
+      break;
+    case 'DRAW':
+      typeBadge = 'bg-slate-800 text-slate-300 border-slate-700';
+      typeLabel = 'ドロー';
+      icon = '🎴';
+      summary = log.message;
+      break;
+    case 'TURN_END':
+      typeBadge = 'bg-slate-800 text-slate-400 border-slate-700';
+      typeLabel = 'ターン終了';
+      icon = '⌛';
+      summary = `${actorLabel}がターン終了`;
+      break;
+    case 'GAME_OVER':
+      typeBadge = 'bg-amber-500/30 text-amber-300 border-amber-500/50';
+      typeLabel = '決着';
+      icon = '🏆';
+      summary = log.message;
+      break;
+    default:
+      summary = log.message;
+  }
+
+  return {
+    id: log.id,
+    turnNumber: log.turnNumber,
+    timestamp: log.timestamp,
+    actorLabel,
+    actorBadge,
+    typeLabel,
+    typeBadge,
+    icon,
+    summary,
+    fullMessage: log.message,
+    isMe,
+    isOpp,
+    rawType: log.type,
+  };
+}
 
 interface TabletopBoardProps {
   gameState: SanitizedGameState;
@@ -94,11 +221,13 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
   const myBench = Array.isArray(me?.bench) ? me.bench : [null, null, null];
   const oppBench = Array.isArray(opponent?.bench) ? opponent.bench : [null, null, null];
   const myHand = Array.isArray(me?.hand) ? me.hand : [];
+  const oppHand = Array.isArray(opponent?.hand) ? opponent.hand : [];
   const myTrash = Array.isArray(me?.trash) ? me.trash : [];
   const oppTrash = Array.isArray(opponent?.trash) ? opponent.trash : [];
 
   const [selectedHandCard, setSelectedHandCard] = useState<CardInstance | null>(null);
   const [hoveredHandCardId, setHoveredHandCardId] = useState<string | null>(null);
+  const [spectatorHandTab, setSpectatorHandTab] = useState<'both' | 'me' | 'opp'>('both');
   const [isAttachingEnergy, setIsAttachingEnergy] = useState(false);
   const [isRetreating, setIsRetreating] = useState(false);
   const [inspectCard, setInspectCard] = useState<CardInstance | null>(null);
@@ -111,6 +240,22 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     spellCard: CardInstance;
     selectedIds: string[];
   } | null>(null);
+  const [showActionHistory, setShowActionHistory] = useState(false);
+
+  const logs = Array.isArray(gameState.logs) ? gameState.logs : [];
+
+  // 直前の行動（自分または相手が直前に行ったアクション）
+  const latestAction = React.useMemo(() => {
+    if (!logs || logs.length === 0) return null;
+    // 最新の非DRAW・非TURN_ENDアクションを優先的に探索
+    for (let i = logs.length - 1; i >= 0; i--) {
+      const l = logs[i];
+      if (l.type !== 'DRAW' && l.type !== 'TURN_END') {
+        return parseGameLog(l, me?.playerId, opponent?.playerId);
+      }
+    }
+    return parseGameLog(logs[logs.length - 1], me?.playerId, opponent?.playerId);
+  }, [logs, me?.playerId, opponent?.playerId]);
 
   useEffect(() => {
     if (opponent && !opponent.isConnected && phase !== 'GAME_OVER') {
@@ -214,6 +359,12 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
       }, durationMs);
     };
 
+    const isMeActor =
+      lastAnimation.actorPlayerId != null &&
+      me?.playerId != null &&
+      lastAnimation.actorPlayerId === me.playerId;
+    const actorLabel = isMeActor ? '自分' : '相手';
+
     if (lastAnimation.type === 'ATTACK') {
       if (lastAnimation.sourceCardId != null) {
         setAttackingCardId(lastAnimation.sourceCardId);
@@ -225,16 +376,16 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
         });
       }
       setAnimBanner(
-        `⚔️ ${lastAnimation.cardName || ''} の『${lastAnimation.attackName || 'アタック'}』！ ${
+        `⚔️ ${actorLabel}: 「${lastAnimation.cardName || ''}」の『${lastAnimation.attackName || 'アタック'}』！ ${
           lastAnimation.damage || 0
         } ダメージ！`
       );
       setVfxOverlay({
         kind: 'SKILL',
-        title: `⚔️ ${lastAnimation.attackName || 'SKILL ATTACK'}`,
+        title: `⚔️ ${actorLabel}: ${lastAnimation.attackName || 'SKILL ATTACK'}`,
         subtitle: `${lastAnimation.cardName || ''} ➔ -${lastAnimation.damage || 0} DMG`,
       });
-      scheduleClearAllAnims(1200);
+      scheduleClearAllAnims(2000);
       return;
     }
 
@@ -248,7 +399,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
 
       setVfxOverlay(null);
       setAnimBanner(
-        `💥 「${lastAnimation.cardName || ''}」がきぜつ！ +${pts} POINT GET!`
+        `💥 攻撃カード「${lastAnimation.cardName || ''}」が撃破された！ (+${pts}pt)`
       );
       setVanishingGhost({
         cardName: lastAnimation.cardName || 'カード',
@@ -271,43 +422,43 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
         });
       }
 
-      scheduleClearAllAnims(1900);
+      scheduleClearAllAnims(2200);
       return;
     }
 
     if (lastAnimation.type === 'PROMOTE') {
       setVfxOverlay(null);
-      setAnimBanner(`🚀 ベンチから「${lastAnimation.cardName || ''}」がバトル場へ登場！`);
-      scheduleClearAllAnims(1100);
+      setAnimBanner(`🛡️ ${actorLabel}: ベンチから「${lastAnimation.cardName || ''}」がバトル場へ登場！`);
+      scheduleClearAllAnims(1500);
       return;
     }
 
     if (lastAnimation.type === 'ATTACH_ENERGY') {
       setVfxOverlay(null);
-      setAnimBanner(`⚡ 「${lastAnimation.cardName || ''}」にエネルギー付与！`);
-      scheduleClearAllAnims(950);
+      setAnimBanner(`⚡ ${actorLabel}: 「${lastAnimation.cardName || ''}」にエネルギー付与！`);
+      scheduleClearAllAnims(1400);
       return;
     }
 
     if (lastAnimation.type === 'EVOLVE') {
-      setAnimBanner(`🌟 進化！「${lastAnimation.cardName || ''}」が降臨！`);
+      setAnimBanner(`🌟 ${actorLabel}: 「${lastAnimation.cardName || ''}」へ進化！`);
       setVfxOverlay({
         kind: 'EVOLVE',
-        title: `🌟 EVOLUTION!`,
+        title: `🌟 ${actorLabel}: EVOLUTION!`,
         subtitle: `${lastAnimation.cardName || ''} が覚醒降臨！`,
       });
-      scheduleClearAllAnims(1250);
+      scheduleClearAllAnims(2000);
       return;
     }
 
     if (lastAnimation.type === 'SPELL') {
-      setAnimBanner(`✨ 「${lastAnimation.cardName || ''}」を発動！`);
+      setAnimBanner(`✨ ${actorLabel}: 魔法カード「${lastAnimation.cardName || ''}」を使用！`);
       setVfxOverlay({
         kind: 'SPELL',
-        title: `✨ MAGIC CAST : ${lastAnimation.cardName || '魔法'}`,
+        title: `✨ ${actorLabel}: 魔法カード「${lastAnimation.cardName || '魔法'}」を使用`,
         subtitle: lastAnimation.attackName || '',
       });
-      scheduleClearAllAnims(1150);
+      scheduleClearAllAnims(2200);
       return;
     }
   }, [lastAnimation?.id]);
@@ -594,17 +745,17 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
     return '手札をベンチに出すか「ターン終了」をタップ';
   };
 
-  // Shared Hand Renderer (Guarantees 100% full card visibility from top edge to bottom edge)
-  const renderHandCards = (isLandscapeMode: boolean) => {
-    if (myHand.length === 0) {
+  // Shared Card Row Renderer
+  const renderCardRow = (cards: CardInstance[], isLandscapeMode: boolean, isOpponent: boolean = false) => {
+    if (cards.length === 0) {
       return (
-        <div className="h-full flex items-center justify-center text-[11px] text-slate-500 italic px-4">
+        <div className="py-2 flex items-center justify-center text-[10px] text-slate-500 italic px-4">
           手札がありません
         </div>
       );
     }
 
-    const total = myHand.length;
+    const total = cards.length;
     const overlapClass = isLandscapeMode
       ? total <= 4
         ? 'space-x-1.5'
@@ -622,11 +773,11 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
       : '-space-x-6 sm:-space-x-3.5';
 
     return (
-      <div className="w-full overflow-x-auto overflow-y-visible pokepoke-scroll flex items-center px-2 pt-2.5 pb-1">
+      <div className="w-full overflow-x-auto overflow-y-visible pokepoke-scroll flex items-center px-2 py-1">
         <div className={`flex items-center mx-auto ${overlapClass}`}>
-          {myHand.map((card, idx) => {
+          {cards.map((card, idx) => {
             if (card == null || card.instanceId == null) return null;
-            const isSelected = isCardMatchingId(selectedHandCard, card.instanceId);
+            const isSelected = !isSpectator && isCardMatchingId(selectedHandCard, card.instanceId);
             const isHovered =
               hoveredHandCardId != null && hoveredHandCardId === card.instanceId;
             const cardDef = getCardDefinition(card.definitionId);
@@ -639,7 +790,7 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             const centerIndex = (total - 1) / 2;
             const normalizedOffset = idx - centerIndex;
 
-            const rotDeg = isLandscapeMode
+            const rotDeg = isLandscapeMode || isSpectator
               ? 0
               : isSelected
               ? 0
@@ -656,7 +807,13 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   transition: 'transform 0.15s ease-out',
                 }}
                 className="relative shrink-0 cursor-pointer"
-                onClick={() => handleSelectHandCard(card)}
+                onClick={() => {
+                  if (isSpectator) {
+                    setInspectCard(card);
+                  } else {
+                    handleSelectHandCard(card);
+                  }
+                }}
                 onMouseEnter={() => setHoveredHandCardId(card.instanceId)}
                 onMouseLeave={() => setHoveredHandCardId(null)}
                 onContextMenu={(e) => {
@@ -668,8 +825,8 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   card={card}
                   size="hand"
                   isSelected={isSelected}
-                  canAct={isMyTurn && hasEvoTargetNow}
-                  isUnplayableEvolution={isEvoCard && !hasEvoTargetNow}
+                  canAct={!isSpectator && !isOpponent && isMyTurn && hasEvoTargetNow}
+                  isUnplayableEvolution={!isSpectator && isEvoCard && !hasEvoTargetNow}
                   onLongPress={() => setInspectCard(card)}
                 />
                 <button
@@ -689,6 +846,78 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
         </div>
       </div>
     );
+  };
+
+  // Shared Hand Renderer (Guarantees spectator dual-hand visibility & normal single-player tray)
+  const renderHandCards = (isLandscapeMode: boolean) => {
+    if (isSpectator) {
+      return (
+        <div className="w-full flex flex-col gap-1 py-1">
+          {/* Spectator Hand Tab Controls */}
+          <div className="flex items-center justify-between px-2.5 py-0.5 border-b border-slate-800/80 bg-slate-950/60 rounded-t-xl text-[10px]">
+            <div className="flex items-center gap-1 font-bold text-amber-300">
+              <Eye className="w-3 h-3 text-amber-400" />
+              <span>観戦手札ビュー</span>
+            </div>
+            <div className="flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-lg p-0.5">
+              <button
+                onClick={() => setSpectatorHandTab('both')}
+                className={`px-2 py-0.5 rounded text-[9px] font-bold cursor-pointer transition-colors ${
+                  spectatorHandTab === 'both'
+                    ? 'bg-amber-400 text-slate-950 shadow'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                👀 両者表示
+              </button>
+              <button
+                onClick={() => setSpectatorHandTab('me')}
+                className={`px-2 py-0.5 rounded text-[9px] font-bold cursor-pointer transition-colors ${
+                  spectatorHandTab === 'me'
+                    ? 'bg-blue-500 text-white shadow'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                🔵 {me.name} ({myHand.length})
+              </button>
+              <button
+                onClick={() => setSpectatorHandTab('opp')}
+                className={`px-2 py-0.5 rounded text-[9px] font-bold cursor-pointer transition-colors ${
+                  spectatorHandTab === 'opp'
+                    ? 'bg-rose-500 text-white shadow'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                🔴 {opponent.name} ({oppHand.length})
+              </button>
+            </div>
+          </div>
+
+          {/* Cards Display according to selected tab */}
+          {(spectatorHandTab === 'both' || spectatorHandTab === 'me') && (
+            <div className="flex flex-col">
+              <div className="px-2 pt-0.5 flex items-center justify-between text-[9px] font-bold text-blue-300">
+                <span>🔵 {me.name} の手札 ({myHand.length}枚)</span>
+                <span className="text-[8px] text-slate-400">タップで詳細確認</span>
+              </div>
+              {renderCardRow(myHand, isLandscapeMode, false)}
+            </div>
+          )}
+
+          {(spectatorHandTab === 'both' || spectatorHandTab === 'opp') && (
+            <div className="flex flex-col border-t border-slate-800/60 pt-0.5">
+              <div className="px-2 pt-0.5 flex items-center justify-between text-[9px] font-bold text-rose-300">
+                <span>🔴 {opponent.name} の手札 ({oppHand.length}枚)</span>
+                <span className="text-[8px] text-slate-400">タップで詳細確認</span>
+              </div>
+              {renderCardRow(oppHand, isLandscapeMode, true)}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return renderCardRow(myHand, isLandscapeMode, false);
   };
 
   // Floating Action Bar when a card in Hand is selected (Does not push layout down)
@@ -921,9 +1150,21 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                   降参
                 </button>
               )}
-              <div className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-stone-300">
-                手札 <span className="text-sky-300 font-mono">{opponent.handCount}</span>
-              </div>
+              {isSpectator ? (
+                <button
+                  onClick={() => setSpectatorHandTab((prev) => (prev === 'opp' ? 'both' : 'opp'))}
+                  className="px-1.5 py-0.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-stone-300 flex items-center gap-1 cursor-pointer transition-colors"
+                  title="相手の手札を表示"
+                >
+                  <Eye className="w-2.5 h-2.5 text-sky-400" />
+                  <span>手札</span>
+                  <span className="text-sky-300 font-mono">{oppHand.length}</span>
+                </button>
+              ) : (
+                <div className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-stone-300">
+                  手札 <span className="text-sky-300 font-mono">{opponent.handCount}</span>
+                </div>
+              )}
               <div className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-stone-300">
                 山札 <span className="text-amber-300 font-mono">{opponent.deckCount}</span>
               </div>
@@ -1095,6 +1336,44 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                 ターン終了
               </button>
             </div>
+          </div>
+
+          {/* 直前の行動 (直前で自分/相手がなにを行ったかを表示) */}
+          <div className="w-full my-0.5 px-2.5 py-1 rounded-xl bg-slate-950/90 border border-slate-700/80 shadow flex items-center justify-between gap-1.5 min-h-[30px]">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                直前の行動
+              </span>
+              {latestAction ? (
+                <div className="flex items-center gap-1 min-w-0 flex-1 truncate">
+                  <span className={`px-1.5 py-0.2 rounded text-[8px] font-black shrink-0 border ${latestAction.actorBadge}`}>
+                    {latestAction.actorLabel}
+                  </span>
+                  <span className={`px-1.5 py-0.2 rounded text-[8px] font-black shrink-0 border ${latestAction.typeBadge}`}>
+                    {latestAction.typeLabel}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowActionHistory(true)}
+                    className="text-[10px] font-bold text-stone-100 truncate cursor-pointer hover:text-amber-300 text-left transition-colors"
+                    title={latestAction.fullMessage}
+                  >
+                    {latestAction.icon} {latestAction.summary}
+                  </button>
+                </div>
+              ) : (
+                <span className="text-[9px] text-slate-400 italic">対戦開始（待機中）</span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowActionHistory(true)}
+              className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-stone-200 text-[9px] font-black shrink-0 flex items-center gap-1 cursor-pointer transition-all active:scale-95 shadow-sm"
+              title="対戦履歴・行動ログ一覧を表示"
+            >
+              <History className="w-3 h-3 text-amber-400" />
+              <span>履歴 ({logs.length})</span>
+            </button>
           </div>
 
           {/* My Active Spot + Energy Zone & Attack/Retreat Controls */}
@@ -1350,9 +1629,21 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                 <span>切断中 ({disconnectSecondsLeft}s)</span>
               </span>
             )}
-            <span className="text-[9px] text-slate-400">
-              手札:{opponent.handCount} 山札:{opponent.deckCount}
-            </span>
+            {isSpectator ? (
+              <button
+                onClick={() => setSpectatorHandTab((prev) => (prev === 'opp' ? 'both' : 'opp'))}
+                className="px-1.5 py-0.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[9px] text-stone-300 flex items-center gap-1 cursor-pointer transition-colors"
+                title="相手の手札を表示"
+              >
+                <Eye className="w-2.5 h-2.5 text-sky-400" />
+                <span>手札:{oppHand.length}</span>
+                <span className="text-slate-400">山札:{opponent.deckCount}</span>
+              </button>
+            ) : (
+              <span className="text-[9px] text-slate-400">
+                手札:{opponent.handCount} 山札:{opponent.deckCount}
+              </span>
+            )}
             <button
               onClick={() => setViewingTrash('opp')}
               className="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-[9px] text-stone-300 cursor-pointer"
@@ -1361,8 +1652,8 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
             </button>
           </div>
 
-          {/* Center Turn & Action Guide */}
-          <div className="flex items-center gap-2 min-w-0 flex-1 justify-center">
+          {/* Center Turn & Action Guide & Recent Action */}
+          <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-center">
             <span
               className={`px-2 py-0.5 rounded-full text-[9px] font-black shrink-0 ${
                 mustPromoteBench
@@ -1378,9 +1669,38 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
                 ? `あなた (T${gameState.turnNumber})`
                 : `相手 (T${gameState.turnNumber})`}
             </span>
-            <span className="text-[9px] text-amber-200 font-bold truncate">
-              {actionError || getActionGuideText()}
-            </span>
+            {latestAction ? (
+              <button
+                type="button"
+                onClick={() => setShowActionHistory(true)}
+                className="flex items-center gap-1 max-w-[260px] px-2 py-0.5 rounded-md bg-slate-950/80 border border-slate-700 hover:border-amber-400/50 text-[9px] cursor-pointer truncate transition-colors"
+                title={latestAction.fullMessage}
+              >
+                <span className="text-[8px] font-black text-amber-300 shrink-0">直前:</span>
+                <span className={`px-1 py-0.2 rounded text-[7px] font-black shrink-0 border ${latestAction.actorBadge}`}>
+                  {latestAction.actorLabel}
+                </span>
+                <span className={`px-1 py-0.2 rounded text-[7px] font-black shrink-0 border ${latestAction.typeBadge}`}>
+                  {latestAction.typeLabel}
+                </span>
+                <span className="text-stone-200 font-bold truncate">
+                  {latestAction.icon} {latestAction.summary}
+                </span>
+              </button>
+            ) : (
+              <span className="text-[9px] text-amber-200 font-bold truncate">
+                {actionError || getActionGuideText()}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowActionHistory(true)}
+              className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-stone-300 text-[8px] font-bold shrink-0 cursor-pointer flex items-center gap-0.5"
+              title="対戦履歴一覧"
+            >
+              <History className="w-2.5 h-2.5 text-amber-400" />
+              <span>履歴({logs.length})</span>
+            </button>
           </div>
 
           {/* Right: Turn End Only (Separated from Surrender) */}
@@ -1759,6 +2079,99 @@ export const TabletopBoard: React.FC<TabletopBoardProps> = ({
           onClose={() => setViewingTrash(null)}
           onInspectCard={setInspectCard}
         />
+      )}
+
+      {/* Action History Modal (直前の行動・対戦ログ一覧) */}
+      {showActionHistory && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="px-4 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <History className="w-4 h-4 text-amber-400" />
+                <h2 className="text-sm font-black text-amber-300">直前の行動・対戦ログ一覧</h2>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300">
+                  全 {logs.length} 件
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowActionHistory(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer transition-colors"
+                title="閉じる"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Log list (newest first) */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2 divide-y divide-slate-800/60">
+              {logs.length === 0 ? (
+                <div className="text-center py-8 text-xs text-slate-500">
+                  まだ行動履歴がありません
+                </div>
+              ) : (
+                [...logs].reverse().map((rawLog, idx) => {
+                  const parsed = parseGameLog(rawLog, me?.playerId, opponent?.playerId);
+                  const isLatest = idx === 0;
+                  return (
+                    <div
+                      key={parsed.id || `log_${idx}`}
+                      className={`pt-2 first:pt-0 flex flex-col gap-1 p-2 rounded-xl transition-colors ${
+                        isLatest
+                          ? 'bg-amber-500/10 border border-amber-500/30'
+                          : 'hover:bg-slate-800/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {isLatest && (
+                            <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-amber-400 text-stone-950">
+                              最新
+                            </span>
+                          )}
+                          <span className="px-1.5 py-0.2 rounded text-[8px] font-mono bg-slate-800 text-slate-400 border border-slate-700">
+                            T{parsed.turnNumber}
+                          </span>
+                          <span className={`px-1.5 py-0.2 rounded text-[8px] font-black border ${parsed.actorBadge}`}>
+                            {parsed.actorLabel}
+                          </span>
+                          <span className={`px-1.5 py-0.2 rounded text-[8px] font-black border ${parsed.typeBadge}`}>
+                            {parsed.icon} {parsed.typeLabel}
+                          </span>
+                        </div>
+                        <span className="text-[9px] text-slate-500 font-mono">
+                          {new Date(parsed.timestamp).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      <div className="text-xs font-bold text-stone-100 pl-1 leading-relaxed">
+                        {parsed.fullMessage}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 py-2.5 bg-slate-950 border-t border-slate-800 flex items-center justify-between shrink-0">
+              <span className="text-[10px] text-slate-400">
+                最新のアクションが一番上に表示されます
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowActionHistory(false)}
+                className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-stone-200 text-xs font-bold cursor-pointer transition-colors"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Ultimate Battle Result Screen */}

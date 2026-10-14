@@ -38,14 +38,12 @@ async function startServer() {
 
   // Ensure no game information, card data, or state is cached on disk or tracked on Wi-Fi/network
   app.use((_req, res, next) => {
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0, private");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
     res.setHeader("Surrogate-Control", "no-store");
-    res.setHeader("Clear-Site-Data", '"cache", "cookies", "storage"');
     res.setHeader("Referrer-Policy", "no-referrer");
     res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("Permissions-Policy", "interest-cohort=(), browsing-topics=()");
     next();
   });
 

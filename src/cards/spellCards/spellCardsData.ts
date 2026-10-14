@@ -28,13 +28,13 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     level: 1,
     abilities: {
       attackName: '清めのドロー',
-      activeEffect: '山札からカードを1枚引く',
-      description: '【魔法】山札からカードを1枚引く。',
+      activeEffect: '山札からカードを3枚引く',
+      description: '【魔法】山札からカードを3枚引く。',
       spellEffect: 'DRAW_1',
     },
     ui: {
       tags: ['魔法', 'ドロー', 'よしえ系'],
-      flavorText: '「清めの数珠が運命の1枚を引き寄せる。」',
+      flavorText: '「清めの数珠が運命の3枚を引き寄せる。」',
       artSymbol: 'Sparkles',
     },
   },
@@ -51,9 +51,9 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     level: 1,
     abilities: {
       attackName: '思い出の掘り出し物',
-      activeEffect: '山札からカードを1枚引く（手札が3枚以下なら2枚引く）',
+      activeEffect: '山札からカードを3枚引く（手札が3枚以下なら4枚引く）',
       description:
-        '【魔法】思い出のショッピングセンターを散策！山札からカードを1枚引く（手札が3枚以下なら2枚引く）。',
+        '【魔法】思い出のショッピングセンターを散策！山札からカードを3枚引く（手札が3枚以下なら4枚引く）。',
       spellEffect: 'DRAW_2_IF_LOW_HAND',
     },
     ui: {
@@ -680,9 +680,9 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     level: 1,
     abilities: {
       attackName: 'あくうせつだん受験突破',
-      activeEffect: '山札からカードを1枚引く（手札が3枚以下なら2枚引く）',
+      activeEffect: '山札からカードを3枚引く（手札が3枚以下なら4枚引く）',
       description:
-        '【魔法】空間を切り裂く勢いで難関突破！山札からカードを1枚引く（手札が3枚以下なら2枚引く）。',
+        '【魔法】空間を切り裂く勢いで難関突破！山札からカードを3枚引く（手札が3枚以下なら4枚引く）。',
       spellEffect: 'DRAW_2_IF_LOW_HAND',
     },
     ui: {
@@ -800,9 +800,9 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     level: 1,
     abilities: {
       attackName: '眠気覚ましの苦味',
-      activeEffect: '山札からカードを1枚引き、自分のバトル場の攻撃ダメージ＋10',
+      activeEffect: '山札からカードを3枚引き、自分のバトル場の攻撃ダメージ＋10',
       description:
-        '【魔法】キリッとした苦味で頭が冴え渡る！山札からカードを1枚引き、このターン自分のバトル場の攻撃ダメージを＋10する。',
+        '【魔法】キリッとした苦味で頭が冴え渡る！山札からカードを3枚引き、このターン自分のバトル場の攻撃ダメージを＋10する。',
       spellEffect: 'DRAW_1',
     },
     ui: {
@@ -872,9 +872,9 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     level: 1,
     abilities: {
       attackName: '高収入求人テーマソング',
-      activeEffect: '山札からカードを1枚引く（手札が3枚以下なら2枚引く）',
+      activeEffect: '山札からカードを3枚引く（手札が3枚以下なら4枚引く）',
       description:
-        '【魔法】街中に響き渡るおなじみのメロディ！山札からカードを1枚引く（手札が3枚以下なら2枚引く）。',
+        '【魔法】街中に響き渡るおなじみのメロディ！山札からカードを3枚引く（手札が3枚以下なら4枚引く）。',
       spellEffect: 'DRAW_2_IF_LOW_HAND',
     },
     ui: {
@@ -992,9 +992,9 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     level: 1,
     abilities: {
       attackName: 'オールイン・ドロー',
-      activeEffect: '山札からカードを1枚引く（手札が3枚以下なら2枚引く）',
+      activeEffect: '山札からカードを3枚引く（手札が3枚以下なら4枚引く）',
       description:
-        '【魔法】勝負師のポーカーフェイスで手札を引き込む！山札からカードを1枚引く（自分の手札が3枚以下なら2枚引く）。',
+        '【魔法】勝負師のポーカーフェイスで手札を引き込む！山札からカードを3枚引く（自分の手札が3枚以下なら4枚引く）。',
       spellEffect: 'DRAW_2_IF_LOW_HAND',
     },
     ui: {
@@ -1028,30 +1028,6 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     },
   },
   {
-    id: 'spl_search_change',
-    name: '歩美ちゃん',
-    type: 'SPELL',
-    evolution: {
-      family: 'サーチ魔法',
-      stage: 1,
-      evolvesFrom: null,
-      evolvesTo: null,
-    },
-    level: 1,
-    abilities: {
-      attackName: 'トップ3サーチ',
-      activeEffect: '山札の上から3枚を見て、その中の攻撃カード1枚を手札に加え、残りを山札に戻してシャッフル',
-      description:
-        '【魔法】自分の山札の上から3枚を見る。その中から攻撃カードを1枚選び、手札に加える。残りのカードは山札に戻してシャッフルする（対象カードがない場合は手札に加えない）。',
-      spellEffect: 'SEARCH_CHANGE_TOP3',
-    },
-    ui: {
-      tags: ['魔法', 'サーチ', '歩美ちゃん', 'トップ3'],
-      flavorText: '「山札の未来を3枚先読みし、最良のアタッカーを掴み取る！」',
-      artSymbol: 'BookOpen',
-    },
-  },
-  {
     id: 'spl_taimatsu_advice',
     name: '泰松の助言',
     type: 'SPELL',
@@ -1064,14 +1040,14 @@ const SPELL_CARD_SEEDS: RawCardSeed[] = [
     level: 1,
     abilities: {
       attackName: '泰松の導き',
-      activeEffect: '手札からランダムに1枚を山札に戻してシャッフルし、山札から3枚引く',
+      activeEffect: '手札からランダムに1枚を山札に戻してシャッフルし、山札から5枚引く',
       description:
-        '【魔法】自分の手札からランダムに1枚を山札に戻してシャッフルする。その後、山札からカードを3枚引く。このカードを使ったターン、他のサポートカードは使えない。手札が悪い時に有効。',
+        '【魔法】自分の手札からランダムに1枚を山札に戻してシャッフルする。その後、山札からカードを5枚引く。このカードを使ったターン、他のサポートカードは使えない。手札が悪い時に有効。',
       spellEffect: 'TAIMATSU_ADVICE',
     },
     ui: {
       tags: ['魔法', 'ドロー', '手札入替', '泰松'],
-      flavorText: '「迷った時はその1枚を戻してみろ。新たな3枚が道を照らす！」',
+      flavorText: '「迷った時はその1枚を戻してみろ。新たな5枚が道を照らす！」',
       artSymbol: 'Flame',
     },
   },

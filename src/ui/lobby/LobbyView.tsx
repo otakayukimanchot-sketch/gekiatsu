@@ -231,17 +231,10 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       {/* Main Container */}
       <div className="relative z-10 max-w-md mx-auto w-full px-4 py-5 flex flex-col gap-4 flex-1 justify-center">
         {/* Game Title & Header */}
-        <div className="text-center space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold shadow-sm">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>ハイテンポ1対1カードバトル</span>
-          </div>
+        <div className="text-center py-1">
           <h1 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 tracking-wider drop-shadow-md">
             ホン〇ノカードバトル
           </h1>
-          <p className="text-slate-400 text-xs">
-            エネルギーを付けてわざを放て！シンプル＆戦略的ポケポケ型バトル
-          </p>
         </div>
 
         {/* Connection Status & Wi-Fi Privacy Protection indicator */}

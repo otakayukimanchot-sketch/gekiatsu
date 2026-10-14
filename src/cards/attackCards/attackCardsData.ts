@@ -25,7 +25,7 @@ import { buildCardDefinition } from '../levelSystem';
  * 18. バニラ進化系列: バニラなそうくん (Lv.2) → バニラじゃなくていいじゃん (Lv.4) → バニラEX (Lv.5)
  * 19. ケロロ軍曹進化系列: ケロロ軍曹 (Lv.2) → ゲロロ軍曹 (Lv.4) → 軍曹EX (Lv.5)
  * 20. アフリカ進化系列: アフリカ (Lv.2) → 専門はアフリカ (Lv.4) → アフリカEX (Lv.5)
- * 21. つだぬまず＆特効系列: しょーちゃん (Lv.3) / おりちゃん (Lv.3) / ムエ (Lv.4) / もえきゅん (Lv.2・しょーちゃん即死) / りょち (Lv.2・ムエ即死) / もか (Lv.2・ムエ＆しょーちゃん+30) / こはく (Lv.2・ムエ＆しょーちゃん+30)
+ * 21. つだぬまず＆特効系列: しょーちゃん (Lv.3) / おりちゃん (Lv.3) / ムエ (Lv.4) / もえきゅん (Lv.2・しょーちゃん即死) / りょち (Lv.2・ムエ即死) / もか (Lv.2・ムエ＆しょーちゃん+30) / こはく (Lv.2・ムエ＆しょーちゃん+30) / 伝説のTENGA (Lv.2・おりちゃんに80ダメ) / 柏木こなつ (Lv.2・おりちゃんに80ダメ) / 涼森れむ (Lv.2・おりちゃん即死)
  * 22. 単体アタッカー: 情報処理基礎のおばぁ (Lv.1) / 顎 (Lv.1) / 井上教授 (Lv.1) / 野々村議員 (Lv.2) / 中央大学教授（ピザを持ってくる） (Lv.3)
  */
 const ATTACK_CARD_SEEDS: RawCardSeed[] = [
@@ -980,6 +980,81 @@ const ATTACK_CARD_SEEDS: RawCardSeed[] = [
     ui: {
       tags: ['特効', 'こはく', 'Lv.2'],
       flavorText: '「ムエちゃんもしょーちゃんもまとめて相手してあげる！」',
+      artSymbol: 'Sparkles',
+    },
+  },
+  {
+    id: 'atk_legendary_tenga',
+    name: '伝説のTENGA',
+    type: 'ATTACK',
+    evolution: {
+      family: '特効系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 2,
+    abilities: {
+      attackName: 'TENGAインパクト',
+      activeEffect: '通常50ダメージ（相手が「おりちゃん」なら80ダメージ！）',
+      passiveEffect: '特効：攻撃対象が「おりちゃん」の場合、与えるダメージが80になる',
+      combatSkill: 'DAMAGE_80_VS_ORICHAN',
+      description:
+        '【特効】通常攻撃（50ダメージ）に加え、相手が「おりちゃん」のときは80ダメージを与える！',
+    },
+    ui: {
+      tags: ['特効', 'おりちゃん特効', 'Lv.2'],
+      flavorText: '「圧倒的快感とホールド力！おりちゃんに大打撃を与える伝説のマスターピース！」',
+      artSymbol: 'Zap',
+    },
+  },
+  {
+    id: 'atk_kashiwagi_konatsu',
+    name: '柏木こなつ',
+    type: 'ATTACK',
+    evolution: {
+      family: '特効系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 2,
+    abilities: {
+      attackName: 'こなつミラクル',
+      activeEffect: '通常50ダメージ（相手が「おりちゃん」なら80ダメージ！）',
+      passiveEffect: '特効：攻撃対象が「おりちゃん」の場合、与えるダメージが80になる',
+      combatSkill: 'DAMAGE_80_VS_ORICHAN',
+      description:
+        '【特効】通常攻撃（50ダメージ）に加え、相手が「おりちゃん」のときは80ダメージを与える！',
+    },
+    ui: {
+      tags: ['特効', 'おりちゃん特効', 'Lv.2'],
+      flavorText: '「おりちゃんの本能を直撃！抗えない魅力で80ダメージの猛攻！」',
+      artSymbol: 'Heart',
+    },
+  },
+  {
+    id: 'atk_suzumori_remu',
+    name: '涼森れむ',
+    type: 'ATTACK',
+    evolution: {
+      family: '特効系列',
+      stage: 1,
+      evolvesFrom: null,
+      evolvesTo: null,
+    },
+    level: 2,
+    abilities: {
+      attackName: 'れむりんノックアウト',
+      activeEffect: '通常50ダメージ（相手が「おりちゃん」なら一撃即死！）',
+      passiveEffect: '特効：攻撃対象が「おりちゃん」の場合、残りHPをすべて削り即死させる',
+      combatSkill: 'INSTANT_KILL_ORICHAN',
+      description:
+        '【特効】相手が「おりちゃん」のとき一撃で即死させる！それ以外の相手には通常のLv.2攻撃（50ダメージ）を行う。',
+    },
+    ui: {
+      tags: ['特効', 'おりちゃんキラー', 'Lv.2'],
+      flavorText: '「美貌と誘惑の前に、おりちゃんは為す術もなく即死昇天♡」',
       artSymbol: 'Sparkles',
     },
   },
